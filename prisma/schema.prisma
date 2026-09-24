@@ -1,0 +1,53 @@
+// Schema do banco de dados do Mini Drama.
+// Por padrão usa SQLite (arquivo local, ótimo para desenvolvimento).
+// Para produção, troque "provider" para "postgresql" e configure DATABASE_URL
+// com a string de conexão do seu banco real (Neon, Supabase, Railway...).
+// Veja o README.md para o passo a passo completo.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  password   String   // hash bcrypt, nunca texto puro
+  role       String   @default("user") // "user" | "admin"
+  plan       String   @default("plateia")
+  planExpiry DateTime @default(now())
+  status     String   @default("ativo") // "ativo" | "bloqueado"
+  createdAt  DateTime @default(now())
+}
+
+model Play {
+  id              String   @id @default(cuid())
+  title           String
+  genre           String
+  durationMinutes Int
+  releaseYear     Int
+  synopsis        String
+  director        String
+  cast            String
+  posterUrl       String
+  backdropUrl     String
+  videoUrl        String   @default("")
+  requiresPlan    String   @default("plateia")
+  featured        Boolean  @default(false)
+  createdAt       DateTime @default(now())
+}
+
+model Plan {
+  id          String  @id
+  name        String
+  price       Float
+  periodicity String
+  benefits    String  // lista de benefícios guardada como JSON (ex: ["a","b"])
+  featured    Boolean @default(false)
+  sortOrder   Int     @default(0)
+}

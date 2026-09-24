@@ -1,0 +1,29 @@
+{
+  "name": "mini-drama",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Mini Drama — plataforma de streaming de peças teatrais (projeto acadêmico Teatro + Tecnologia)",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node src/index.js",
+    "start": "node src/index.js",
+    "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "seed": "node prisma/seed.js",
+    "postinstall": "node node_modules/prisma/build/index.js generate"
+  },
+  "prisma": {
+    "seed": "node prisma/seed.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.18.0",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2"
+  },
+  "devDependencies": {
+    "prisma": "^5.18.0"
+  }
+}

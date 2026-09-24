@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Mini Drama — peças de teatro online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tus-js-client@4.1.0/dist/tus.min.js"></script>
+<style>
+:root{
+  --bg:#120D0F; --bg-elev:#1B1417; --bg-elev-2:#241B1E;
+  --curtain:#7A1F2E; --curtain-2:#9C2C3E;
+  --gold:#C9A24B; --gold-soft:#E4CE95;
+  --ink:#F4ECE3; --ink-muted:#B9A9A0; --ink-faint:#8A7A72;
+  --line:rgba(244,236,227,0.10);
+  --danger:#C4453C; --ok:#5C8A5A;
+  --radius:3px; --radius-lg:6px;
+  --shadow-deep:0 24px 60px rgba(0,0,0,0.55);
+  --font-display:'Fraunces', Georgia, serif;
+  --font-body:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{background:var(--bg); color:var(--ink); font-family:var(--font-body); min-height:100vh; -webkit-font-smoothing:antialiased;}
+img{max-width:100%; display:block;}
+a{color:inherit; text-decoration:none;}
+button{font-family:inherit; cursor:pointer;}
+input,select,textarea{font-family:inherit;}
+::-webkit-scrollbar{height:8px; width:8px;}
+::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px;}
+.container{max-width:1240px; margin:0 auto; padding:0 28px;}
+@media (max-width:640px){.container{padding:0 16px;}}
+
+.site-header{position:sticky; top:0; z-index:60; display:flex; align-items:center; justify-content:space-between; padding:16px 28px; gap:24px; background:linear-gradient(180deg, rgba(9,6,7,0.92), rgba(9,6,7,0.55) 80%, transparent); backdrop-filter:blur(6px);}
+.site-header.solid{background:var(--bg); box-shadow:0 1px 0 var(--line);}
+@media (max-width:640px){.site-header{padding:14px 16px;}}
+.brand{display:flex; align-items:baseline; gap:6px; font-family:var(--font-display); font-weight:700; font-size:23px; letter-spacing:.2px; flex-shrink:0;}
+.brand .dot{width:7px; height:7px; border-radius:50%; background:var(--curtain-2); margin-left:1px;}
+.main-nav{display:flex; align-items:center; gap:26px; flex:1; margin-left:12px;}
+.main-nav a{font-size:14.5px; color:var(--ink-muted); white-space:nowrap; position:relative; padding:6px 0;}
+.main-nav a:hover, .main-nav a.active{color:var(--ink);}
+.main-nav a.active::after{content:""; position:absolute; left:0; right:0; bottom:-2px; height:2px; background:var(--gold);}
+@media (max-width:900px){.main-nav{display:none;}}
+.header-actions{display:flex; align-items:center; gap:10px; flex-shrink:0;}
+.icon-btn{background:none; border:1px solid var(--line); color:var(--ink); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center;}
+.icon-btn:hover{border-color:var(--gold);}
+.btn{border:none; border-radius:var(--radius); padding:10px 20px; font-size:14px; font-weight:600; letter-spacing:.2px; transition:transform .12s ease, opacity .15s;}
+.btn:active{transform:scale(0.97);}
+.btn:disabled{opacity:.5; cursor:default;}
+.btn-gold{background:var(--gold); color:#241708;}
+.btn-gold:hover{background:var(--gold-soft);}
+.btn-ghost{background:transparent; color:var(--ink); border:1px solid var(--line);}
+.btn-ghost:hover{border-color:var(--ink-muted);}
+.btn-danger{background:transparent; color:var(--danger); border:1px solid rgba(196,69,60,.4);}
+.btn-danger:hover{background:rgba(196,69,60,.1);}
+.btn-block{width:100%;}
+.btn-sm{padding:7px 14px; font-size:13px;}
+.avatar-btn{width:36px; height:36px; border-radius:50%; background:var(--curtain); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; border:1px solid var(--line);}
+.hamburger{display:none; background:none; border:none; color:var(--ink);}
+@media (max-width:900px){.hamburger{display:block;}}
+.mobile-drawer{position:fixed; inset:0; background:rgba(9,6,7,.94); z-index:90; display:none; flex-direction:column; padding:24px; gap:6px;}
+.mobile-drawer.open{display:flex;}
+.mobile-drawer a, .mobile-drawer button{padding:14px 6px; font-size:18px; color:var(--ink); border:none; background:none; text-align:left; border-bottom:1px solid var(--line); font-family:var(--font-display);}
+.mobile-drawer .close-drawer{align-self:flex-end; font-size:28px; background:none; border:none; color:var(--ink); margin-bottom:12px;}
+
+.hero{position:relative; height:74vh; min-height:460px; max-height:720px; overflow:hidden;}
+.hero-slide{position:absolute; inset:0; opacity:0; transition:opacity .9s ease; background-size:cover; background-position:center 20%;}
+.hero-slide.active{opacity:1;}
+.hero-slide::after{content:""; position:absolute; inset:0; background:linear-gradient(0deg, var(--bg) 4%, rgba(18,13,15,0.15) 45%, rgba(18,13,15,0.55) 100%), linear-gradient(90deg, rgba(18,13,15,0.85) 0%, rgba(18,13,15,0.15) 55%);}
+.hero-content{position:absolute; left:0; bottom:9%; padding:0 28px; max-width:640px; z-index:2;}
+@media (max-width:640px){.hero-content{padding:0 16px; bottom:7%;}}
+.hero-eyebrow{display:flex; align-items:center; gap:8px; color:var(--gold-soft); font-size:13px; font-weight:600; margin-bottom:14px;}
+.hero-eyebrow .dot{width:6px; height:6px; border-radius:50%; background:var(--curtain-2);}
+.hero-title{font-family:var(--font-display); font-size:clamp(32px,5.2vw,58px); line-height:1.02; font-weight:700; margin:0 0 16px;}
+.hero-desc{color:var(--ink-muted); font-size:15.5px; line-height:1.6; margin:0 0 22px; max-width:520px;}
+.hero-meta{display:flex; gap:14px; align-items:center; color:var(--ink-muted); font-size:13.5px; margin-bottom:22px; flex-wrap:wrap;}
+.hero-meta span{display:flex; align-items:center; gap:6px;}
+.hero-actions{display:flex; gap:12px; flex-wrap:wrap;}
+.hero-dots{position:absolute; right:28px; bottom:9%; z-index:3; display:flex; flex-direction:column; gap:8px;}
+@media (max-width:640px){.hero-dots{display:none;}}
+.hero-dots button{width:26px; height:3px; border:none; background:var(--line); padding:0;}
+.hero-dots button.active{background:var(--gold);}
+
+.section-row{margin:44px 0;}
+.section-row-head{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:16px;}
+.section-title{font-family:var(--font-display); font-size:22px; font-weight:600; margin:0;}
+.section-link{font-size:13px; color:var(--ink-muted);}
+.section-link:hover{color:var(--gold);}
+.rail{display:flex; gap:16px; overflow-x:auto; padding-bottom:10px; scroll-snap-type:x proximity;}
+.rail::-webkit-scrollbar{display:none;}
+.card{flex:0 0 210px; scroll-snap-align:start; cursor:pointer; position:relative; border-radius:var(--radius-lg); overflow:hidden; background:var(--bg-elev); border:1px solid var(--line); transition:border-color .18s, transform .18s;}
+@media (max-width:640px){.card{flex-basis:150px;}}
+.card:hover{border-color:var(--gold); transform:translateY(-3px);}
+.card-poster{width:100%; aspect-ratio:2/3; object-fit:cover; background:var(--bg-elev-2);}
+.card-body{padding:10px 12px 12px;}
+.card-title{font-size:13.5px; font-weight:600; margin:0 0 4px; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.card-sub{font-size:11.5px; color:var(--ink-faint); display:flex; justify-content:space-between; gap:6px;}
+.card-badge{position:absolute; top:8px; left:8px; background:var(--curtain); color:#fff; font-size:10px; font-weight:700; padding:3px 8px; border-radius:2px; letter-spacing:.3px;}
+.card-lock{position:absolute; top:8px; right:8px; width:24px; height:24px; border-radius:50%; background:rgba(9,6,7,.7); display:flex; align-items:center; justify-content:center;}
+.genre-filters{display:flex; gap:8px; overflow-x:auto; margin-bottom:22px; padding-bottom:2px;}
+.genre-filters::-webkit-scrollbar{display:none;}
+.chip{flex:0 0 auto; padding:8px 16px; border-radius:20px; border:1px solid var(--line); font-size:13px; color:var(--ink-muted); white-space:nowrap; background:none;}
+.chip.active{background:var(--ink); color:var(--bg); border-color:var(--ink);}
+
+.site-footer{border-top:1px solid var(--line); margin-top:80px; padding:44px 28px 90px; color:var(--ink-faint); font-size:13px;}
+.footer-grid{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:28px; max-width:1240px; margin:0 auto 28px;}
+@media (max-width:760px){.footer-grid{grid-template-columns:1fr 1fr;}}
+.footer-grid h4{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-muted); margin:0 0 12px; font-weight:600;}
+.footer-grid a{display:block; margin-bottom:8px; color:var(--ink-faint);}
+.footer-grid a:hover{color:var(--ink);}
+.footer-bottom{max-width:1240px; margin:0 auto; border-top:1px solid var(--line); padding-top:20px;}
+
+.auth-wrap{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px 20px; position:relative;}
+.auth-wrap::before{content:""; position:absolute; inset:0; background:radial-gradient(ellipse at top, rgba(122,31,46,.28), transparent 60%); pointer-events:none;}
+.auth-card{position:relative; z-index:1; width:100%; max-width:400px; background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius-lg); padding:38px 32px;}
+.auth-brand{text-align:center; font-family:var(--font-display); font-size:26px; font-weight:700; margin-bottom:6px;}
+.auth-sub{text-align:center; color:var(--ink-muted); font-size:13.5px; margin-bottom:28px;}
+.field{margin-bottom:16px;}
+.field label{display:block; font-size:12.5px; font-weight:600; color:var(--ink-muted); margin-bottom:6px;}
+.field input, .field select, .field textarea{width:100%; background:var(--bg-elev-2); border:1px solid var(--line); color:var(--ink); padding:11px 13px; border-radius:var(--radius); font-size:14px; outline:none;}
+.field input:focus, .field select:focus, .field textarea:focus{border-color:var(--gold);}
+.field-hint{color:var(--ink-faint); font-size:11.5px; margin-top:5px;}
+.auth-foot{text-align:center; margin-top:20px; font-size:13.5px; color:var(--ink-muted);}
+.auth-foot a{color:var(--gold-soft); font-weight:600;}
+.form-msg{padding:10px 12px; border-radius:var(--radius); font-size:13px; margin-bottom:16px; display:none;}
+.form-msg.error{display:block; background:rgba(196,69,60,.12); color:#E8938C; border:1px solid rgba(196,69,60,.3);}
+.form-msg.ok{display:block; background:rgba(92,138,90,.14); color:#9CC79A; border:1px solid rgba(92,138,90,.3);}
+.demo-note{background:var(--bg-elev-2); border:1px dashed var(--line); border-radius:var(--radius); padding:10px 12px; font-size:11.5px; color:var(--ink-faint); margin-top:18px; line-height:1.5;}
+
+.plans-hero{text-align:center; padding:64px 20px 20px;}
+.plans-hero h1{font-family:var(--font-display); font-size:clamp(30px,4.4vw,46px); margin:0 0 12px;}
+.plans-hero p{color:var(--ink-muted); max-width:520px; margin:0 auto; font-size:15px;}
+.plans-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:20px; max-width:1080px; margin:44px auto; padding:0 20px;}
+@media (max-width:860px){.plans-grid{grid-template-columns:1fr; max-width:420px;}}
+.plan-card{background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius-lg); padding:30px 26px; display:flex; flex-direction:column; position:relative;}
+.plan-card.featured{border-color:var(--gold); background:linear-gradient(180deg, rgba(201,162,75,.08), var(--bg-elev) 40%);}
+.plan-tag{position:absolute; top:-12px; left:26px; background:var(--gold); color:#241708; font-size:11px; font-weight:700; padding:4px 10px; border-radius:2px;}
+.plan-name{font-family:var(--font-display); font-size:21px; font-weight:600; margin:0 0 6px;}
+.plan-price{font-size:34px; font-weight:700; margin:0 0 4px;}
+.plan-price span{font-size:14px; font-weight:500; color:var(--ink-muted);}
+.plan-period{color:var(--ink-faint); font-size:12.5px; margin-bottom:22px;}
+.plan-benefits{list-style:none; padding:0; margin:0 0 26px; flex:1;}
+.plan-benefits li{display:flex; gap:10px; align-items:flex-start; font-size:13.5px; color:var(--ink-muted); margin-bottom:11px; line-height:1.4;}
+.plan-benefits li svg{flex-shrink:0; margin-top:2px; color:var(--gold);}
+.plans-faq{max-width:720px; margin:60px auto 0; padding:0 20px;}
+.faq-item{border-bottom:1px solid var(--line); padding:18px 0;}
+.faq-item summary{cursor:pointer; font-weight:600; font-size:14.5px; list-style:none;}
+.faq-item summary::-webkit-details-marker{display:none;}
+.faq-item p{color:var(--ink-muted); font-size:13.5px; margin:10px 0 0; line-height:1.6;}
+
+.detail-hero{position:relative; height:56vh; min-height:380px; background-size:cover; background-position:center;}
+.detail-hero::after{content:""; position:absolute; inset:0; background:linear-gradient(0deg, var(--bg), rgba(18,13,15,.2) 60%);}
+.detail-back{position:absolute; top:20px; left:20px; z-index:2;}
+.detail-wrap{max-width:900px; margin:-90px auto 60px; position:relative; z-index:2; padding:0 24px;}
+@media (max-width:640px){.detail-wrap{margin-top:-60px; padding:0 16px;}}
+.detail-title{font-family:var(--font-display); font-size:clamp(26px,4vw,40px); font-weight:700; margin:0 0 10px;}
+.detail-meta{display:flex; gap:14px; flex-wrap:wrap; color:var(--ink-muted); font-size:13.5px; margin-bottom:20px;}
+.detail-actions{display:flex; gap:12px; margin-bottom:28px; flex-wrap:wrap;}
+.detail-desc{color:var(--ink-muted); line-height:1.75; font-size:14.5px; max-width:680px; margin-bottom:26px;}
+.detail-cast{font-size:13.5px; color:var(--ink-faint); line-height:1.9;}
+.detail-cast b{color:var(--ink-muted); font-weight:600;}
+.player-shell{background:#000; border-radius:var(--radius-lg); overflow:hidden; aspect-ratio:16/9; display:flex; align-items:center; justify-content:center; position:relative;}
+.player-shell video, .player-shell iframe{width:100%; height:100%; border:none;}
+.player-locked{text-align:center; padding:40px; color:var(--ink-muted);}
+.player-locked svg{color:var(--gold); margin-bottom:14px;}
+.player-locked h3{font-family:var(--font-display); color:var(--ink); margin:0 0 8px;}
+
+.page-wrap{max-width:840px; margin:0 auto; padding:50px 24px 90px;}
+.page-title{font-family:var(--font-display); font-size:32px; margin:0 0 8px;}
+.page-sub{color:var(--ink-muted); font-size:14px; margin-bottom:36px;}
+.acc-grid{display:grid; grid-template-columns:220px 1fr; gap:32px;}
+@media (max-width:700px){.acc-grid{grid-template-columns:1fr;}}
+.acc-nav a, .acc-nav button{display:block; width:100%; text-align:left; padding:11px 14px; border-radius:var(--radius); font-size:14px; color:var(--ink-muted); border:none; background:none; margin-bottom:4px;}
+.acc-nav a.active, .acc-nav button.active{background:var(--bg-elev); color:var(--ink); font-weight:600;}
+.acc-card{background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius-lg); padding:26px;}
+.acc-card h3{font-family:var(--font-display); font-size:18px; margin:0 0 18px;}
+.plan-status-badge{display:inline-flex; align-items:center; gap:8px; background:var(--bg-elev-2); border:1px solid var(--line); padding:8px 14px; border-radius:20px; font-size:13px; margin-bottom:16px;}
+.plan-status-badge .dot{width:8px; height:8px; border-radius:50%; background:var(--ok);}
+.plan-status-badge.expired .dot{background:var(--danger);}
+
+.admin-shell{display:grid; grid-template-columns:230px 1fr; min-height:100vh;}
+@media (max-width:860px){.admin-shell{grid-template-columns:1fr;}}
+.admin-side{background:var(--bg-elev); border-right:1px solid var(--line); padding:22px 14px; position:sticky; top:0; height:100vh; overflow-y:auto;}
+@media (max-width:860px){.admin-side{position:relative; height:auto; display:flex; overflow-x:auto; gap:4px; padding:14px;}}
+.admin-brand{font-family:var(--font-display); font-weight:700; font-size:19px; padding:6px 12px 22px;}
+@media (max-width:860px){.admin-brand{display:none;}}
+.admin-nav-item{display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:var(--radius); color:var(--ink-muted); font-size:13.5px; margin-bottom:2px; white-space:nowrap; border:none; background:none; width:100%; text-align:left;}
+.admin-nav-item svg{flex-shrink:0;}
+.admin-nav-item:hover{color:var(--ink);}
+.admin-nav-item.active{background:var(--curtain); color:#fff;}
+.admin-main{padding:30px 34px 80px;}
+@media (max-width:640px){.admin-main{padding:20px 16px 70px;}}
+.admin-topbar{display:flex; justify-content:space-between; align-items:center; margin-bottom:28px; flex-wrap:wrap; gap:14px;}
+.admin-h1{font-family:var(--font-display); font-size:26px; margin:0;}
+.stat-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:34px;}
+@media (max-width:900px){.stat-grid{grid-template-columns:repeat(2,1fr);}}
+.stat-card{background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius-lg); padding:20px;}
+.stat-card .stat-label{font-size:12px; color:var(--ink-faint); margin-bottom:8px; text-transform:uppercase; letter-spacing:.05em;}
+.stat-card .stat-value{font-family:var(--font-display); font-size:28px; font-weight:600;}
+.admin-panel{background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius-lg); padding:24px; margin-bottom:24px;}
+.admin-panel-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:10px;}
+.admin-panel-head h3{font-family:var(--font-display); font-size:18px; margin:0;}
+table{width:100%; border-collapse:collapse; font-size:13.5px;}
+th{text-align:left; color:var(--ink-faint); font-weight:600; font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; padding:10px 12px; border-bottom:1px solid var(--line);}
+td{padding:13px 12px; border-bottom:1px solid var(--line); color:var(--ink-muted); vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+td.strong{color:var(--ink); font-weight:600;}
+.table-scroll{overflow-x:auto;}
+.badge{display:inline-block; padding:3px 10px; border-radius:10px; font-size:11px; font-weight:600;}
+.badge-ok{background:rgba(92,138,90,.16); color:#9CC79A;}
+.badge-warn{background:rgba(201,162,75,.16); color:var(--gold-soft);}
+.badge-off{background:rgba(196,69,60,.16); color:#E8938C;}
+.badge-neutral{background:var(--bg-elev-2); color:var(--ink-muted);}
+.row-actions{display:flex; gap:8px;}
+.row-actions button{background:none; border:1px solid var(--line); color:var(--ink-muted); border-radius:var(--radius); padding:5px 10px; font-size:12px;}
+.row-actions button:hover{border-color:var(--gold); color:var(--ink);}
+.empty-state{text-align:center; padding:50px 20px; color:var(--ink-faint);}
+.empty-state svg{margin-bottom:14px; color:var(--ink-faint);}
+.search-input{background:var(--bg-elev-2); border:1px solid var(--line); border-radius:var(--radius); padding:9px 13px; color:var(--ink); font-size:13.5px; min-width:220px;}
+
+.modal-overlay{position:fixed; inset:0; background:rgba(9,6,7,.75); z-index:200; display:none; align-items:flex-start; justify-content:center; padding:40px 16px; overflow-y:auto;}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius-lg); width:100%; max-width:560px; padding:28px; margin-top:20px;}
+.modal-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;}
+.modal-head h3{font-family:var(--font-display); font-size:19px; margin:0;}
+.modal-close{background:none; border:none; color:var(--ink-muted); font-size:22px;}
+.modal-close:hover{color:var(--ink);}
+.form-grid-2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+@media (max-width:480px){.form-grid-2{grid-template-columns:1fr;}}
+.modal-actions{display:flex; justify-content:flex-end; gap:10px; margin-top:20px;}
+.checkbox-row{display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--ink-muted);}
+.checkbox-row input{width:16px; height:16px;}
+
+#toast-host{position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:300; display:flex; flex-direction:column; gap:8px; align-items:center;}
+.toast{background:var(--bg-elev); border:1px solid var(--gold); color:var(--ink); padding:12px 20px; border-radius:var(--radius); font-size:13.5px; box-shadow:var(--shadow-deep); animation:toast-in .25s ease;}
+@keyframes toast-in{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
+.hidden{display:none !important;}
+.reveal{animation:fade-up .5s ease both;}
+@keyframes fade-up{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
+.boot-screen{min-height:100vh; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; color:var(--ink-muted);}
+.boot-screen .brand{font-size:30px;}
+.spinner{width:26px; height:26px; border-radius:50%; border:2px solid var(--line); border-top-color:var(--gold); animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important;}}
+</style>
+</head>
+<body>
+<div id="toast-host"></div>
+<div id="app"><div class="boot-screen"><div class="brand">Mini Drama</div><div class="spinner"></div><p>Carregando o catálogo...</p></div></div>
+
+<script>
+/* ======================================================================
+   MINI DRAMA — front-end. Fala com a API real (Node/Express + Prisma)
+   pelo mesmo domínio (/api/...). Sem localStorage como banco: os dados
+   ficam de fato no servidor / banco de dados.
+   ====================================================================== */
+const SITE_NAME = "Mini Drama";
+const TOKEN_KEY = "minidrama_token";
+
+const ICO = {
+  play: `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>`,
+  info: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>`,
+  lock: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M7 10V7a5 5 0 0110 0v3"/></svg>`,
+  check: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>`,
+  bell: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0112 0c0 6 2 7 2 7H4s2-1 2-7z"/><path d="M9.7 21a2.5 2.5 0 004.6 0"/></svg>`,
+  menu: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/></svg>`,
+  chevronLeft: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 18l-6-6 6-6"/></svg>`,
+  grid: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`,
+  film: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="1"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>`,
+  users: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.5 3-6 6.5-6s6.5 2.5 6.5 6M16 8.2a3 3 0 110 5.9M21.5 20c0-2.7-1.9-5-4.5-5.7"/></svg>`,
+  ticket: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8a2 2 0 012-2h14a2 2 0 012 2v2a2 2 0 000 4v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2a2 2 0 000-4V8z"/><path d="M10 6v12" stroke-dasharray="2 3"/></svg>`,
+  logout: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>`,
+  home: `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>`,
+  edit: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>`,
+  trash: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>`,
+  clock: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>`
+};
+
+/* --------------------------- ESTADO LOCAL (cache do que veio da API) ------- */
+const DB = { plays: [], plans: [], users: [], me: null };
+
+/* --------------------------- CLIENTE DE API --------------------------------- */
+function getToken(){ return localStorage.getItem(TOKEN_KEY); }
+function setToken(t){ localStorage.setItem(TOKEN_KEY, t); }
+function clearToken(){ localStorage.removeItem(TOKEN_KEY); }
+
+async function api(path, { method="GET", body } = {}){
+  const headers = { "Content-Type": "application/json" };
+  const token = getToken();
+  if(token) headers["Authorization"] = "Bearer " + token;
+  const res = await fetch("/api" + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  let data = null;
+  try{ data = await res.json(); }catch(e){ data = null; }
+  if(!res.ok){ throw new Error((data && data.error) || "Ocorreu um erro. Tente novamente."); }
+  return data;
+}
+
+/* --------------------------- HELPERS ----------------------------------- */
+function esc(str){ return String(str==null?"":str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtMoney(v){ return v===0 ? "Grátis" : "R$ " + v.toFixed(2).replace(".", ","); }
+function fmtDuration(min){ const h=Math.floor(min/60), m=min%60; return h + "h" + (m? (m<10?"0"+m:m)+"min" : ""); }
+function fmtDate(iso){ return new Date(iso).toLocaleDateString("pt-BR"); }
+function planById(id){ return DB.plans.find(p=>p.id===id); }
+function planLevel(planId){ const idx = DB.plans.findIndex(p=>p.id===planId); return idx<0?0:idx; }
+function isPlanActive(user){ if(!user) return false; if(user.plan==="plateia") return true; return new Date(user.planExpiry) > new Date(); }
+function currentUser(){ return DB.me; }
+function toast(msg){
+  const host = document.getElementById("toast-host");
+  const t = document.createElement("div"); t.className="toast"; t.textContent = msg;
+  host.appendChild(t); setTimeout(()=>{ t.remove(); }, 3400);
+}
+function qs(sel, root=document){ return root.querySelector(sel); }
+function qsa(sel, root=document){ return Array.from(root.querySelectorAll(sel)); }
+function go(hash){ location.hash = hash; }
+
+/* --------------------------- BOOTSTRAP + ROTEADOR --------------------------- */
+window.addEventListener("hashchange", render);
+window.addEventListener("DOMContentLoaded", boot);
+
+async function boot(){
+  try{
+    const [playsRes, plansRes] = await Promise.all([ api("/plays"), api("/plans") ]);
+    DB.plays = playsRes.plays; DB.plans = plansRes.plans;
+    if(getToken()){
+      try{ const meRes = await api("/auth/me"); DB.me = meRes.user; }
+      catch(e){ clearToken(); DB.me = null; }
+    }
+  }catch(e){
+    document.getElementById("app").innerHTML = `<div class="boot-screen"><div class="brand">Mini Drama</div><p>Não foi possível conectar ao servidor.<br>Verifique se a API está no ar e recarregue a página.</p></div>`;
+    return;
+  }
+  render();
+}
+
+const ADMIN_ROUTES = ["#/admin","#/admin/pecas","#/admin/usuarios","#/admin/planos"];
+
+async function render(){
+  let hash = location.hash || "#/home";
+  const user = currentUser();
+
+  if(ADMIN_ROUTES.some(r=>hash.startsWith(r)) && !(user && user.role==="admin")){
+    toast("Acesso restrito à administração.");
+    hash = "#/login"; location.hash = hash; return;
+  }
+
+  const app = document.getElementById("app");
+  window.scrollTo(0,0);
+
+  if(hash.startsWith("#/admin")) { app.innerHTML = AdminLayout(hash); await afterAdminRender(hash); return; }
+  if(hash.startsWith("#/peca/")) {
+    const id = hash.split("/")[2];
+    app.innerHTML = PublicShell(`<div class="page-wrap"><p>Carregando peça...</p></div>`); afterPublicRender();
+    const html = await PlayDetail(id);
+    qs("#app main").outerHTML = `<main>${html}</main>`; afterPublicRender();
+    initPlayerIfNeeded();
+    return;
+  }
+  if(hash === "#/login") { app.innerHTML = LoginPage(); attachAuthEvents(); return; }
+  if(hash === "#/cadastro") { app.innerHTML = SignupPage(); attachAuthEvents(); return; }
+  if(hash === "#/planos") { app.innerHTML = PublicShell(PlansPage()); afterPublicRender(); return; }
+  if(hash === "#/conta") {
+    if(!user){ go("#/login"); return; }
+    app.innerHTML = PublicShell(AccountPage(user)); afterPublicRender(); attachAccountEvents(); return;
+  }
+  if(hash === "#/catalogo") { app.innerHTML = PublicShell(CatalogPage()); afterPublicRender(); attachCatalogEvents(); return; }
+  app.innerHTML = PublicShell(HomePage());
+  afterPublicRender();
+  attachHomeEvents();
+}
+
+async function refreshPlays(){ const r = await api("/plays"); DB.plays = r.plays; }
+async function refreshPlans(){ const r = await api("/plans"); DB.plans = r.plans; }
+async function refreshUsers(){ const r = await api("/users"); DB.users = r.users; }
+
+/* --------------------------- SHELL / HEADER ---------------------------- */
+function PublicShell(innerHtml){
+  const user = currentUser();
+  const hash = location.hash || "#/home";
+  const initials = user ? user.name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase() : "";
+  return `
+  <header class="site-header" id="site-header">
+    <a href="#/home" class="brand">${SITE_NAME}<span class="dot"></span></a>
+    <nav class="main-nav">
+      <a href="#/home" class="${hash==='#/home'?'active':''}">Início</a>
+      <a href="#/catalogo" class="${hash==='#/catalogo'?'active':''}">Catálogo</a>
+      <a href="#/planos" class="${hash==='#/planos'?'active':''}">Planos</a>
+      ${user && user.role==='admin' ? `<a href="#/admin">Painel admin</a>` : ``}
+    </nav>
+    <div class="header-actions">
+      ${user ? `
+        <button class="icon-btn" title="Conta" onclick="go('#/conta')">${ICO.bell}</button>
+        <a href="#/conta" class="avatar-btn" title="${esc(user.name)}">${esc(initials)}</a>
+      ` : `
+        <a href="#/login" class="btn btn-ghost btn-sm">Entrar</a>
+        <a href="#/cadastro" class="btn btn-gold btn-sm">Criar conta</a>
+      `}
+      <button class="hamburger" onclick="toggleDrawer(true)">${ICO.menu}</button>
+    </div>
+  </header>
+  <div class="mobile-drawer" id="mobile-drawer">
+    <button class="close-drawer" onclick="toggleDrawer(false)">&times;</button>
+    <a href="#/home" onclick="toggleDrawer(false)">Início</a>
+    <a href="#/catalogo" onclick="toggleDrawer(false)">Catálogo</a>
+    <a href="#/planos" onclick="toggleDrawer(false)">Planos</a>
+    ${user ? `<a href="#/conta" onclick="toggleDrawer(false)">Minha conta</a>` : ``}
+    ${user && user.role==='admin' ? `<a href="#/admin" onclick="toggleDrawer(false)">Painel admin</a>` : ``}
+    ${user ? `<button onclick="doLogout()">Sair</button>` : `
+      <a href="#/login" onclick="toggleDrawer(false)">Entrar</a>
+      <a href="#/cadastro" onclick="toggleDrawer(false)">Criar conta</a>`}
+  </div>
+  <main>${innerHtml}</main>
+  <footer class="site-footer">
+    <div class="footer-grid">
+      <div>
+        <div class="brand" style="margin-bottom:10px;">${SITE_NAME}<span class="dot"></span></div>
+        <p style="max-width:260px; line-height:1.6;">Streaming de peças de teatro produzidas por grupos independentes. Um projeto da turma de Teatro em parceria com a turma de Tecnologia.</p>
+      </div>
+      <div><h4>Navegação</h4><a href="#/catalogo">Catálogo</a><a href="#/planos">Planos</a><a href="#/cadastro">Criar conta</a></div>
+      <div><h4>Suporte</h4><a href="#/">Central de ajuda</a><a href="#/">Fale conosco</a></div>
+      <div><h4>Legal</h4><a href="#/">Termos de uso</a><a href="#/">Privacidade</a></div>
+    </div>
+    <div class="footer-bottom">© ${new Date().getFullYear()} ${SITE_NAME}</div>
+  </footer>`;
+}
+function toggleDrawer(open){ qs("#mobile-drawer").classList.toggle("open", open); }
+function doLogout(){ clearToken(); DB.me = null; toast("Você saiu da sua conta."); go("#/home"); }
+function afterPublicRender(){
+  const h = qs("#site-header");
+  if(h){ window.onscroll = ()=>{ h.classList.toggle("solid", window.scrollY>10); }; }
+}
+
+/* --------------------------- HOME PAGE ---------------------------------- */
+let heroIndex = 0, heroTimer = null;
+function HomePage(){
+  const featured = DB.plays.filter(p=>p.featured);
+  const genres = [...new Set(DB.plays.map(p=>p.genre))];
+  return `
+  <section class="hero" id="hero">
+    ${featured.map((p,i)=>`
+      <div class="hero-slide ${i===0?'active':''}" data-i="${i}" style="background-image:url('${esc(p.backdropUrl)}')">
+        <div class="hero-content reveal">
+          <div class="hero-eyebrow"><span class="dot"></span> Em cartaz na plataforma</div>
+          <h1 class="hero-title">${esc(p.title)}</h1>
+          <div class="hero-meta"><span>${ICO.clock} ${fmtDuration(p.durationMinutes)}</span><span>${p.genre}</span><span>${p.releaseYear}</span></div>
+          <p class="hero-desc">${esc(p.synopsis)}</p>
+          <div class="hero-actions">
+            <a href="#/peca/${p.id}" class="btn btn-gold">${ICO.play} Assistir agora</a>
+            <a href="#/peca/${p.id}" class="btn btn-ghost">${ICO.info} Mais detalhes</a>
+          </div>
+        </div>
+      </div>`).join("")}
+    <div class="hero-dots">${featured.map((_,i)=>`<button class="${i===0?'active':''}" onclick="setHero(${i})"></button>`).join("")}</div>
+  </section>
+  <div class="container">${genres.map(g => PlayRow(g, DB.plays.filter(p=>p.genre===g))).join("")}</div>`;
+}
+function PlayRow(title, plays){
+  return `<div class="section-row">
+    <div class="section-row-head"><h2 class="section-title">${esc(title)}</h2><a href="#/catalogo" class="section-link">Ver tudo</a></div>
+    <div class="rail">${plays.map(p=>PlayCard(p)).join("")}</div></div>`;
+}
+function PlayCard(p){
+  return `<a class="card" href="#/peca/${p.id}">
+    ${planLevel(p.requiresPlan)>0 ? `<span class="card-badge">${planById(p.requiresPlan)?.name || ''}</span>` : ``}
+    ${!p.canWatch ? `<span class="card-lock">${ICO.lock}</span>` : ``}
+    <img class="card-poster" src="${esc(p.posterUrl)}" alt="${esc(p.title)}" loading="lazy">
+    <div class="card-body"><p class="card-title">${esc(p.title)}</p>
+    <div class="card-sub"><span>${p.genre}</span><span>${fmtDuration(p.durationMinutes)}</span></div></div></a>`;
+}
+function setHero(i){
+  heroIndex = i;
+  qsa(".hero-slide").forEach((el,idx)=>el.classList.toggle("active", idx===i));
+  qsa(".hero-dots button").forEach((el,idx)=>el.classList.toggle("active", idx===i));
+}
+function attachHomeEvents(){
+  const slides = qsa(".hero-slide");
+  if(heroTimer) clearInterval(heroTimer);
+  if(slides.length>1) heroTimer = setInterval(()=>{ setHero((heroIndex+1) % slides.length); }, 6500);
+}
+
+/* --------------------------- CATALOG PAGE -------------------------------- */
+let catalogGenre = "Todos";
+function CatalogPage(){
+  const genres = ["Todos", ...new Set(DB.plays.map(p=>p.genre))];
+  const list = catalogGenre==="Todos" ? DB.plays : DB.plays.filter(p=>p.genre===catalogGenre);
+  return `<div class="container" style="padding-top:36px;">
+    <h1 class="page-title" style="margin-bottom:22px;">Catálogo completo</h1>
+    <div class="genre-filters" id="genre-filters">${genres.map(g=>`<button class="chip ${g===catalogGenre?'active':''}" data-genre="${esc(g)}">${esc(g)}</button>`).join("")}</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:18px; margin-bottom:60px;">${list.map(p=>PlayCard(p)).join("")}</div>
+  </div>`;
+}
+function attachCatalogEvents(){
+  qsa("#genre-filters .chip").forEach(btn=>{
+    btn.addEventListener("click", ()=>{ catalogGenre = btn.dataset.genre; qs("#app main").innerHTML = CatalogPage(); attachCatalogEvents(); });
+  });
+}
+
+/* --------------------------- PLAY DETAIL --------------------------------- */
+function isYoutube(url){ return /youtube\.com|youtu\.be/.test(url||""); }
+function embedYoutube(url){ const m = url.match(/(?:v=|youtu\.be\/)([\w-]{6,})/); return m ? `https://www.youtube.com/embed/${m[1]}` : url; }
+function isHls(url){ return /\.m3u8(\?|$)/i.test(url||""); }
+
+let currentPlayData = null;
+let currentHls = null;
+
+// Liga o player HLS (Bunny.net Stream e afins) depois que o <video> ja esta no DOM.
+function initPlayerIfNeeded(){
+  if(currentHls){ currentHls.destroy(); currentHls = null; }
+  if(!currentPlayData) return;
+  const { play, canWatch } = currentPlayData;
+  if(!canWatch || !play.videoUrl || !isHls(play.videoUrl)) return;
+  const video = document.getElementById("hls-player");
+  if(!video) return;
+  if(window.Hls && Hls.isSupported()){
+    currentHls = new Hls();
+    currentHls.loadSource(play.videoUrl);
+    currentHls.attachMedia(video);
+  } else if(video.canPlayType("application/vnd.apple.mpegurl")){
+    video.src = play.videoUrl; // Safari toca HLS nativamente
+  } else {
+    toast("Este navegador não consegue tocar este vídeo.");
+  }
+}
+
+async function PlayDetail(id){
+  let play, canWatch;
+  try{
+    const r = await api("/plays/" + id);
+    play = r.play; canWatch = r.canWatch;
+  }catch(e){
+    return `<div class="page-wrap"><p>Peça não encontrada. <a href="#/catalogo" style="color:var(--gold-soft)">Voltar ao catálogo</a></p></div>`;
+  }
+  const user = currentUser();
+  currentPlayData = { play, canWatch };
+  return `
+  <div class="detail-hero" style="background-image:url('${esc(play.backdropUrl)}')">
+    <a href="#/home" class="btn btn-ghost btn-sm detail-back">${ICO.chevronLeft} Voltar</a>
+  </div>
+  <div class="detail-wrap">
+    <h1 class="detail-title">${esc(play.title)}</h1>
+    <div class="detail-meta">
+      <span>${ICO.clock} ${fmtDuration(play.durationMinutes)}</span><span>${play.genre}</span><span>${play.releaseYear}</span>
+      <span>Necessário: plano ${esc(planById(play.requiresPlan)?.name||'Plateia')}</span>
+    </div>
+    <div class="player-shell" style="margin-bottom:26px;">
+      ${canWatch ? (
+        play.videoUrl ? (
+          isHls(play.videoUrl)
+            ? `<video id="hls-player" controls playsinline poster="${esc(play.backdropUrl)}"></video>`
+            : isYoutube(play.videoUrl)
+              ? `<iframe src="${embedYoutube(play.videoUrl)}" allowfullscreen></iframe>`
+              : `<video controls poster="${esc(play.backdropUrl)}"><source src="${esc(play.videoUrl)}"></video>`
+        ) : `<div class="player-locked">${ICO.play}<h3>Vídeo ainda não cadastrado</h3><p>A produção ainda vai anexar o link de exibição desta peça.</p></div>`
+      ) : `<div class="player-locked">${ICO.lock}<h3>Conteúdo do plano ${esc(planById(play.requiresPlan)?.name||'')}</h3>
+        <p>Assine para assistir a peça completa (${fmtDuration(play.durationMinutes)}).</p>
+        <div style="margin-top:16px;"><a href="#/planos" class="btn btn-gold btn-sm">Ver planos</a></div></div>`}
+    </div>
+    <div class="detail-actions">${!user ? `<a href="#/cadastro" class="btn btn-gold">Criar conta para assistir</a>` : ``}</div>
+    <p class="detail-desc">${esc(play.synopsis)}</p>
+    <p class="detail-cast"><b>Direção:</b> ${esc(play.director)}<br><b>Elenco:</b> ${esc(play.cast)}</p>
+  </div>`;
+}
+
+/* --------------------------- PLANS PAGE ----------------------------------- */
+function PlansPage(){
+  const user = currentUser();
+  return `
+  <div class="plans-hero"><h1>Escolha seu lugar na plateia</h1><p>Do fundo da plateia ao camarote: planos pensados para quem ama teatro, em qualquer orçamento.</p></div>
+  <div class="plans-grid">${DB.plans.map(pl => PlanCard(pl, user)).join("")}</div>
+  <div class="plans-faq">
+    <details class="faq-item" open><summary>Posso cancelar quando quiser?</summary><p>Sim. Sua assinatura vale até o fim do período já pago.</p></details>
+    <details class="faq-item"><summary>O plano Plateia é realmente gratuito?</summary><p>Sim, sem custo. Você acompanha sinopses e uma peça liberada por mês.</p></details>
+    <details class="faq-item"><summary>Como funciona o acesso por conta?</summary><p>Cada conta tem um plano ativo, controlado pela administração da plataforma.</p></details>
+  </div>`;
+}
+function PlanCard(pl, user){
+  const isCurrent = user && user.plan===pl.id;
+  return `<div class="plan-card ${pl.featured?'featured':''}">
+    ${pl.featured?`<span class="plan-tag">Mais escolhido</span>`:``}
+    <p class="plan-name">${esc(pl.name)}</p>
+    <p class="plan-price">${pl.price===0?'Grátis':fmtMoney(pl.price)+'<span>/mês</span>'}</p>
+    <p class="plan-period">${pl.price===0?'sem cobrança':'cobrado mensalmente'}</p>
+    <ul class="plan-benefits">${pl.benefits.map(b=>`<li>${ICO.check}${esc(b)}</li>`).join("")}</ul>
+    ${isCurrent ? `<button class="btn btn-ghost btn-block" disabled>Seu plano atual</button>`
+      : (user ? `<button class="btn ${pl.featured?'btn-gold':'btn-ghost'} btn-block" onclick="choosePlan('${pl.id}')">Assinar ${esc(pl.name)}</button>`
+              : `<a href="#/cadastro" class="btn ${pl.featured?'btn-gold':'btn-ghost'} btn-block">Criar conta</a>`)}
+  </div>`;
+}
+async function choosePlan(planId){
+  if(!currentUser()) return go("#/login");
+  try{
+    const r = await api("/users/" + currentUser().id, { method:"PATCH", body:{ plan: planId } });
+    DB.me = r.user;
+    toast("Plano atualizado com sucesso!");
+    render();
+  }catch(e){ toast(e.message); }
+}
+
+/* --------------------------- LOGIN / SIGNUP -------------------------------- */
+function LoginPage(){
+  return `<div class="auth-wrap"><div class="auth-card reveal">
+    <div class="auth-brand">${SITE_NAME}</div><p class="auth-sub">Entre para continuar assistindo</p>
+    <div class="form-msg error" id="auth-msg"></div>
+    <form id="login-form">
+      <div class="field"><label>E-mail</label><input type="email" name="email" required placeholder="voce@email.com"></div>
+      <div class="field"><label>Senha</label><input type="password" name="password" required placeholder="••••••••"></div>
+      <button class="btn btn-gold btn-block" type="submit">Entrar</button>
+    </form>
+    <p class="auth-foot">Não tem conta? <a href="#/cadastro">Cadastre-se</a></p>
+    <div class="demo-note"><b>Contas de demonstração</b><br>Admin: admin@minidrama.app / admin123<br>Usuário: convidado@minidrama.app / 123456</div>
+  </div></div>`;
+}
+function SignupPage(){
+  return `<div class="auth-wrap"><div class="auth-card reveal">
+    <div class="auth-brand">${SITE_NAME}</div><p class="auth-sub">Crie sua conta gratuita</p>
+    <div class="form-msg error" id="auth-msg"></div>
+    <form id="signup-form">
+      <div class="field"><label>Nome completo</label><input type="text" name="name" required placeholder="Seu nome"></div>
+      <div class="field"><label>E-mail</label><input type="email" name="email" required placeholder="voce@email.com"></div>
+      <div class="field"><label>Senha</label><input type="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
+      <button class="btn btn-gold btn-block" type="submit">Criar conta</button>
+    </form>
+    <p class="auth-foot">Já tem conta? <a href="#/login">Entrar</a></p>
+  </div></div>`;
+}
+function attachAuthEvents(){
+  const loginForm = qs("#login-form");
+  if(loginForm){
+    loginForm.addEventListener("submit", async e=>{
+      e.preventDefault();
+      const fd = new FormData(loginForm);
+      const msg = qs("#auth-msg");
+      try{
+        const r = await api("/auth/login", { method:"POST", body:{ email: fd.get("email"), password: fd.get("password") } });
+        setToken(r.token); DB.me = r.user;
+        toast("Bem-vindo(a) de volta, " + r.user.name.split(" ")[0] + "!");
+        go(r.user.role==="admin" ? "#/admin" : "#/home");
+      }catch(err){ msg.textContent = err.message; msg.style.display="block"; }
+    });
+  }
+  const signupForm = qs("#signup-form");
+  if(signupForm){
+    signupForm.addEventListener("submit", async e=>{
+      e.preventDefault();
+      const fd = new FormData(signupForm);
+      const msg = qs("#auth-msg");
+      try{
+        const r = await api("/auth/signup", { method:"POST", body:{ name: fd.get("name"), email: fd.get("email"), password: fd.get("password") } });
+        setToken(r.token); DB.me = r.user;
+        toast("Conta criada! Bem-vindo(a) ao " + SITE_NAME + ".");
+        go("#/home");
+      }catch(err){ msg.textContent = err.message; msg.style.display="block"; }
+    });
+  }
+}
+
+/* --------------------------- ACCOUNT PAGE ----------------------------------- */
+function AccountPage(user){
+  const plan = planById(user.plan);
+  const active = isPlanActive(user);
+  return `<div class="page-wrap">
+    <h1 class="page-title">Minha conta</h1><p class="page-sub">Gerencie seus dados e sua assinatura.</p>
+    <div class="acc-grid">
+      <div class="acc-nav">
+        <button class="active">Visão geral</button>
+        <button onclick="go('#/planos')">Planos disponíveis</button>
+        <button onclick="doLogout()">${ICO.logout} Sair</button>
+      </div>
+      <div class="acc-card">
+        <h3>Assinatura</h3>
+        <div class="plan-status-badge ${active?'':'expired'}"><span class="dot"></span> Plano ${esc(plan?.name||'')} — ${active? 'ativo':'expirado'}</div>
+        <p style="color:var(--ink-muted); font-size:13.5px; margin-bottom:22px;">${user.plan==='plateia' ? 'Plano gratuito, sem data de expiração.' : 'Válido até ' + fmtDate(user.planExpiry) + '.'}</p>
+        <a href="#/planos" class="btn btn-ghost btn-sm">Alterar plano</a>
+      </div>
+    </div>
+  </div>`;
+}
+function attachAccountEvents(){}
+
+/* ======================================================================
+   PAINEL ADMINISTRATIVO
+   ====================================================================== */
+let adminUserSearch = "";
+let adminPlaySearch = "";
+
+function AdminLayout(hash){
+  const section = hash.split("/")[2] || "";
+  const nav = [
+    { key:"", label:"Visão geral", icon:ICO.grid, href:"#/admin" },
+    { key:"pecas", label:"Peças", icon:ICO.film, href:"#/admin/pecas" },
+    { key:"usuarios", label:"Usuários", icon:ICO.users, href:"#/admin/usuarios" },
+    { key:"planos", label:"Planos", icon:ICO.ticket, href:"#/admin/planos" }
+  ];
+  return `<div class="admin-shell">
+    <aside class="admin-side">
+      <div class="admin-brand">${SITE_NAME} <span style="font-size:11px; color:var(--ink-faint); font-family:var(--font-body); font-weight:600;">ADMIN</span></div>
+      ${nav.map(n=>`<a class="admin-nav-item ${section===n.key?'active':''}" href="${n.href}">${n.icon}${n.label}</a>`).join("")}
+      <a class="admin-nav-item" href="#/home" style="margin-top:14px; border-top:1px solid var(--line); padding-top:14px;">${ICO.home}Ver site público</a>
+      <button class="admin-nav-item" onclick="doLogout()">${ICO.logout}Sair</button>
+    </aside>
+    <div class="admin-main" id="admin-main"><p style="color:var(--ink-faint);">Carregando...</p></div>
+  </div>`;
+}
+async function afterAdminRender(hash){
+  const section = hash.split("/")[2] || "";
+  const main = qs("#admin-main");
+  try{
+    if(section==="pecas") { await refreshPlays(); main.innerHTML = AdminPlays(); attachAdminPlaysEvents(); return; }
+    if(section==="usuarios") { await refreshUsers(); main.innerHTML = AdminUsers(); attachAdminUsersEvents(); return; }
+    if(section==="planos") { await refreshPlans(); main.innerHTML = AdminPlans(); return; }
+    await Promise.all([refreshPlays(), refreshUsers(), refreshPlans()]);
+    main.innerHTML = AdminDashboard();
+  }catch(e){ main.innerHTML = `<p style="color:var(--danger);">${esc(e.message)}</p>`; }
+}
+
+function AdminDashboard(){
+  const totalUsers = DB.users.filter(u=>u.role==='user').length;
+  const activeSubs = DB.users.filter(u=>u.role==='user' && u.plan!=='plateia' && isPlanActive(u)).length;
+  const totalPlays = DB.plays.length;
+  const mrr = DB.users.filter(u=>u.role==='user' && isPlanActive(u)).reduce((s,u)=>{ const p=planById(u.plan); return s + (p?p.price:0); },0);
+  const recentUsers = [...DB.users].filter(u=>u.role==='user').sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
+  return `
+  <div class="admin-topbar"><h1 class="admin-h1">Visão geral</h1></div>
+  <div class="stat-grid">
+    <div class="stat-card"><div class="stat-label">Usuários cadastrados</div><div class="stat-value">${totalUsers}</div></div>
+    <div class="stat-card"><div class="stat-label">Assinaturas ativas (pagas)</div><div class="stat-value">${activeSubs}</div></div>
+    <div class="stat-card"><div class="stat-label">Peças no catálogo</div><div class="stat-value">${totalPlays}</div></div>
+    <div class="stat-card"><div class="stat-label">Receita mensal recorrente</div><div class="stat-value">${fmtMoney(mrr)}</div></div>
+  </div>
+  <div class="admin-panel">
+    <div class="admin-panel-head"><h3>Últimos cadastros</h3><a href="#/admin/usuarios" class="section-link">Ver todos</a></div>
+    <div class="table-scroll"><table>
+      <thead><tr><th>Nome</th><th>E-mail</th><th>Plano</th><th>Cadastrado em</th><th>Status</th></tr></thead>
+      <tbody>${recentUsers.map(u=>`<tr><td class="strong">${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(planById(u.plan)?.name||'')}</td><td>${fmtDate(u.createdAt)}</td><td>${StatusBadge(u)}</td></tr>`).join("") || `<tr><td colspan="5" style="text-align:center; color:var(--ink-faint);">Nenhum usuário ainda.</td></tr>`}</tbody>
+    </table></div>
+  </div>`;
+}
+function StatusBadge(u){
+  if(u.status==="bloqueado") return `<span class="badge badge-off">Bloqueado</span>`;
+  if(u.plan!=="plateia" && !isPlanActive(u)) return `<span class="badge badge-warn">Assinatura expirada</span>`;
+  return `<span class="badge badge-ok">Ativo</span>`;
+}
+
+/* ---- Admin: Peças ---- */
+function AdminPlays(){
+  const list = DB.plays.filter(p => p.title.toLowerCase().includes(adminPlaySearch.toLowerCase()));
+  return `
+  <div class="admin-topbar"><h1 class="admin-h1">Peças</h1>
+    <div style="display:flex; gap:10px;">
+      <input class="search-input" id="play-search" placeholder="Buscar peça..." value="${esc(adminPlaySearch)}">
+      <button class="btn btn-gold btn-sm" onclick="openPlayModal()">+ Nova peça</button>
+    </div>
+  </div>
+  <div class="admin-panel"><div class="table-scroll">
+    ${list.length===0 ? EmptyState(ICO.film, "Nenhuma peça encontrada", "Cadastre a primeira peça do seu grupo.") : `
+    <table><thead><tr><th>Peça</th><th>Gênero</th><th>Duração</th><th>Plano mínimo</th><th>Vídeo</th><th></th></tr></thead>
+    <tbody>${list.map(p=>`
+      <tr>
+        <td class="strong" style="display:flex; align-items:center; gap:10px;"><img src="${esc(p.posterUrl)}" style="width:34px;height:48px;object-fit:cover;border-radius:2px;" onerror="this.style.visibility='hidden'">${esc(p.title)}</td>
+        <td>${esc(p.genre)}</td><td>${fmtDuration(p.durationMinutes)}</td><td>${esc(planById(p.requiresPlan)?.name||'')}</td>
+        <td>${p.hasVideo ? `<span class="badge badge-ok">Cadastrado</span>` : `<span class="badge badge-neutral">Pendente</span>`}</td>
+        <td><div class="row-actions"><button onclick="openPlayModal('${p.id}')">${ICO.edit}</button><button onclick="deletePlay('${p.id}')">${ICO.trash}</button></div></td>
+      </tr>`).join("")}</tbody></table>`}
+  </div></div>
+  ${Modal("play-modal")}`;
+}
+function EmptyState(icon, title, sub){ return `<div class="empty-state">${icon}<h3 style="font-family:var(--font-display); color:var(--ink); margin:0 0 6px;">${esc(title)}</h3><p style="margin:0;">${esc(sub)}</p></div>`; }
+function Modal(id){ return `<div class="modal-overlay" id="${id}"><div class="modal-box" id="${id}-box"></div></div>`; }
+function openModal(id){ qs("#"+id).classList.add("open"); }
+function closeModal(id){ qs("#"+id).classList.remove("open"); }
+
+async function openPlayModal(id){
+  let p = null;
+  if(id){ try{ const r = await api("/plays/" + id); p = r.play; }catch(e){ toast(e.message); return; } }
+  const genres = ["Drama","Comédia","Clássico","Musical","Suspense","Infantil","Outro"];
+  qs("#play-modal-box").innerHTML = `
+    <div class="modal-head"><h3>${p? "Editar peça" : "Nova peça"}</h3><button class="modal-close" onclick="closeModal('play-modal')">&times;</button></div>
+    <form id="play-form">
+      <input type="hidden" name="id" value="${p?p.id:''}">
+      <div class="field"><label>Título da peça</label><input type="text" name="title" required value="${p?esc(p.title):''}"></div>
+      <div class="form-grid-2">
+        <div class="field"><label>Gênero</label><select name="genre">${genres.map(g=>`<option ${p&&p.genre===g?'selected':''}>${g}</option>`).join("")}</select></div>
+        <div class="field"><label>Ano</label><input type="number" name="releaseYear" value="${p?p.releaseYear:new Date().getFullYear()}"></div>
+      </div>
+      <div class="form-grid-2">
+        <div class="field"><label>Duração (minutos) — mínimo 60</label><input type="number" name="durationMinutes" min="60" required value="${p?p.durationMinutes:65}"></div>
+        <div class="field"><label>Plano mínimo exigido</label><select name="requiresPlan">${DB.plans.map(pl=>`<option value="${pl.id}" ${p&&p.requiresPlan===pl.id?'selected':''}>${esc(pl.name)}</option>`).join("")}</select></div>
+      </div>
+      <div class="field"><label>Sinopse</label><textarea name="synopsis" rows="3" required>${p?esc(p.synopsis):''}</textarea></div>
+      <div class="form-grid-2">
+        <div class="field"><label>Diretor(a)</label><input type="text" name="director" value="${p?esc(p.director):''}"></div>
+        <div class="field"><label>Elenco (separado por vírgula)</label><input type="text" name="cast" value="${p?esc(p.cast):''}"></div>
+      </div>
+      <div class="field"><label>URL do pôster (imagem vertical)</label><input type="url" name="posterUrl" value="${p?esc(p.posterUrl):''}" placeholder="https://..."></div>
+      <div class="field"><label>URL da imagem de destaque (banner, horizontal)</label><input type="url" name="backdropUrl" value="${p?esc(p.backdropUrl):''}" placeholder="https://..."></div>
+      <div class="field"><label>URL do vídeo da peça</label><input type="url" name="videoUrl" id="video-url-field" value="${p?esc(p.videoUrl):''}" placeholder="https://..."></div>
+      <div class="field">
+        <label>Ou envie o arquivo de vídeo direto para o Bunny.net (preenche a URL acima sozinho)</label>
+        <input type="file" id="bunny-file-input" accept="video/*">
+        <button type="button" id="bunny-upload-btn" class="btn btn-ghost btn-sm" style="margin-top:8px;">Enviar vídeo</button>
+        <div id="bunny-progress" class="field-hint" style="display:none; margin-top:8px;"></div>
+      </div>
+      <div class="field"><label class="checkbox-row"><input type="checkbox" name="featured" ${p&&p.featured?'checked':''}> Destacar na página inicial (banner rotativo)</label></div>
+      <div class="field-hint">O upload pode demorar alguns minutos dependendo do tamanho do vídeo (peças têm +1h). Depois de enviado, o Bunny ainda leva um tempo pra processar antes do vídeo ficar disponível pra assistir.</div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('play-modal')">Cancelar</button>
+        <button type="submit" class="btn btn-gold btn-sm">Salvar peça</button>
+      </div>
+    </form>`;
+  openModal("play-modal");
+  qs("#bunny-upload-btn").addEventListener("click", uploadVideoToBunny);
+  qs("#play-form").addEventListener("submit", async e=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = {
+      title: fd.get("title").trim(), genre: fd.get("genre"), releaseYear: parseInt(fd.get("releaseYear"),10),
+      durationMinutes: parseInt(fd.get("durationMinutes"),10), requiresPlan: fd.get("requiresPlan"),
+      synopsis: fd.get("synopsis").trim(), director: fd.get("director").trim(), cast: fd.get("cast").trim(),
+      posterUrl: fd.get("posterUrl").trim(), backdropUrl: fd.get("backdropUrl").trim() || fd.get("posterUrl").trim(),
+      videoUrl: fd.get("videoUrl").trim(), featured: fd.get("featured")==="on"
+    };
+    const existingId = fd.get("id");
+    try{
+      if(existingId){ await api("/plays/" + existingId, { method:"PUT", body:data }); toast("Peça atualizada."); }
+      else{ await api("/plays", { method:"POST", body:data }); toast("Peça cadastrada."); }
+      closeModal("play-modal"); render();
+    }catch(err){ toast(err.message); }
+  });
+}
+// Envia o arquivo de vídeo escolhido direto para o Bunny.net Stream,
+// sem passar pelo nosso próprio servidor (evita limites de tamanho/tempo
+// do Render). Usa o protocolo TUS (upload retomável, aguenta arquivos grandes).
+async function uploadVideoToBunny(){
+  const fileInput = qs("#bunny-file-input");
+  const progressEl = qs("#bunny-progress");
+  const file = fileInput.files[0];
+  if(!file){ toast("Escolha um arquivo de vídeo primeiro."); return; }
+  if(!window.tus){ toast("Não foi possível carregar o enviador de vídeo. Recarregue a página."); return; }
+
+  const titleField = qs('#play-form [name="title"]');
+  const title = (titleField && titleField.value.trim()) || "Peça sem título";
+
+  progressEl.style.display = "block";
+  progressEl.textContent = "Preparando upload...";
+
+  let prep;
+  try{
+    prep = await api("/bunny/create-upload", { method:"POST", body:{ title } });
+  }catch(err){
+    progressEl.textContent = "";
+    toast(err.message);
+    return;
+  }
+
+  const upload = new tus.Upload(file, {
+    endpoint: "https://video.bunnycdn.com/tusupload",
+    retryDelays: [0, 3000, 5000, 10000],
+    headers: {
+      AuthorizationSignature: prep.signature,
+      AuthorizationExpire: String(prep.expiration),
+      VideoId: prep.videoGuid,
+      LibraryId: String(prep.libraryId)
+    },
+    metadata: { filetype: file.type, title: title },
+    onError: function(error){
+      progressEl.textContent = "Erro no upload: " + error.message;
+      toast("Falha ao enviar o vídeo.");
+    },
+    onProgress: function(bytesUploaded, bytesTotal){
+      const pct = ((bytesUploaded / bytesTotal) * 100).toFixed(1);
+      progressEl.textContent = "Enviando... " + pct + "%";
+    },
+    onSuccess: function(){
+      progressEl.textContent = "Upload concluído! O Bunny ainda vai processar o vídeo (alguns minutos) antes de ficar disponível.";
+      const urlField = qs("#video-url-field");
+      if(urlField) urlField.value = prep.playbackUrl;
+      toast("Vídeo enviado! Clique em \"Salvar peça\" para confirmar.");
+    }
+  });
+  upload.start();
+}
+
+async function deletePlay(id){
+  if(!confirm("Remover esta peça definitivamente?")) return;
+  try{ await api("/plays/" + id, { method:"DELETE" }); toast("Peça removida."); render(); }
+  catch(e){ toast(e.message); }
+}
+function attachAdminPlaysEvents(){
+  const s = qs("#play-search");
+  if(s) s.addEventListener("input", ()=>{ adminPlaySearch = s.value; qs("#admin-main").innerHTML = AdminPlays(); attachAdminPlaysEvents(); });
+}
+
+/* ---- Admin: Usuários ---- */
+function AdminUsers(){
+  const list = DB.users.filter(u=> (u.name+u.email).toLowerCase().includes(adminUserSearch.toLowerCase()));
+  return `
+  <div class="admin-topbar"><h1 class="admin-h1">Usuários</h1>
+    <input class="search-input" id="user-search" placeholder="Buscar por nome ou e-mail..." value="${esc(adminUserSearch)}"></div>
+  <div class="admin-panel"><div class="table-scroll">
+    ${list.length===0 ? EmptyState(ICO.users, "Nenhum usuário encontrado", "") : `
+    <table><thead><tr><th>Nome</th><th>E-mail</th><th>Função</th><th>Plano</th><th>Validade</th><th>Status</th><th></th></tr></thead>
+    <tbody>${list.map(u=>`
+      <tr>
+        <td class="strong">${esc(u.name)}</td><td>${esc(u.email)}</td>
+        <td>${u.role==='admin' ? `<span class="badge badge-warn">Admin</span>` : `<span class="badge badge-neutral">Usuário</span>`}</td>
+        <td>${u.role==='admin' ? '—' : `<select onchange="changeUserPlan('${u.id}', this.value)" style="background:var(--bg-elev-2); color:var(--ink); border:1px solid var(--line); border-radius:4px; padding:4px 6px; font-size:12.5px;">${DB.plans.map(pl=>`<option value="${pl.id}" ${u.plan===pl.id?'selected':''}>${esc(pl.name)}</option>`).join("")}</select>`}</td>
+        <td>${u.plan==='plateia' ? '—' : fmtDate(u.planExpiry)}</td>
+        <td>${StatusBadge(u)}</td>
+        <td><div class="row-actions">${u.role!=='admin' ? `<button onclick="extendUser('${u.id}')">+30 dias</button><button onclick="toggleBlockUser('${u.id}','${u.status}')">${u.status==='bloqueado'?'Desbloquear':'Bloquear'}</button>` : `<span style="color:var(--ink-faint); font-size:12px;">conta protegida</span>`}</div></td>
+      </tr>`).join("")}</tbody></table>`}
+  </div></div>`;
+}
+async function changeUserPlan(id, planId){
+  try{ await api("/users/" + id, { method:"PATCH", body:{ plan: planId } }); toast("Plano do usuário atualizado."); render(); }
+  catch(e){ toast(e.message); }
+}
+async function extendUser(id){
+  try{ await api("/users/" + id, { method:"PATCH", body:{ extendDays: 30 } }); toast("Validade estendida em 30 dias."); render(); }
+  catch(e){ toast(e.message); }
+}
+async function toggleBlockUser(id, currentStatus){
+  const next = currentStatus === "bloqueado" ? "ativo" : "bloqueado";
+  try{ await api("/users/" + id, { method:"PATCH", body:{ status: next } }); toast(next==="bloqueado" ? "Usuário bloqueado." : "Usuário desbloqueado."); render(); }
+  catch(e){ toast(e.message); }
+}
+function attachAdminUsersEvents(){
+  const s = qs("#user-search");
+  if(s) s.addEventListener("input", ()=>{ adminUserSearch = s.value; qs("#admin-main").innerHTML = AdminUsers(); attachAdminUsersEvents(); });
+}
+
+/* ---- Admin: Planos ---- */
+function AdminPlans(){
+  return `
+  <div class="admin-topbar"><h1 class="admin-h1">Planos e preços</h1><button class="btn btn-gold btn-sm" onclick="openPlanModal()">+ Novo plano</button></div>
+  <div class="stat-grid" style="grid-template-columns:repeat(${DB.plans.length},1fr);">
+    ${DB.plans.map(pl=>`
+      <div class="stat-card">
+        <div class="stat-label">${esc(pl.name)}</div><div class="stat-value">${fmtMoney(pl.price)}</div>
+        <div style="margin-top:14px; display:flex; gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="openPlanModal('${pl.id}')">Editar</button>
+          ${DB.plans.length>1 ? `<button class="btn btn-danger btn-sm" onclick="deletePlan('${pl.id}')">Excluir</button>` : ``}
+        </div>
+      </div>`).join("")}
+  </div>
+  ${Modal("plan-modal")}`;
+}
+function openPlanModal(id){
+  const pl = id ? planById(id) : null;
+  qs("#plan-modal-box").innerHTML = `
+    <div class="modal-head"><h3>${pl? "Editar plano" : "Novo plano"}</h3><button class="modal-close" onclick="closeModal('plan-modal')">&times;</button></div>
+    <form id="plan-form">
+      <input type="hidden" name="id" value="${pl?pl.id:''}">
+      <div class="form-grid-2">
+        <div class="field"><label>Nome do plano</label><input type="text" name="name" required value="${pl?esc(pl.name):''}"></div>
+        <div class="field"><label>Preço mensal (R$, 0 = grátis)</label><input type="number" step="0.01" min="0" name="price" required value="${pl?pl.price:0}"></div>
+      </div>
+      <div class="field"><label>Benefícios (um por linha)</label><textarea name="benefits" rows="4">${pl?esc(pl.benefits.join("\n")):''}</textarea></div>
+      <div class="field"><label class="checkbox-row"><input type="checkbox" name="featured" ${pl&&pl.featured?'checked':''}> Marcar como "mais escolhido"</label></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('plan-modal')">Cancelar</button>
+        <button type="submit" class="btn btn-gold btn-sm">Salvar plano</button>
+      </div>
+    </form>`;
+  openModal("plan-modal");
+  qs("#plan-form").addEventListener("submit", async e=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const data = {
+      name: fd.get("name").trim(), price: parseFloat(fd.get("price"))||0,
+      benefits: fd.get("benefits").split("\n").map(s=>s.trim()).filter(Boolean),
+      featured: fd.get("featured")==="on"
+    };
+    const existingId = fd.get("id");
+    try{
+      if(existingId){ await api("/plans/" + existingId, { method:"PUT", body:data }); toast("Plano atualizado."); }
+      else{ await api("/plans", { method:"POST", body:data }); toast("Plano criado."); }
+      closeModal("plan-modal"); render();
+    }catch(err){ toast(err.message); }
+  });
+}
+async function deletePlan(id){
+  if(!confirm("Excluir este plano?")) return;
+  try{ await api("/plans/" + id, { method:"DELETE" }); toast("Plano excluído."); render(); }
+  catch(e){ toast(e.message); }
+}
+</script>
+</body>
+</html>
