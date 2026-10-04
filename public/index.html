@@ -365,7 +365,12 @@ async function render(){
     if(!user){ go("#/login"); return; }
     app.innerHTML = PublicShell(AccountPage(user)); afterPublicRender(); attachAccountEvents(); return;
   }
-  if(hash === "#/catalogo") { app.innerHTML = PublicShell(CatalogPage()); afterPublicRender(); attachCatalogEvents(); return; }
+  if(hash === "#/catalogo") {
+    app.innerHTML = PublicShell(`<div class="page-wrap"><p>Carregando catálogo...</p></div>`); afterPublicRender();
+    const html = await CatalogPage();
+    qs("#app main").outerHTML = `<main>${html}</main>`; afterPublicRender(); attachCatalogEvents();
+    return;
+  }
   app.innerHTML = PublicShell(HomePage());
   afterPublicRender();
   attachHomeEvents();
@@ -482,18 +487,47 @@ function attachHomeEvents(){
 
 /* --------------------------- CATALOG PAGE -------------------------------- */
 let catalogGenre = "Todos";
-function CatalogPage(){
-  const genres = ["Todos", ...new Set(DB.plays.map(p=>p.genre))];
-  const list = catalogGenre==="Todos" ? DB.plays : DB.plays.filter(p=>p.genre===catalogGenre);
+let catalogPage = 1;
+let catalogMeta = { total: 0, totalPages: 1 };
+
+function PaginationControls(meta, gotoFnName){
+  if(!meta || meta.totalPages <= 1) return "";
+  const page = meta.page || 1, totalPages = meta.totalPages;
+  return `<div style="display:flex; justify-content:center; align-items:center; gap:14px; margin:10px 0 50px;">
+    <button class="btn btn-ghost btn-sm" ${page<=1?'disabled':''} onclick="${gotoFnName}(${page-1})">${ICO.chevronLeft} Anterior</button>
+    <span style="color:var(--ink-muted); font-size:13px;">Página ${page} de ${totalPages} (${meta.total} peças)</span>
+    <button class="btn btn-ghost btn-sm" ${page>=totalPages?'disabled':''} onclick="${gotoFnName}(${page+1})">Próxima</button>
+  </div>`;
+}
+
+async function CatalogPage(){
+  const r = await api(`/plays?page=${catalogPage}&pageSize=24&genre=${encodeURIComponent(catalogGenre)}`);
+  catalogMeta = r;
+  const genres = ["Todos", ...GENRE_OPTIONS.filter(g=>g!=="Outro")];
   return `<div class="container" style="padding-top:36px;">
     <h1 class="page-title" style="margin-bottom:22px;">Catálogo completo</h1>
     <div class="genre-filters" id="genre-filters">${genres.map(g=>`<button class="chip ${g===catalogGenre?'active':''}" data-genre="${esc(g)}">${esc(g)}</button>`).join("")}</div>
-    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:18px; margin-bottom:60px;">${list.map(p=>PlayCard(p)).join("")}</div>
+    <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:18px; margin-bottom:24px;">
+      ${r.plays.length ? r.plays.map(p=>PlayCard(p)).join("") : `<p style="color:var(--ink-faint); grid-column:1/-1;">Nenhuma peça encontrada nesse gênero.</p>`}
+    </div>
+    ${PaginationControls(catalogMeta, "goToCatalogPage")}
   </div>`;
+}
+async function goToCatalogPage(n){
+  catalogPage = Math.max(1, n);
+  const html = await CatalogPage();
+  qs("#app main").innerHTML = html;
+  attachCatalogEvents();
+  window.scrollTo(0,0);
 }
 function attachCatalogEvents(){
   qsa("#genre-filters .chip").forEach(btn=>{
-    btn.addEventListener("click", ()=>{ catalogGenre = btn.dataset.genre; qs("#app main").innerHTML = CatalogPage(); attachCatalogEvents(); });
+    btn.addEventListener("click", async ()=>{
+      catalogGenre = btn.dataset.genre; catalogPage = 1;
+      const html = await CatalogPage();
+      qs("#app main").innerHTML = html;
+      attachCatalogEvents();
+    });
   });
 }
 
@@ -501,6 +535,51 @@ function attachCatalogEvents(){
 function isYoutube(url){ return /youtube\.com|youtu\.be/.test(url||""); }
 function embedYoutube(url){ const m = url.match(/(?:v=|youtu\.be\/)([\w-]{6,})/); return m ? `https://www.youtube.com/embed/${m[1]}` : url; }
 function isHls(url){ return /\.m3u8(\?|$)/i.test(url||""); }
+
+// Lê a duração de um arquivo de vídeo local (em minutos), sem precisar subir nada.
+function detectVideoDuration(file){
+  return new Promise((resolve)=>{
+    const url = URL.createObjectURL(file);
+    const videoEl = document.createElement("video");
+    videoEl.preload = "metadata";
+    videoEl.onloadedmetadata = () => { URL.revokeObjectURL(url); resolve(Math.round(videoEl.duration / 60)); };
+    videoEl.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+    videoEl.src = url;
+  });
+}
+// Transforma "minha_peca-ATO_final.mp4" em "Minha Peca Ato Final".
+function titleFromFilename(filename){
+  const base = filename.replace(/\.[^/.]+$/, "");
+  return base.replace(/[_\-]+/g, " ").replace(/\s+/g, " ").trim().replace(/\b\w/g, c => c.toUpperCase());
+}
+// Converte um arquivo de imagem escolhido pelo usuário em base64, pra usar direto como URL.
+function fileToDataUrl(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// "Intuição" de gênero por palavras-chave no título (heurística simples, não é IA
+// entendendo a peça de verdade — serve pra dar um ponto de partida, sempre editável).
+const GENRE_OPTIONS = ["Drama","Comédia","Romance","Ação","Clássico","Musical","Suspense","Infantil","Outro"];
+const GENRE_KEYWORDS = [
+  { genre: "Comédia", words: ["comedia","farsa","riso","hilari","engracad"] },
+  { genre: "Romance", words: ["romance","amor","paixao","coracao","namoro","casamento"] },
+  { genre: "Suspense", words: ["suspense","misterio","crime","assassinato","investiga","enigma"] },
+  { genre: "Ação", words: ["acao","luta","guerra","batalha","persegui"] },
+  { genre: "Infantil", words: ["infantil","crianca","criancas","bicho","fada","dragao","conto"] },
+  { genre: "Clássico", words: ["classico","tragedia","grecia","shakespeare","mitologia","antigona"] },
+  { genre: "Musical", words: ["musical","cancao","viola","sanfona","opera","canta"] }
+];
+function normalizeText(s){ return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+function guessGenre(text){
+  const t = normalizeText(text);
+  for(const rule of GENRE_KEYWORDS){ if(rule.words.some(w => t.includes(w))) return rule.genre; }
+  return "Drama";
+}
 
 let currentPlayData = null;
 let currentHls = null;
@@ -684,6 +763,21 @@ function attachAccountEvents(){}
    ====================================================================== */
 let adminUserSearch = "";
 let adminPlaySearch = "";
+let adminPlaysPage = 1;
+let adminPlaysList = [];
+let adminPlaysMeta = { total: 0, totalPages: 1 };
+
+async function loadAdminPlaysPage(){
+  const r = await api(`/plays?page=${adminPlaysPage}&pageSize=20&search=${encodeURIComponent(adminPlaySearch)}`);
+  adminPlaysList = r.plays;
+  adminPlaysMeta = r;
+}
+async function goToAdminPlaysPage(n){
+  adminPlaysPage = Math.max(1, n);
+  await loadAdminPlaysPage();
+  qs("#admin-main").innerHTML = AdminPlays();
+  attachAdminPlaysEvents();
+}
 
 function AdminLayout(hash){
   const section = hash.split("/")[2] || "";
@@ -707,7 +801,7 @@ async function afterAdminRender(hash){
   const section = hash.split("/")[2] || "";
   const main = qs("#admin-main");
   try{
-    if(section==="pecas") { await refreshPlays(); main.innerHTML = AdminPlays(); attachAdminPlaysEvents(); return; }
+    if(section==="pecas") { adminPlaysPage = 1; await loadAdminPlaysPage(); main.innerHTML = AdminPlays(); attachAdminPlaysEvents(); return; }
     if(section==="usuarios") { await refreshUsers(); main.innerHTML = AdminUsers(); attachAdminUsersEvents(); return; }
     if(section==="planos") { await refreshPlans(); main.innerHTML = AdminPlans(); return; }
     await Promise.all([refreshPlays(), refreshUsers(), refreshPlans()]);
@@ -745,11 +839,12 @@ function StatusBadge(u){
 
 /* ---- Admin: Peças ---- */
 function AdminPlays(){
-  const list = DB.plays.filter(p => p.title.toLowerCase().includes(adminPlaySearch.toLowerCase()));
+  const list = adminPlaysList;
   return `
   <div class="admin-topbar"><h1 class="admin-h1">Peças</h1>
-    <div style="display:flex; gap:10px;">
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <input class="search-input" id="play-search" placeholder="Buscar peça..." value="${esc(adminPlaySearch)}">
+      <button class="btn btn-ghost btn-sm" onclick="openBatchModal()">Cadastrar várias peças</button>
       <button class="btn btn-gold btn-sm" onclick="openPlayModal()">+ Nova peça</button>
     </div>
   </div>
@@ -764,7 +859,9 @@ function AdminPlays(){
         <td><div class="row-actions"><button onclick="openPlayModal('${p.id}')">${ICO.edit}</button><button onclick="deletePlay('${p.id}')">${ICO.trash}</button></div></td>
       </tr>`).join("")}</tbody></table>`}
   </div></div>
-  ${Modal("play-modal")}`;
+  ${PaginationControls(adminPlaysMeta, "goToAdminPlaysPage")}
+  ${Modal("play-modal")}
+  ${Modal("batch-modal")}`;
 }
 function EmptyState(icon, title, sub){ return `<div class="empty-state">${icon}<h3 style="font-family:var(--font-display); color:var(--ink); margin:0 0 6px;">${esc(title)}</h3><p style="margin:0;">${esc(sub)}</p></div>`; }
 function Modal(id){ return `<div class="modal-overlay" id="${id}"><div class="modal-box" id="${id}-box"></div></div>`; }
@@ -774,7 +871,7 @@ function closeModal(id){ qs("#"+id).classList.remove("open"); }
 async function openPlayModal(id){
   let p = null;
   if(id){ try{ const r = await api("/plays/" + id); p = r.play; }catch(e){ toast(e.message); return; } }
-  const genres = ["Drama","Comédia","Clássico","Musical","Suspense","Infantil","Outro"];
+  const genres = GENRE_OPTIONS;
   qs("#play-modal-box").innerHTML = `
     <div class="modal-head"><h3>${p? "Editar peça" : "Nova peça"}</h3><button class="modal-close" onclick="closeModal('play-modal')">&times;</button></div>
     <form id="play-form">
@@ -793,13 +890,26 @@ async function openPlayModal(id){
         <div class="field"><label>Diretor(a)</label><input type="text" name="director" value="${p?esc(p.director):''}"></div>
         <div class="field"><label>Elenco (separado por vírgula)</label><input type="text" name="cast" value="${p?esc(p.cast):''}"></div>
       </div>
-      <div class="field"><label>URL do pôster (imagem vertical)</label><input type="url" name="posterUrl" value="${p?esc(p.posterUrl):''}" placeholder="https://..."></div>
-      <div class="field"><label>URL da imagem de destaque (banner, horizontal)</label><input type="url" name="backdropUrl" value="${p?esc(p.backdropUrl):''}" placeholder="https://..."></div>
+      <div class="field">
+        <label>Pôster (imagem vertical)</label>
+        <input type="url" name="posterUrl" id="poster-url-field" value="${p?esc(p.posterUrl):''}" placeholder="https://... ou escolha um arquivo abaixo">
+        <input type="file" id="poster-file-input" accept="image/png,image/jpeg" style="margin-top:6px;">
+      </div>
+      <div class="field">
+        <label>Imagem de destaque (banner, horizontal)</label>
+        <input type="url" name="backdropUrl" id="backdrop-url-field" value="${p?esc(p.backdropUrl):''}" placeholder="https://... ou escolha um arquivo abaixo">
+        <input type="file" id="backdrop-file-input" accept="image/png,image/jpeg" style="margin-top:6px;">
+      </div>
       <div class="field"><label>URL do vídeo da peça</label><input type="url" name="videoUrl" id="video-url-field" value="${p?esc(p.videoUrl):''}" placeholder="https://..."></div>
       <div class="field">
-        <label>Ou envie o arquivo de vídeo direto para o Bunny.net (preenche a URL acima sozinho)</label>
+        <label>Ou envie o arquivo de vídeo direto para o Bunny.net (preenche a URL acima, o título e a duração sozinho)</label>
         <input type="file" id="bunny-file-input" accept="video/*">
         <button type="button" id="bunny-upload-btn" class="btn btn-ghost btn-sm" style="margin-top:8px;">Enviar vídeo</button>
+      </div>
+      <div class="field">
+        <label>Ou importe direto de um link (Google Drive, etc.) — mais rápido, o Bunny busca sozinho</label>
+        <input type="url" id="import-url-input" placeholder="https://drive.google.com/file/d/...">
+        <button type="button" id="import-url-btn" class="btn btn-ghost btn-sm" style="margin-top:8px;">Importar por link</button>
         <div id="bunny-progress" class="field-hint" style="display:none; margin-top:8px;"></div>
       </div>
       <div class="field"><label class="checkbox-row"><input type="checkbox" name="featured" ${p&&p.featured?'checked':''}> Destacar na página inicial (banner rotativo)</label></div>
@@ -811,6 +921,26 @@ async function openPlayModal(id){
     </form>`;
   openModal("play-modal");
   qs("#bunny-upload-btn").addEventListener("click", uploadVideoToBunny);
+  qs("#import-url-btn").addEventListener("click", importVideoFromUrl);
+  qs("#poster-file-input").addEventListener("change", async e=>{
+    const file = e.target.files[0]; if(!file) return;
+    try{ qs("#poster-url-field").value = await fileToDataUrl(file); toast("Pôster carregado."); }
+    catch(err){ toast("Não foi possível ler essa imagem."); }
+  });
+  qs("#backdrop-file-input").addEventListener("change", async e=>{
+    const file = e.target.files[0]; if(!file) return;
+    try{ qs("#backdrop-url-field").value = await fileToDataUrl(file); toast("Imagem de destaque carregada."); }
+    catch(err){ toast("Não foi possível ler essa imagem."); }
+  });
+  qs("#bunny-file-input").addEventListener("change", async e=>{
+    const file = e.target.files[0]; if(!file) return;
+    const titleField = qs('#play-form [name="title"]');
+    if(titleField && !titleField.value.trim()) titleField.value = titleFromFilename(file.name);
+    const minutes = await detectVideoDuration(file);
+    if(minutes){ qs('#play-form [name="durationMinutes"]').value = Math.max(minutes, 60); toast("Duração detectada: " + minutes + " min."); }
+    const genreSelect = qs('#play-form [name="genre"]');
+    if(genreSelect) genreSelect.value = guessGenre(titleField.value);
+  });
   qs("#play-form").addEventListener("submit", async e=>{
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -882,14 +1012,214 @@ async function uploadVideoToBunny(){
   upload.start();
 }
 
+// ---------- Cadastro em lote (vários vídeos de uma vez) ----------
+let batchFiles = [];
+
+function openBatchModal(){
+  batchFiles = [];
+  qs("#batch-modal-box").innerHTML = `
+    <div class="modal-head"><h3>Cadastrar várias peças de uma vez</h3><button class="modal-close" onclick="closeModal('batch-modal'); goToAdminPlaysPage(1);">&times;</button></div>
+    <p style="color:var(--ink-muted); font-size:13px; margin-bottom:14px; line-height:1.6;">
+      Escolha os vídeos do computador <b>ou</b> cole links do Google Drive (bem mais rápido — o Bunny busca
+      direto do Drive, sem passar pela sua internet). Título e gênero são sugeridos automaticamente
+      (dá pra ajustar). Depois de enviadas, edite cada peça pra completar sinopse, elenco e pôster.
+    </p>
+    <div class="field"><label>Arquivos do computador</label><input type="file" id="batch-file-input" accept="video/*" multiple></div>
+    <div class="field">
+      <label>Ou links do Google Drive (um por linha, no formato "Título | link")</label>
+      <textarea id="batch-links-input" rows="4" placeholder="A Farsa do Silêncio | https://drive.google.com/file/d/XXXXX/view
+Ventos de Dona Flor | https://drive.google.com/file/d/YYYYY/view"></textarea>
+      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="onBatchLinksSubmit()">Adicionar esses links à lista</button>
+    </div>
+    <div id="batch-list" style="margin-top:16px; display:flex; flex-direction:column; gap:10px;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('batch-modal'); goToAdminPlaysPage(1);">Fechar</button>
+      <button type="button" class="btn btn-gold btn-sm" id="batch-start-btn" style="display:none;" onclick="startBatchUpload()">Iniciar cadastro em lote</button>
+    </div>`;
+  openModal("batch-modal");
+  qs("#batch-file-input").addEventListener("change", onBatchFilesChosen);
+}
+
+function onBatchLinksSubmit(){
+  const raw = qs("#batch-links-input").value;
+  const lines = raw.split("\n").map(l=>l.trim()).filter(Boolean);
+  for(const line of lines){
+    const parts = line.split("|");
+    let title, url;
+    if(parts.length >= 2){ title = parts[0].trim(); url = parts.slice(1).join("|").trim(); }
+    else { title = "Peça sem título"; url = line.trim(); }
+    if(!url) continue;
+    batchFiles.push({ driveUrl: url, title, duration: 60, status: "Pronto para importar (ajuste a duração — não dá pra detectar de um link)" });
+  }
+  qs("#batch-links-input").value = "";
+  renderBatchList();
+  qs("#batch-start-btn").style.display = batchFiles.length ? "inline-block" : "none";
+}
+
+async function onBatchFilesChosen(e){
+  const files = Array.from(e.target.files || []);
+  const listEl = qs("#batch-list");
+  listEl.textContent = "Detectando a duração dos vídeos...";
+  for(const file of files){
+    const minutes = await detectVideoDuration(file);
+    batchFiles.push({ file, title: titleFromFilename(file.name), duration: Math.max(minutes || 60, 60), status: "Pronto para enviar" });
+  }
+  renderBatchList();
+  qs("#batch-start-btn").style.display = batchFiles.length ? "inline-block" : "none";
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+function renderBatchList(){
+  qs("#batch-list").innerHTML = batchFiles.map((f,i)=>`
+    <div style="border:1px solid var(--line); border-radius:4px; padding:10px;">
+      <div style="font-size:11px; color:var(--ink-faint); margin-bottom:6px;">${f.file ? "📁 arquivo local" : "🔗 link (" + esc(f.driveUrl) + ")"}</div>
+      <div class="form-grid-2">
+        <div class="field" style="margin-bottom:6px;"><label>Título</label><input type="text" value="${esc(f.title)}" onchange="batchFiles[${i}].title=this.value"></div>
+        <div class="field" style="margin-bottom:0;"><label>Duração (min)</label><input type="number" min="60" value="${f.duration}" onchange="batchFiles[${i}].duration=parseInt(this.value,10)||60"></div>
+      </div>
+      <div style="font-size:12px; color:var(--ink-faint); margin-top:4px;" id="batch-status-${i}">${esc(f.status)}</div>
+    </div>`).join("");
+}
+
+async function startBatchUpload(){
+  qs("#batch-start-btn").disabled = true;
+  qs("#batch-start-btn").textContent = "Enviando...";
+  for(let i=0; i<batchFiles.length; i++){
+    await processBatchItem(i);
+  }
+  toast("Cadastro em lote concluído!");
+  await refreshPlays();
+  qs("#batch-start-btn").textContent = "Concluído";
+}
+
+async function processBatchItem(i){
+  const item = batchFiles[i];
+  const setStatus = (txt) => { const el = qs("#batch-status-"+i); if(el) el.textContent = txt; };
+  try{
+    setStatus("Criando peça...");
+    const created = await api("/plays", { method:"POST", body:{
+      title: item.title, genre: guessGenre(item.title), releaseYear: new Date().getFullYear(),
+      durationMinutes: item.duration, requiresPlan: "plateia",
+      synopsis: "Sinopse a definir — edite esta peça para completar os detalhes.",
+      director: "", cast: "",
+      posterUrl: "https://images.unsplash.com/photo-1503095396549-807759245b35?q=80&w=800&auto=format&fit=crop",
+      backdropUrl: "https://images.unsplash.com/photo-1503095396549-807759245b35?q=80&w=1600&auto=format&fit=crop",
+      videoUrl: "", featured: false
+    }});
+    const playId = created.play.id;
+
+    if(item.file){
+      // Arquivo local: sobe direto do navegador pro Bunny via TUS.
+      setStatus("Preparando envio do vídeo...");
+      const prep = await api("/bunny/create-upload", { method:"POST", body:{ title: item.title } });
+      await new Promise((resolve, reject)=>{
+        const upload = new tus.Upload(item.file, {
+          endpoint: "https://video.bunnycdn.com/tusupload",
+          retryDelays: [0, 3000, 5000, 10000],
+          headers: {
+            AuthorizationSignature: prep.signature, AuthorizationExpire: String(prep.expiration),
+            VideoId: prep.videoGuid, LibraryId: String(prep.libraryId)
+          },
+          metadata: { filetype: item.file.type, title: item.title },
+          onError: (err) => { setStatus("Erro no envio: " + err.message); reject(err); },
+          onProgress: (up, total) => setStatus("Enviando vídeo... " + ((up/total)*100).toFixed(0) + "%"),
+          onSuccess: () => resolve()
+        });
+        upload.start();
+      });
+      await api("/plays/" + playId, { method:"PUT", body:{ videoUrl: prep.playbackUrl } });
+      setStatus("✔ Concluído — edite a peça depois para completar gênero, sinopse etc.");
+    } else if(item.driveUrl){
+      // Link (Google Drive etc.): o Bunny busca sozinho, servidor-a-servidor.
+      setStatus("Pedindo para o Bunny buscar o vídeo...");
+      const prep = await api("/bunny/fetch-from-url", { method:"POST", body:{ url: item.driveUrl, title: item.title } });
+      setStatus("Aguardando o Bunny confirmar...");
+      let found = null;
+      for(let attempt=0; attempt<20; attempt++){
+        await sleep(4000);
+        try{
+          const r = await api("/bunny/resolve?marker=" + encodeURIComponent(prep.marker));
+          if(r.found){ found = r; break; }
+        }catch(e){ /* tenta de novo */ }
+        setStatus("Aguardando o Bunny confirmar... (tentativa " + (attempt+1) + "/20)");
+      }
+      if(!found){
+        setStatus("Não localizei a confirmação a tempo. Confira no painel do Bunny e cole a URL manualmente na peça, se precisar.");
+        return;
+      }
+      await api("/plays/" + playId, { method:"PUT", body:{ videoUrl: found.playbackUrl } });
+      setStatus("✔ Importação iniciada — o Bunny ainda está baixando/processando em segundo plano.");
+    } else {
+      setStatus("Nada para enviar (nem arquivo nem link).");
+    }
+  }catch(err){
+    setStatus("Erro: " + (err.message || "falhou ao processar este item."));
+  }
+}
+
+// Pede pro Bunny buscar o vídeo direto de um link (Google Drive etc.) — muito
+// mais rápido que enviar do navegador, porque a transferência é servidor-a-servidor.
+async function importVideoFromUrl(){
+  const urlInput = qs("#import-url-input");
+  const progressEl = qs("#bunny-progress");
+  const url = urlInput.value.trim();
+  if(!url){ toast("Cole um link primeiro."); return; }
+  const titleField = qs('#play-form [name="title"]');
+  const title = (titleField && titleField.value.trim()) || "Peça sem título";
+
+  progressEl.style.display = "block";
+  progressEl.textContent = "Pedindo para o Bunny buscar o vídeo...";
+
+  let prep;
+  try{
+    prep = await api("/bunny/fetch-from-url", { method:"POST", body:{ url, title } });
+  }catch(err){
+    progressEl.textContent = "";
+    toast(err.message);
+    return;
+  }
+
+  progressEl.textContent = "Bunny está buscando o vídeo. Aguardando confirmação (pode levar um pouco)...";
+  let tries = 0;
+  const poll = async () => {
+    tries++;
+    try{
+      const r = await api("/bunny/resolve?marker=" + encodeURIComponent(prep.marker));
+      if(r.found){
+        qs("#video-url-field").value = r.playbackUrl;
+        progressEl.textContent = "Importação iniciada! O Bunny ainda vai processar o vídeo (alguns minutos) antes de ficar disponível.";
+        toast("Vídeo importado! Clique em \"Salvar peça\" para confirmar.");
+        return;
+      }
+    }catch(e){ /* tenta de novo */ }
+    if(tries >= 20){
+      progressEl.textContent = "Ainda não localizei o vídeo importado. Ele pode estar demorando mais — confira no painel do Bunny.net, ou tente salvar a peça e colar a URL manualmente depois.";
+      return;
+    }
+    setTimeout(poll, 4000);
+  };
+  poll();
+}
+
 async function deletePlay(id){
   if(!confirm("Remover esta peça definitivamente?")) return;
   try{ await api("/plays/" + id, { method:"DELETE" }); toast("Peça removida."); render(); }
   catch(e){ toast(e.message); }
 }
+let adminPlaySearchDebounce = null;
 function attachAdminPlaysEvents(){
   const s = qs("#play-search");
-  if(s) s.addEventListener("input", ()=>{ adminPlaySearch = s.value; qs("#admin-main").innerHTML = AdminPlays(); attachAdminPlaysEvents(); });
+  if(s) s.addEventListener("input", ()=>{
+    adminPlaySearch = s.value;
+    clearTimeout(adminPlaySearchDebounce);
+    adminPlaySearchDebounce = setTimeout(async ()=>{
+      adminPlaysPage = 1;
+      await loadAdminPlaysPage();
+      qs("#admin-main").innerHTML = AdminPlays();
+      attachAdminPlaysEvents();
+    }, 350);
+  });
 }
 
 /* ---- Admin: Usuários ---- */

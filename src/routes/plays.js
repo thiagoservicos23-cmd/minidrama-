@@ -7,14 +7,36 @@ const router = express.Router();
 
 // Lista pública do catálogo. Nunca inclui o link do vídeo aqui — só a
 // página de detalhe entrega o vídeo, e só para quem tem direito.
+// Aceita paginação opcional (?page=&pageSize=) e filtros (?genre=&search=);
+// sem "page", devolve tudo (usado pela home e pelo painel para montar as seções).
 router.get("/", attachUserIfPresent, async (req, res) => {
-  const plays = await prisma.play.findMany({ orderBy: { createdAt: "desc" } });
+  const { page, pageSize, genre, search } = req.query;
+  const where = {};
+  if (genre && genre !== "Todos") where.genre = genre;
+  if (search) where.title = { contains: search };
+
+  const usePagination = !!page;
+  const take = usePagination ? (parseInt(pageSize, 10) || 24) : undefined;
+  const skip = usePagination ? Math.max(parseInt(page, 10) - 1, 0) * take : undefined;
+
+  const [plays, total] = await Promise.all([
+    prisma.play.findMany({ where, orderBy: { createdAt: "desc" }, skip, take }),
+    prisma.play.count({ where })
+  ]);
+
   const withAccess = await Promise.all(plays.map(async (p) => {
     const { videoUrl, ...rest } = p;
     const canWatch = await userCanWatch(req.user, p);
     return { ...rest, hasVideo: !!videoUrl, canWatch };
   }));
-  res.json({ plays: withAccess });
+
+  res.json({
+    plays: withAccess,
+    total,
+    page: usePagination ? parseInt(page, 10) : 1,
+    pageSize: usePagination ? take : total,
+    totalPages: usePagination ? Math.max(Math.ceil(total / take), 1) : 1
+  });
 });
 
 // Detalhe de uma peça. Só devolve a URL real do vídeo se o visitante tiver direito.

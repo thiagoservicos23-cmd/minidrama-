@@ -109,6 +109,39 @@ navegador, computador ou celular, para qualquer pessoa, sem precisar instalar na
 
 Depois de logado com a conta admin, acesse **Painel admin** no menu.
 
+### Importar vídeos que já estão no Google Drive (ou qualquer link)
+Além de escolher um arquivo do computador, dá pra colar um link (Google Drive,
+por exemplo) e o **Bunny.net busca o vídeo sozinho**, servidor a servidor — muito
+mais rápido que subir pela internet de casa.
+- Peça única: no formulário "Nova peça", use o campo "Ou importe direto de um link".
+- Várias de uma vez: em Peças → "Cadastrar várias peças", cole uma lista no
+  formato `Título | link do Drive`, uma por linha.
+- Para o Google Drive, o link precisa estar compartilhado como **"qualquer
+  pessoa com o link"**. Arquivos grandes às vezes mostram uma tela de aviso do
+  Google em vez do vídeo direto — o sistema tenta contornar isso automaticamente,
+  mas não é 100% garantido; se um vídeo específico não importar, baixe ele do
+  Drive e suba como arquivo mesmo (a outra opção do mesmo formulário).
+
+### Cadastro em lote (várias peças de uma vez)
+Em Peças → "Cadastrar várias peças": escolha vários arquivos de vídeo do
+computador, ou cole vários links (formato acima), ou combine os dois. Cada
+vídeo vira uma peça com **título (do nome do arquivo), duração (detectada
+automaticamente) e gênero (sugerido por palavras-chave no título)** —
+mas ainda **sem sinopse, elenco nem pôster definitivos**: depois do lote,
+edite cada peça criada para completar esses detalhes.
+
+### Sugestão automática de gênero
+Ao digitar o título (ou escolher o arquivo de vídeo), o campo Gênero é
+preenchido sozinho com base em palavras-chave (ex: "amor" → Romance, "riso"
+→ Comédia). É uma regra simples, não uma IA lendo a peça de verdade — então
+erra às vezes, principalmente em títulos que não dão pistas óbvias. Sempre dá
+pra corrigir manualmente antes de salvar.
+
+### Paginação
+O catálogo público e a lista de peças do painel admin agora carregam por
+páginas (não tudo de uma vez), então o site continua rápido mesmo com um
+catálogo grande.
+
 ### Configurar o upload automático de vídeo (Bunny.net Stream)
 Com isso configurado, o admin pode enviar o arquivo de vídeo direto pela tela
 "Nova peça", sem precisar entrar no site do Bunny nem copiar link nenhum.
