@@ -4,6 +4,7 @@ const mailer = require("../services/mailer");
 const { validUnsubToken } = mailer;
 const { requireAuth, requireAdmin } = require("../middleware/auth");
 const T = require("../services/emailTemplates");
+const { limit } = require("../utils/rateLimit");
 
 const router = express.Router();
 
@@ -16,13 +17,15 @@ router.get("/unsubscribe", async (req, res) => {
   res.send(page("Pronto, você saiu da lista", "Não vamos mais enviar e-mails de divulgação. Avisos importantes sobre a sua conta (como vencimento de plano e pagamentos) continuam chegando. <br><br><a href='/' style='color:#C9A24B'>Voltar ao Mini Drama</a>"));
 });
 
-// Admin: manda o e-mail de boas-vindas para o PRÓPRIO e-mail do admin, para validar a configuração.
-router.post("/test", requireAuth, requireAdmin, async (req, res) => {
+// Admin: manda um e-mail de teste (modelo de boas-vindas) para o endereço informado, para validar a configuração.
+router.post("/test", requireAuth, requireAdmin, limit("emailtest", 5, 60 * 60000), async (req, res) => {
   if (!mailer.configured()) return res.status(400).json({ error: "E-mail não configurado. Defina BREVO_API_KEY e MAIL_FROM_EMAIL nas variáveis de ambiente do servidor." });
+  const to = String((req.body && req.body.to) || req.user.email).trim();
+  if (!/^\S+@\S+\.\S+$/.test(to)) return res.status(400).json({ error: "Digite um e-mail válido para receber o teste." });
   const tpl = T.welcome(req.user, null);
-  const r = await mailer.sendMail({ to: req.user.email, toName: req.user.name, subject: "[TESTE] " + tpl.subject, html: tpl.html, text: tpl.text });
-  if (!r.ok) return res.status(502).json({ error: "A Brevo recusou o envio. Confira a chave de API e se o remetente (MAIL_FROM_EMAIL) foi verificado lá. Veja os logs do servidor." });
-  res.json({ ok: true, message: "E-mail de teste enviado para " + req.user.email + ". Confira também a caixa de spam." });
+  const r = await mailer.sendMail({ to, toName: req.user.name, subject: "[TESTE] " + tpl.subject, html: tpl.html, text: tpl.text });
+  if (!r.ok) return res.status(502).json({ error: "A Brevo recusou o envio (status " + (r.status || "?") + "). Confira se a chave de API está certa e se o remetente (MAIL_FROM_EMAIL) foi verificado na Brevo. Os Logs do Render têm a resposta detalhada ([email] Brevo recusou)." });
+  res.json({ ok: true, message: "Enviado para " + to + ". Pode levar alguns minutos; confira também a caixa de spam." });
 });
 
 function page(title, msg) {

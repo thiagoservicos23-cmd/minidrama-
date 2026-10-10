@@ -243,7 +243,7 @@ cancelar, **nada é liberado**.
 1. Crie conta grátis em **brevo.com** (300 e-mails/dia).
 2. Em **Senders**, cadastre e **verifique** o e-mail remetente (clique no link que a Brevo envia).
 3. Em **SMTP & API → API Keys**, crie uma chave e coloque em `BREVO_API_KEY`; o remetente em `MAIL_FROM_EMAIL`.
-4. No painel admin → **Visão geral → Sistema → “Enviar e-mail de teste para mim”**.
+4. No painel admin → **Visão geral → Sistema → “Enviar e-mail de teste”**.
 
 > Dica: remetentes `@gmail.com` costumam cair no spam. O ideal é um domínio próprio (a Brevo ensina a
 > configurar SPF/DKIM). O Render gratuito bloqueia SMTP, por isso usamos a API da Brevo.
