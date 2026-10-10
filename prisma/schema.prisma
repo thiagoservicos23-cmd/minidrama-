@@ -23,6 +23,14 @@ model User {
   planExpiry DateTime @default(now())
   status     String   @default("ativo") // "ativo" | "bloqueado"
   createdAt  DateTime @default(now())
+
+  // --- e-mails e engajamento ---
+  lastSeenAt    DateTime @default(now())  // última vez que a pessoa entrou no site
+  lastDigestAt  DateTime?                 // último resumo diário enviado
+  lastMissYouAt DateTime?                 // última mensagem "sentimos sua falta"
+  emailOptOut   Boolean  @default(false)  // true = não quer e-mails de divulgação
+
+  payments   Payment[]
 }
 
 model Play {
@@ -40,6 +48,16 @@ model Play {
   requiresPlan    String   @default("plateia")
   featured        Boolean  @default(false)
   createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  // Imagens enviadas por arquivo ficam aqui (base64), FORA das consultas de
+  // listagem — são servidas por /api/plays/:id/image/:kind com cache longo.
+  posterData      String?
+  backdropData    String?
+  hasPosterData   Boolean  @default(false)
+  hasBackdropData Boolean  @default(false)
+
+  announcedAt     DateTime? // quando o e-mail "nova obra em destaque" foi disparado
 }
 
 model Plan {
@@ -50,4 +68,37 @@ model Plan {
   benefits    String  // lista de benefícios guardada como JSON (ex: ["a","b"])
   featured    Boolean @default(false)
   sortOrder   Int     @default(0)
+}
+
+// Cada tentativa de pagamento. O plano só é liberado quando status = "paid",
+// e isso só acontece depois que o servidor confirma com a SyncPay.
+model Payment {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  planId      String
+  amount      Float     // valor cobrado, copiado do plano NO SERVIDOR no momento da compra
+  status      String    @default("pending") // pending | paid | expired | canceled
+  providerId  String    @unique             // "identifier" devolvido pela SyncPay
+  pixCode     String?
+  cpfMasked   String?   // só os 2 últimos dígitos, por privacidade (LGPD)
+  createdAt   DateTime  @default(now())
+  paidAt      DateTime?
+  validUntil  DateTime? // até quando o plano ficou valendo por causa deste pagamento
+  lastCheckAt DateTime?
+
+  @@index([userId])
+  @@index([status])
+}
+
+// Registro de e-mails enviados. A chave única impede mandar o mesmo e-mail duas vezes.
+model EmailLog {
+  id     String   @id @default(cuid())
+  userId String
+  type   String   // welcome | digest | expiry-3 | expiry-2 | expiry-1 | expired | missyou | featured | payment
+  key    String   // ex.: data de vencimento, id da peça, data do dia
+  sentAt DateTime @default(now())
+
+  @@unique([userId, type, key])
+  @@index([sentAt])
 }

@@ -4,11 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Mini Drama — peças de teatro online</title>
+<meta name="description" content="Assista a peças de teatro completas, onde e quando quiser. Streaming de teatro feito por grupos independentes.">
+<meta name="theme-color" content="#120D0F">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mini Drama">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/tus-js-client@4.1.0/dist/tus.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700;800&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700;800&display=swap"></noscript>
+<script defer src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/tus-js-client@4.1.0/dist/tus.min.js"></script>
 <style>
 :root{
   --bg:#120D0F; --bg-elev:#1B1417; --bg-elev-2:#241B1E;
@@ -126,6 +136,7 @@ input,select,textarea{font-family:inherit;}
 .auth-foot{text-align:center; margin-top:20px; font-size:13.5px; color:var(--ink-muted);}
 .auth-foot a{color:var(--gold-soft); font-weight:600;}
 .form-msg{padding:10px 12px; border-radius:var(--radius); font-size:13px; margin-bottom:16px; display:none;}
+.form-msg:empty{display:none !important;}
 .form-msg.error{display:block; background:rgba(196,69,60,.12); color:#E8938C; border:1px solid rgba(196,69,60,.3);}
 .form-msg.ok{display:block; background:rgba(92,138,90,.14); color:#9CC79A; border:1px solid rgba(92,138,90,.3);}
 .demo-note{background:var(--bg-elev-2); border:1px dashed var(--line); border-radius:var(--radius); padding:10px 12px; font-size:11.5px; color:var(--ink-faint); margin-top:18px; line-height:1.5;}
@@ -244,12 +255,53 @@ td.strong{color:var(--ink); font-weight:600;}
 .boot-screen .brand{font-size:30px;}
 .spinner{width:26px; height:26px; border-radius:50%; border:2px solid var(--line); border-top-color:var(--gold); animation:spin .8s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
+
+/* ---------- carregamento: esqueleto (aparece NA HORA, antes do JS) ---------- */
+.sk{background:linear-gradient(90deg,var(--bg-elev) 25%,var(--bg-elev-2) 50%,var(--bg-elev) 75%); background-size:200% 100%; animation:shimmer 1.4s infinite linear; border-radius:var(--radius-lg);}
+@keyframes shimmer{to{background-position:-200% 0;}}
+.sk-hero{height:60vh; min-height:360px; border-radius:0;}
+.sk-row{display:flex; gap:16px; overflow:hidden; margin:0 0 36px;}
+.sk-card{flex:0 0 210px; aspect-ratio:2/3;}
+@media (max-width:640px){.sk-card{flex-basis:150px;}}
+.sk-title{height:22px; width:160px; margin:34px 0 16px;}
+.wake-hint{text-align:center; color:var(--ink-muted); font-size:13.5px; padding:14px 20px; display:none;}
+.wake-hint.show{display:block;}
+.avatar-sk{width:36px; height:36px; border-radius:50%;}
+
+/* ---------- instalar app ---------- */
+.install-banner{position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom,0px)); z-index:250; max-width:460px; margin:0 auto; background:var(--bg-elev); border:1px solid var(--gold); border-radius:var(--radius-lg); box-shadow:var(--shadow-deep); padding:14px 16px; display:flex; align-items:center; gap:14px; animation:fade-up .4s ease both;}
+.install-banner img{width:46px; height:46px; border-radius:10px; flex-shrink:0;}
+.install-banner .ib-text{flex:1; min-width:0;}
+.install-banner .ib-title{font-weight:700; font-size:14.5px; margin:0 0 2px;}
+.install-banner .ib-sub{font-size:12.5px; color:var(--ink-muted); margin:0; line-height:1.4;}
+.install-banner .ib-close{background:none; border:none; color:var(--ink-faint); font-size:22px; line-height:1; padding:4px 6px; align-self:flex-start;}
+
+/* ---------- checkout PIX ---------- */
+.co-summary{background:var(--bg-elev-2); border:1px solid var(--line); border-radius:var(--radius); padding:14px 16px; margin-bottom:18px; display:flex; justify-content:space-between; align-items:center; gap:10px;}
+.co-summary b{font-family:var(--font-display); font-size:17px;}
+.co-summary .co-price{white-space:nowrap; font-size:22px; font-weight:700; color:var(--gold-soft);}
+.pix-box{text-align:center;}
+.pix-box img.qr{width:230px; height:230px; background:#fff; padding:8px; border-radius:var(--radius-lg); margin:6px auto 14px;}
+.pix-code{width:100%; background:var(--bg-elev-2); border:1px solid var(--line); border-radius:var(--radius); color:var(--ink-muted); font-size:11.5px; padding:10px; word-break:break-all; text-align:left; max-height:74px; overflow:auto;}
+.pix-wait{display:flex; align-items:center; justify-content:center; gap:10px; color:var(--ink-muted); font-size:13.5px; margin:16px 0 4px;}
+.pix-steps{text-align:left; color:var(--ink-muted); font-size:13px; line-height:1.7; margin:14px 0 4px; padding-left:18px;}
+.co-ok{text-align:center; padding:10px 0;}
+.co-ok .big{font-size:46px; margin-bottom:6px;}
+.co-ok h3{font-family:var(--font-display); font-size:22px; margin:0 0 8px;}
+.days-left{display:inline-block; background:rgba(201,162,75,.14); color:var(--gold-soft); border-radius:10px; padding:2px 10px; font-size:12px; font-weight:600; margin-left:6px;}
+.pay-row{display:flex; justify-content:space-between; gap:10px; padding:10px 0; border-bottom:1px solid var(--line); font-size:13.5px; color:var(--ink-muted);}
+.pay-row:last-child{border-bottom:none;}
 @media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important;}}
 </style>
 </head>
 <body>
 <div id="toast-host"></div>
-<div id="app"><div class="boot-screen"><div class="brand">Mini Drama</div><div class="spinner"></div><p>Carregando o catálogo...</p></div></div>
+<div id="app">
+  <header class="site-header"><span class="brand">Mini Drama<span class="dot"></span></span></header>
+  <div class="sk sk-hero"></div>
+  <p class="wake-hint" id="wake-hint">Acordando o servidor… isso acontece no primeiro acesso depois de um tempo parado e leva só alguns segundos. 🎭</p>
+  <div class="container"><div class="sk sk-title"></div><div class="sk-row"><div class="sk sk-card"></div><div class="sk sk-card"></div><div class="sk sk-card"></div><div class="sk sk-card"></div><div class="sk sk-card"></div></div></div>
+</div>
 
 <script>
 /* ======================================================================
@@ -287,15 +339,37 @@ function getToken(){ return localStorage.getItem(TOKEN_KEY); }
 function setToken(t){ localStorage.setItem(TOKEN_KEY, t); }
 function clearToken(){ localStorage.removeItem(TOKEN_KEY); }
 
+function showWakeHint(on){ const el = document.getElementById("wake-hint"); if(el) el.classList.toggle("show", on); }
+
+// Chamadas à API. GETs tentam de novo sozinhos (o servidor gratuito "dorme" e leva alguns
+// segundos para acordar); POST/PUT/DELETE nunca são repetidos, para não duplicar nada.
 async function api(path, { method="GET", body } = {}){
   const headers = { "Content-Type": "application/json" };
   const token = getToken();
   if(token) headers["Authorization"] = "Bearer " + token;
-  const res = await fetch("/api" + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  let data = null;
-  try{ data = await res.json(); }catch(e){ data = null; }
-  if(!res.ok){ throw new Error((data && data.error) || "Ocorreu um erro. Tente novamente."); }
-  return data;
+  const isGet = method === "GET";
+  const attempts = isGet ? 4 : 1;
+  for(let i=0; i<attempts; i++){
+    const ctrl = new AbortController();
+    const timer = setTimeout(()=>ctrl.abort(), isGet ? 35000 : 60000);
+    try{
+      const res = await fetch("/api" + path, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: ctrl.signal });
+      clearTimeout(timer);
+      if(isGet && [502,503,504].includes(res.status) && i < attempts-1){ showWakeHint(true); await sleep(1500*(i+1)); continue; }
+      let data = null;
+      try{ data = await res.json(); }catch(e){ data = null; }
+      if(!res.ok){
+        const err = new Error((data && data.error) || "Ocorreu um erro. Tente novamente.");
+        err.httpError = true; err.status = res.status; throw err;
+      }
+      return data;
+    }catch(e){
+      clearTimeout(timer);
+      if(e.httpError) throw e;
+      if(i < attempts-1){ showWakeHint(true); await sleep(1500*(i+1)); continue; }
+    }
+  }
+  throw new Error("Sem conexão com o servidor. Verifique sua internet e tente de novo.");
 }
 
 /* --------------------------- HELPERS ----------------------------------- */
@@ -305,7 +379,8 @@ function fmtDuration(min){ const h=Math.floor(min/60), m=min%60; return h + "h" 
 function fmtDate(iso){ return new Date(iso).toLocaleDateString("pt-BR"); }
 function planById(id){ return DB.plans.find(p=>p.id===id); }
 function planLevel(planId){ const idx = DB.plans.findIndex(p=>p.id===planId); return idx<0?0:idx; }
-function isPlanActive(user){ if(!user) return false; if(user.plan==="plateia") return true; return new Date(user.planExpiry) > new Date(); }
+function isPlanActive(user){ if(!user) return false; const pl = planById(user.plan); if(user.plan === "plateia" || (pl && pl.price === 0)) return true; return new Date(user.planExpiry) > new Date(); }
+function daysLeft(user){ return Math.max(0, Math.ceil((new Date(user.planExpiry) - Date.now()) / 86400000)); }
 function currentUser(){ return DB.me; }
 function toast(msg){
   const host = document.getElementById("toast-host");
@@ -320,19 +395,57 @@ function go(hash){ location.hash = hash; }
 window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", boot);
 
-async function boot(){
+/* ---- cache local: a 2ª visita em diante abre NA HORA, mesmo com o servidor dormindo ---- */
+const CACHE_KEY = "minidrama_cache_v2";
+function loadCache(){
+  try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)); if(c && Date.now() - c.t < 14*86400000) return c; }catch(e){}
+  return null;
+}
+function saveCache(){
+  try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), plays: DB.plays, plans: DB.plans, me: DB.me, hasToken: !!getToken() })); }catch(e){}
+}
+
+// Busca catálogo, planos e (se logado) os dados do usuário. Só desloga em 401/403 — falha de rede não desloga ninguém.
+async function loadFresh(){
+  const [playsRes, plansRes] = await Promise.all([ api("/plays"), api("/plans") ]);
+  DB.plays = playsRes.plays; DB.plans = plansRes.plans;
+  if(getToken()){
+    try{ DB.me = (await api("/auth/me")).user; }
+    catch(e){ if(e.httpError && (e.status === 401 || e.status === 403)){ clearToken(); DB.me = null; } }
+  } else { DB.me = null; }
+  saveCache();
+}
+
+async function refreshInBackground(){
   try{
-    const [playsRes, plansRes] = await Promise.all([ api("/plays"), api("/plans") ]);
-    DB.plays = playsRes.plays; DB.plans = plansRes.plans;
-    if(getToken()){
-      try{ const meRes = await api("/auth/me"); DB.me = meRes.user; }
-      catch(e){ clearToken(); DB.me = null; }
-    }
-  }catch(e){
-    document.getElementById("app").innerHTML = `<div class="boot-screen"><div class="brand">Mini Drama</div><p>Não foi possível conectar ao servidor.<br>Verifique se a API está no ar e recarregue a página.</p></div>`;
+    const before = JSON.stringify([DB.plays, DB.plans, DB.me]);
+    await loadFresh();
+    const changed = before !== JSON.stringify([DB.plays, DB.plans, DB.me]);
+    if(changed && ["#/home", "#/planos"].includes(location.hash || "#/home")) render();
+  }catch(e){ /* silencioso: o usuário já está vendo a versão guardada */ }
+}
+
+async function boot(){
+  registerServiceWorker();
+  const cached = loadCache();
+  if(cached && cached.hasToken === !!getToken() && (cached.plans || []).length){
+    DB.plays = cached.plays || []; DB.plans = cached.plans; DB.me = cached.me || null;
+    render();
+    refreshInBackground();
+    scheduleInstallBanner();
     return;
   }
+  const wake = setTimeout(()=>showWakeHint(true), 4000);
+  try{
+    await loadFresh();
+  }catch(e){
+    clearTimeout(wake);
+    document.getElementById("app").innerHTML = `<div class="boot-screen"><div class="brand">Mini Drama</div><p style="text-align:center; padding:0 20px;">${esc(e.message || "Não foi possível conectar ao servidor.")}</p><button class="btn btn-gold" onclick="location.reload()">Tentar de novo</button></div>`;
+    return;
+  }
+  clearTimeout(wake);
   render();
+  scheduleInstallBanner();
 }
 
 const ADMIN_ROUTES = ["#/admin","#/admin/pecas","#/admin/usuarios","#/admin/planos"];
@@ -376,7 +489,7 @@ async function render(){
   attachHomeEvents();
 }
 
-async function refreshPlays(){ const r = await api("/plays"); DB.plays = r.plays; }
+async function refreshPlays(){ const r = await api("/plays"); DB.plays = r.plays; DB.playsTotal = r.total; }
 async function refreshPlans(){ const r = await api("/plans"); DB.plans = r.plans; }
 async function refreshUsers(){ const r = await api("/users"); DB.users = r.users; }
 
@@ -398,10 +511,10 @@ function PublicShell(innerHtml){
       ${user ? `
         <button class="icon-btn" title="Conta" onclick="go('#/conta')">${ICO.bell}</button>
         <a href="#/conta" class="avatar-btn" title="${esc(user.name)}">${esc(initials)}</a>
-      ` : `
+      ` : (getToken() ? `<span class="sk avatar-sk"></span>` : `
         <a href="#/login" class="btn btn-ghost btn-sm">Entrar</a>
         <a href="#/cadastro" class="btn btn-gold btn-sm">Criar conta</a>
-      `}
+      `)}
       <button class="hamburger" onclick="toggleDrawer(true)">${ICO.menu}</button>
     </div>
   </header>
@@ -423,7 +536,7 @@ function PublicShell(innerHtml){
         <div class="brand" style="margin-bottom:10px;">${SITE_NAME}<span class="dot"></span></div>
         <p style="max-width:260px; line-height:1.6;">Streaming de peças de teatro produzidas por grupos independentes. Um projeto da turma de Teatro em parceria com a turma de Tecnologia.</p>
       </div>
-      <div><h4>Navegação</h4><a href="#/catalogo">Catálogo</a><a href="#/planos">Planos</a><a href="#/cadastro">Criar conta</a></div>
+      <div><h4>Navegação</h4><a href="#/catalogo">Catálogo</a><a href="#/planos">Planos</a><a href="#/cadastro">Criar conta</a><a href="#/home" onclick="promptInstall(); return false;">Instalar o app</a></div>
       <div><h4>Suporte</h4><a href="#/">Central de ajuda</a><a href="#/">Fale conosco</a></div>
       <div><h4>Legal</h4><a href="#/">Termos de uso</a><a href="#/">Privacidade</a></div>
     </div>
@@ -431,7 +544,11 @@ function PublicShell(innerHtml){
   </footer>`;
 }
 function toggleDrawer(open){ qs("#mobile-drawer").classList.toggle("open", open); }
-function doLogout(){ clearToken(); DB.me = null; toast("Você saiu da sua conta."); go("#/home"); }
+function doLogout(){
+  clearToken(); DB.me = null; saveCache();
+  toast("Você saiu da sua conta."); go("#/home");
+  loadFresh().then(()=>{ if((location.hash||"#/home")==="#/home") render(); }).catch(()=>{});
+}
 function afterPublicRender(){
   const h = qs("#site-header");
   if(h){ window.onscroll = ()=>{ h.classList.toggle("solid", window.scrollY>10); }; }
@@ -445,7 +562,7 @@ function HomePage(){
   return `
   <section class="hero" id="hero">
     ${featured.map((p,i)=>`
-      <div class="hero-slide ${i===0?'active':''}" data-i="${i}" style="background-image:url('${esc(p.backdropUrl)}')">
+      <div class="hero-slide ${i===0?'active':''}" data-i="${i}" data-bg="${esc(p.backdropUrl)}" ${i===0?`style="background-image:url('${esc(p.backdropUrl)}')"`:''}>
         <div class="hero-content reveal">
           <div class="hero-eyebrow"><span class="dot"></span> Em cartaz na plataforma</div>
           <h1 class="hero-title">${esc(p.title)}</h1>
@@ -474,8 +591,13 @@ function PlayCard(p){
     <div class="card-body"><p class="card-title">${esc(p.title)}</p>
     <div class="card-sub"><span>${p.genre}</span><span>${fmtDuration(p.durationMinutes)}</span></div></div></a>`;
 }
+function loadHeroBg(i){
+  const el = qsa(".hero-slide")[i];
+  if(el && !el.style.backgroundImage && el.dataset.bg) el.style.backgroundImage = `url('${el.dataset.bg}')`;
+}
 function setHero(i){
   heroIndex = i;
+  loadHeroBg(i); loadHeroBg(i+1);
   qsa(".hero-slide").forEach((el,idx)=>el.classList.toggle("active", idx===i));
   qsa(".hero-dots button").forEach((el,idx)=>el.classList.toggle("active", idx===i));
 }
@@ -646,35 +768,168 @@ async function PlayDetail(id){
 function PlansPage(){
   const user = currentUser();
   return `
-  <div class="plans-hero"><h1>Escolha seu lugar na plateia</h1><p>Do fundo da plateia ao camarote: planos pensados para quem ama teatro, em qualquer orçamento.</p></div>
+  <div class="plans-hero"><h1>Escolha seu lugar na plateia</h1><p>Do fundo da plateia ao camarote: planos pensados para quem ama teatro, em qualquer orçamento. Pagamento por PIX, liberação na hora.</p></div>
   <div class="plans-grid">${DB.plans.map(pl => PlanCard(pl, user)).join("")}</div>
   <div class="plans-faq">
-    <details class="faq-item" open><summary>Posso cancelar quando quiser?</summary><p>Sim. Sua assinatura vale até o fim do período já pago.</p></details>
-    <details class="faq-item"><summary>O plano Plateia é realmente gratuito?</summary><p>Sim, sem custo. Você acompanha sinopses e uma peça liberada por mês.</p></details>
-    <details class="faq-item"><summary>Como funciona o acesso por conta?</summary><p>Cada conta tem um plano ativo, controlado pela administração da plataforma.</p></details>
+    <details class="faq-item" open><summary>Como funciona o pagamento?</summary><p>Você escolhe o plano, informa CPF e celular e paga por PIX (QR Code ou "copia e cola"). Assim que o banco confirma, o plano é liberado automaticamente — normalmente em segundos — e vale por 30 dias.</p></details>
+    <details class="faq-item"><summary>A assinatura renova sozinha?</summary><p>Não. Você nunca é cobrado sem querer: quando faltarem poucos dias, avisamos por e-mail e você renova se quiser. Se renovar o mesmo plano antes de vencer, os 30 dias novos são somados aos que sobraram.</p></details>
+    <details class="faq-item"><summary>O plano Plateia é realmente gratuito?</summary><p>Sim, sem custo e sem prazo. Você acompanha sinopses e as peças liberadas no plano gratuito.</p></details>
+    <details class="faq-item"><summary>É seguro informar meu CPF?</summary><p>O CPF é usado só para gerar a cobrança PIX. Não guardamos o número completo — só os 2 últimos dígitos, para conferência.</p></details>
   </div>`;
 }
 function PlanCard(pl, user){
-  const isCurrent = user && user.plan===pl.id;
+  const isCurrent = user && user.plan === pl.id && isPlanActive(user);
+  const paid = pl.price > 0;
+  let action;
+  if(!paid){
+    action = isCurrent || (user && user.plan === pl.id) ? `<button class="btn btn-ghost btn-block" disabled>Seu plano atual</button>` : `<button class="btn btn-ghost btn-block" disabled>Incluso em todas as contas</button>`;
+  } else if(!user){
+    action = `<a href="#/cadastro" class="btn ${pl.featured?'btn-gold':'btn-ghost'} btn-block">Criar conta para assinar</a>`;
+  } else if(isCurrent){
+    action = `<button class="btn btn-ghost btn-block" onclick="openCheckout('${pl.id}')">Renovar +30 dias</button><p style="text-align:center; font-size:12px; color:var(--ink-faint); margin:8px 0 0;">Vale até ${fmtDate(user.planExpiry)}</p>`;
+  } else {
+    action = `<button class="btn ${pl.featured?'btn-gold':'btn-ghost'} btn-block" onclick="openCheckout('${pl.id}')">Assinar ${esc(pl.name)}</button>`;
+  }
   return `<div class="plan-card ${pl.featured?'featured':''}">
     ${pl.featured?`<span class="plan-tag">Mais escolhido</span>`:``}
     <p class="plan-name">${esc(pl.name)}</p>
-    <p class="plan-price">${pl.price===0?'Grátis':fmtMoney(pl.price)+'<span>/mês</span>'}</p>
-    <p class="plan-period">${pl.price===0?'sem cobrança':'cobrado mensalmente'}</p>
+    <p class="plan-price">${!paid?'Grátis':fmtMoney(pl.price)+'<span>/30 dias</span>'}</p>
+    <p class="plan-period">${!paid?'sem cobrança':'pagamento único via PIX, sem renovação automática'}</p>
     <ul class="plan-benefits">${pl.benefits.map(b=>`<li>${ICO.check}${esc(b)}</li>`).join("")}</ul>
-    ${isCurrent ? `<button class="btn btn-ghost btn-block" disabled>Seu plano atual</button>`
-      : (user ? `<button class="btn ${pl.featured?'btn-gold':'btn-ghost'} btn-block" onclick="choosePlan('${pl.id}')">Assinar ${esc(pl.name)}</button>`
-              : `<a href="#/cadastro" class="btn ${pl.featured?'btn-gold':'btn-ghost'} btn-block">Criar conta</a>`)}
+    ${action}
   </div>`;
 }
-async function choosePlan(planId){
-  if(!currentUser()) return go("#/login");
+
+/* --------------------------- CHECKOUT PIX -------------------------------- */
+// O navegador só PEDE o pagamento e ACOMPANHA o resultado. Quem decide se o plano é liberado é o
+// servidor, depois de confirmar com a SyncPay — nada aqui consegue "forçar" a liberação.
+let checkout = { plan: null, payment: null, timer: null, polls: 0 };
+
+function maskCpf(v){ v = v.replace(/\D/g,"").slice(0,11); return v.replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d)/,"$1.$2").replace(/(\d{3})(\d{1,2})$/,"$1-$2"); }
+function maskPhone(v){ v = v.replace(/\D/g,"").slice(0,11); if(v.length>7) return v.replace(/(\d{2})(\d{5})(\d{0,4})/,"($1) $2-$3").replace(/-$/,""); if(v.length>2) return v.replace(/(\d{2})(\d+)/,"($1) $2"); return v; }
+
+function checkoutBox(){
+  let host = document.getElementById("checkout-modal");
+  if(!host){
+    host = document.createElement("div"); host.id = "checkout-modal"; host.className = "modal-overlay";
+    host.innerHTML = `<div class="modal-box" id="checkout-box" style="max-width:440px;"></div>`;
+    document.body.appendChild(host);
+  }
+  return host;
+}
+function openCheckout(planId){
+  if(!currentUser()){ go("#/login"); return; }
+  const plan = planById(planId);
+  if(!plan || !(plan.price > 0)) return;
+  stopPolling();
+  checkout = { plan, payment: null, timer: null, polls: 0 };
+  checkoutBox().classList.add("open");
+  document.body.style.overflow = "hidden";
+  renderCheckoutForm();
+}
+function closeCheckout(){
+  const pending = checkout.payment && checkout.payment.status === "pending";
+  stopPolling();
+  const host = document.getElementById("checkout-modal");
+  if(host) host.classList.remove("open");
+  document.body.style.overflow = "";
+  if(pending) toast("Se você já pagou o PIX, a confirmação chega sozinha em instantes.");
+}
+function stopPolling(){ if(checkout.timer){ clearTimeout(checkout.timer); checkout.timer = null; } }
+function coHead(title){ return `<div class="modal-head"><h3>${title}</h3><button class="modal-close" onclick="closeCheckout()">&times;</button></div>`; }
+function setCheckout(html){ document.getElementById("checkout-box").innerHTML = html; }
+
+function renderCheckoutForm(errorMsg, vals){
+  const p = checkout.plan; vals = vals || {};
+  setCheckout(`${coHead("Assinar plano " + esc(p.name))}
+    <div class="co-summary"><div><b>${esc(p.name)}</b><div style="font-size:12.5px; color:var(--ink-muted); margin-top:2px;">30 dias de acesso · pagamento por PIX</div></div><div class="co-price">${fmtMoney(p.price)}</div></div>
+    <div class="form-msg error" id="co-msg" style="${errorMsg?'display:block':''}">${esc(errorMsg||"")}</div>
+    <form id="co-form" autocomplete="on">
+      <div class="field"><label>CPF</label><input name="cpf" inputmode="numeric" placeholder="000.000.000-00" required autocomplete="off" value="${esc(vals.cpf||"")}"></div>
+      <div class="field"><label>Celular com DDD</label><input name="phone" inputmode="tel" placeholder="(63) 99999-9999" required autocomplete="tel" value="${esc(vals.phone||"")}"></div>
+      <div class="field-hint" style="margin:-4px 0 16px;">O CPF é usado apenas para gerar a cobrança PIX. Não guardamos o número completo.</div>
+      <button class="btn btn-gold btn-block" id="co-submit" type="submit">Gerar PIX de ${fmtMoney(p.price)}</button>
+    </form>`);
+  const f = qs("#co-form");
+  f.cpf.addEventListener("input", ()=>{ f.cpf.value = maskCpf(f.cpf.value); });
+  f.phone.addEventListener("input", ()=>{ f.phone.value = maskPhone(f.phone.value); });
+  f.addEventListener("submit", submitCheckout);
+}
+
+async function submitCheckout(e){
+  e.preventDefault();
+  const f = e.target, btn = qs("#co-submit");
+  btn.disabled = true; btn.textContent = "Gerando PIX...";
   try{
-    const r = await api("/users/" + currentUser().id, { method:"PATCH", body:{ plan: planId } });
-    DB.me = r.user;
-    toast("Plano atualizado com sucesso!");
-    render();
-  }catch(e){ toast(e.message); }
+    const r = await api("/payments/checkout", { method:"POST", body:{ planId: checkout.plan.id, cpf: f.cpf.value, phone: f.phone.value } });
+    checkout.payment = r.payment; checkout.polls = 0;
+    renderPix(r);
+    scheduleCheck(4000);
+  }catch(err){
+    renderCheckoutForm(err.message, { cpf: f.cpf.value, phone: f.phone.value });   // mantém o que a pessoa digitou
+  }
+}
+
+function renderPix(r){
+  setCheckout(`${coHead("Pague com PIX")}
+    <div class="pix-box">
+      <div class="co-summary" style="text-align:left;"><div><b>${esc(checkout.plan.name)}</b><div style="font-size:12.5px; color:var(--ink-muted);">30 dias de acesso</div></div><div class="co-price">${fmtMoney(r.payment.amount)}</div></div>
+      <img class="qr" src="${r.qr}" alt="QR Code do PIX">
+      <div class="pix-code" id="pix-code">${esc(r.pixCode)}</div>
+      <button class="btn btn-gold btn-block" style="margin-top:12px;" onclick="copyPix()">Copiar código PIX</button>
+      <ol class="pix-steps"><li>Abra o app do seu banco e escolha <b>Pix</b>.</li><li>Leia o QR Code ou use <b>Pix Copia e Cola</b>.</li><li>Confirme o pagamento. Esta tela atualiza sozinha!</li></ol>
+      <div class="pix-wait"><span class="spinner" style="width:18px;height:18px;"></span><span id="pix-status">Aguardando o pagamento…</span></div>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <button class="btn btn-ghost btn-sm" style="flex:1;" onclick="checkNow()">Já paguei, verificar</button>
+        <button class="btn btn-danger btn-sm" onclick="cancelCheckout()">Cancelar</button>
+      </div>
+    </div>`);
+}
+
+async function copyPix(){
+  const code = checkout.payment && qs("#pix-code") ? qs("#pix-code").textContent : "";
+  try{ await navigator.clipboard.writeText(code); toast("Código PIX copiado! Cole no app do seu banco."); }
+  catch(e){
+    const r = document.createRange(); r.selectNodeContents(qs("#pix-code"));
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+    toast("Selecionamos o código — é só copiar.");
+  }
+}
+
+function scheduleCheck(ms){
+  stopPolling();
+  checkout.timer = setTimeout(checkNow, ms);
+}
+async function checkNow(){
+  if(!checkout.payment) return;
+  stopPolling();
+  checkout.polls++;
+  try{
+    const r = await api("/payments/" + checkout.payment.id);
+    const st = r.payment.status;
+    if(st === "paid"){ return onPaid(r.payment); }
+    if(st === "expired" || st === "canceled"){
+      return setCheckout(`${coHead("PIX expirado")}<div class="co-ok"><div class="big">⌛</div><h3>Este PIX não vale mais</h3><p style="color:var(--ink-muted); font-size:14px;">Sem problema — gere um novo e pague em menos de um minuto.</p><button class="btn btn-gold btn-block" style="margin-top:14px;" onclick="renderCheckoutForm()">Gerar novo PIX</button></div>`);
+    }
+  }catch(err){ /* falha momentânea de rede: tenta de novo no próximo ciclo */ }
+  if(checkout.polls < 300) scheduleCheck(checkout.polls < 60 ? 5000 : 10000);
+}
+// Voltou do app do banco? Confere na hora, sem esperar o próximo ciclo.
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "visible" && checkout.payment && checkout.payment.status === "pending" && checkout.timer) checkNow(); });
+
+async function onPaid(payment){
+  stopPolling();
+  checkout.payment = payment;
+  await loadFresh().catch(()=>{});
+  setCheckout(`${coHead("Pagamento confirmado")}<div class="co-ok"><div class="big">🎉</div><h3>Tudo certo! Plano ${esc(checkout.plan.name)} ativo</h3>
+    <p style="color:var(--ink-muted); font-size:14px; line-height:1.6;">Seu acesso vale até <b style="color:var(--gold-soft);">${fmtDate(payment.validUntil)}</b>.<br>O comprovante fica em <b>Minha conta › Meus pagamentos</b>.</p>
+    <button class="btn btn-gold btn-block" style="margin-top:14px;" onclick="closeCheckout(); go('#/catalogo'); render();">Ver as peças</button></div>`);
+}
+async function cancelCheckout(){
+  try{ if(checkout.payment) await api("/payments/" + checkout.payment.id + "/cancel", { method:"POST" }); }catch(e){}
+  checkout.payment = null;
+  closeCheckout();
+  toast("Pagamento cancelado. Nada foi cobrado.");
 }
 
 /* --------------------------- LOGIN / SIGNUP -------------------------------- */
@@ -688,7 +943,6 @@ function LoginPage(){
       <button class="btn btn-gold btn-block" type="submit">Entrar</button>
     </form>
     <p class="auth-foot">Não tem conta? <a href="#/cadastro">Cadastre-se</a></p>
-    <div class="demo-note"><b>Contas de demonstração</b><br>Admin: admin@minidrama.app / admin123<br>Usuário: convidado@minidrama.app / 123456</div>
   </div></div>`;
 }
 function SignupPage(){
@@ -714,6 +968,7 @@ function attachAuthEvents(){
       try{
         const r = await api("/auth/login", { method:"POST", body:{ email: fd.get("email"), password: fd.get("password") } });
         setToken(r.token); DB.me = r.user;
+        await loadFresh().catch(()=>{});
         toast("Bem-vindo(a) de volta, " + r.user.name.split(" ")[0] + "!");
         go(r.user.role==="admin" ? "#/admin" : "#/home");
       }catch(err){ msg.textContent = err.message; msg.style.display="block"; }
@@ -728,7 +983,8 @@ function attachAuthEvents(){
       try{
         const r = await api("/auth/signup", { method:"POST", body:{ name: fd.get("name"), email: fd.get("email"), password: fd.get("password") } });
         setToken(r.token); DB.me = r.user;
-        toast("Conta criada! Bem-vindo(a) ao " + SITE_NAME + ".");
+        await loadFresh().catch(()=>{});
+        toast("Conta criada! Bem-vindo(a) ao " + SITE_NAME + " 🎭");
         go("#/home");
       }catch(err){ msg.textContent = err.message; msg.style.display="block"; }
     });
@@ -738,25 +994,71 @@ function attachAuthEvents(){
 /* --------------------------- ACCOUNT PAGE ----------------------------------- */
 function AccountPage(user){
   const plan = planById(user.plan);
+  const free = !plan || plan.price === 0;
   const active = isPlanActive(user);
+  const paidPlan = DB.plans.find(p => p.price > 0 && p.featured) || DB.plans.find(p => p.price > 0);
   return `<div class="page-wrap">
-    <h1 class="page-title">Minha conta</h1><p class="page-sub">Gerencie seus dados e sua assinatura.</p>
+    <h1 class="page-title">Minha conta</h1><p class="page-sub">Olá, ${esc(user.name.split(" ")[0])}! Aqui você acompanha sua assinatura e seus dados.</p>
     <div class="acc-grid">
       <div class="acc-nav">
         <button class="active">Visão geral</button>
         <button onclick="go('#/planos')">Planos disponíveis</button>
         <button onclick="doLogout()">${ICO.logout} Sair</button>
       </div>
-      <div class="acc-card">
-        <h3>Assinatura</h3>
-        <div class="plan-status-badge ${active?'':'expired'}"><span class="dot"></span> Plano ${esc(plan?.name||'')} — ${active? 'ativo':'expirado'}</div>
-        <p style="color:var(--ink-muted); font-size:13.5px; margin-bottom:22px;">${user.plan==='plateia' ? 'Plano gratuito, sem data de expiração.' : 'Válido até ' + fmtDate(user.planExpiry) + '.'}</p>
-        <a href="#/planos" class="btn btn-ghost btn-sm">Alterar plano</a>
+      <div>
+        <div class="acc-card" style="margin-bottom:20px;">
+          <h3>Assinatura</h3>
+          <div class="plan-status-badge ${active?'':'expired'}"><span class="dot"></span> Plano ${esc(plan?.name||'')} — ${active? 'ativo':'expirado'}${!free && active ? `<span class="days-left">${daysLeft(user)} ${daysLeft(user)===1?'dia':'dias'}</span>` : ''}</div>
+          <p style="color:var(--ink-muted); font-size:13.5px; margin-bottom:18px;">${free ? 'Plano gratuito, sem data de expiração. Assine para liberar o catálogo completo.' : (active ? 'Válido até ' + fmtDate(user.planExpiry) + '.' : 'Venceu em ' + fmtDate(user.planExpiry) + '. Renove para voltar a assistir tudo.')}</p>
+          ${free && paidPlan ? `<button class="btn btn-gold btn-sm" onclick="go('#/planos')">Ver planos</button>`
+            : (!free ? `<button class="btn ${active?'btn-ghost':'btn-gold'} btn-sm" onclick="openCheckout('${esc(user.plan)}')">${active ? 'Renovar +30 dias' : 'Reativar plano'}</button> <a href="#/planos" class="btn btn-ghost btn-sm">Trocar de plano</a>` : '')}
+        </div>
+        <div class="acc-card" style="margin-bottom:20px;">
+          <h3>Meus pagamentos</h3>
+          <div id="my-payments"><p style="color:var(--ink-faint); font-size:13.5px;">Carregando…</p></div>
+        </div>
+        <div class="acc-card" style="margin-bottom:20px;">
+          <h3>E-mails</h3>
+          <label class="checkbox-row"><input type="checkbox" id="opt-emails" ${user.emailOptOut ? '' : 'checked'}> Quero receber novidades e destaques do catálogo por e-mail</label>
+          <p class="field-hint" style="margin-top:8px;">Avisos importantes (vencimento do plano e comprovantes de pagamento) continuam chegando sempre.</p>
+        </div>
+        <div class="acc-card">
+          <h3>Alterar senha</h3>
+          <div class="form-msg" id="pw-msg"></div>
+          <form id="pw-form">
+            <div class="field"><label>Senha atual</label><input type="password" name="current" required autocomplete="current-password"></div>
+            <div class="field"><label>Nova senha (mínimo 8 caracteres)</label><input type="password" name="next" required minlength="8" autocomplete="new-password"></div>
+            <button class="btn btn-ghost btn-sm" type="submit">Salvar nova senha</button>
+          </form>
+        </div>
       </div>
     </div>
   </div>`;
 }
-function attachAccountEvents(){}
+const PAY_LABEL = { paid:["Pago","badge-ok"], pending:["Aguardando","badge-warn"], expired:["Expirado","badge-neutral"], canceled:["Cancelado","badge-neutral"] };
+async function attachAccountEvents(){
+  const pf = qs("#pw-form");
+  if(pf) pf.addEventListener("submit", async e=>{
+    e.preventDefault();
+    const msg = qs("#pw-msg");
+    try{
+      await api("/auth/change-password", { method:"POST", body:{ currentPassword: pf.current.value, newPassword: pf.next.value } });
+      msg.className = "form-msg ok"; msg.textContent = "Senha alterada com sucesso."; msg.style.display = "block"; pf.reset();
+    }catch(err){ msg.className = "form-msg error"; msg.textContent = err.message; msg.style.display = "block"; }
+  });
+  const opt = qs("#opt-emails");
+  if(opt) opt.addEventListener("change", async ()=>{
+    try{ const r = await api("/auth/preferences", { method:"PATCH", body:{ emailOptOut: !opt.checked } }); DB.me = r.user; saveCache(); toast(opt.checked ? "Pronto! Você vai receber as novidades." : "Tudo bem, paramos os e-mails de divulgação."); }
+    catch(err){ opt.checked = !opt.checked; toast(err.message); }
+  });
+  try{
+    const r = await api("/payments/mine");
+    const box = qs("#my-payments"); if(!box) return;
+    box.innerHTML = r.payments.length ? r.payments.map(p=>{ const [t,c] = PAY_LABEL[p.status] || [p.status,"badge-neutral"];
+      return `<div class="pay-row"><span>${fmtDate(p.createdAt)} · ${esc(p.planName)}</span><span>${fmtMoney(p.amount)} <span class="badge ${c}" style="margin-left:6px;">${t}</span></span></div>`; }).join("")
+      : `<p style="color:var(--ink-faint); font-size:13.5px;">Você ainda não fez nenhum pagamento.</p>`;
+  }catch(e){ const box = qs("#my-payments"); if(box) box.innerHTML = `<p style="color:var(--ink-faint); font-size:13.5px;">Não foi possível carregar agora.</p>`; }
+}
 
 /* ======================================================================
    PAINEL ADMINISTRATIVO
@@ -785,7 +1087,8 @@ function AdminLayout(hash){
     { key:"", label:"Visão geral", icon:ICO.grid, href:"#/admin" },
     { key:"pecas", label:"Peças", icon:ICO.film, href:"#/admin/pecas" },
     { key:"usuarios", label:"Usuários", icon:ICO.users, href:"#/admin/usuarios" },
-    { key:"planos", label:"Planos", icon:ICO.ticket, href:"#/admin/planos" }
+    { key:"planos", label:"Planos", icon:ICO.ticket, href:"#/admin/planos" },
+    { key:"pagamentos", label:"Pagamentos", icon:ICO.ticket, href:"#/admin/pagamentos" }
   ];
   return `<div class="admin-shell">
     <aside class="admin-side">
@@ -804,7 +1107,9 @@ async function afterAdminRender(hash){
     if(section==="pecas") { adminPlaysPage = 1; await loadAdminPlaysPage(); main.innerHTML = AdminPlays(); attachAdminPlaysEvents(); return; }
     if(section==="usuarios") { await refreshUsers(); main.innerHTML = AdminUsers(); attachAdminUsersEvents(); return; }
     if(section==="planos") { await refreshPlans(); main.innerHTML = AdminPlans(); return; }
-    await Promise.all([refreshPlays(), refreshUsers(), refreshPlans()]);
+    if(section==="pagamentos") { await refreshPlans(); adminPayPage = 1; await loadAdminPayments(); main.innerHTML = AdminPayments(); return; }
+    const [, , , pay] = await Promise.all([refreshPlays(), refreshUsers(), refreshPlans(), api("/payments/admin/list?page=1")]);
+    DB.payStats = pay.last30;
     main.innerHTML = AdminDashboard();
   }catch(e){ main.innerHTML = `<p style="color:var(--danger);">${esc(e.message)}</p>`; }
 }
@@ -812,8 +1117,8 @@ async function afterAdminRender(hash){
 function AdminDashboard(){
   const totalUsers = DB.users.filter(u=>u.role==='user').length;
   const activeSubs = DB.users.filter(u=>u.role==='user' && u.plan!=='plateia' && isPlanActive(u)).length;
-  const totalPlays = DB.plays.length;
-  const mrr = DB.users.filter(u=>u.role==='user' && isPlanActive(u)).reduce((s,u)=>{ const p=planById(u.plan); return s + (p?p.price:0); },0);
+  const totalPlays = DB.playsTotal != null ? DB.playsTotal : DB.plays.length;
+  const stats = DB.payStats || { revenue: 0, count: 0 };
   const recentUsers = [...DB.users].filter(u=>u.role==='user').sort((a,b)=> new Date(b.createdAt)-new Date(a.createdAt)).slice(0,5);
   return `
   <div class="admin-topbar"><h1 class="admin-h1">Visão geral</h1></div>
@@ -821,7 +1126,7 @@ function AdminDashboard(){
     <div class="stat-card"><div class="stat-label">Usuários cadastrados</div><div class="stat-value">${totalUsers}</div></div>
     <div class="stat-card"><div class="stat-label">Assinaturas ativas (pagas)</div><div class="stat-value">${activeSubs}</div></div>
     <div class="stat-card"><div class="stat-label">Peças no catálogo</div><div class="stat-value">${totalPlays}</div></div>
-    <div class="stat-card"><div class="stat-label">Receita mensal recorrente</div><div class="stat-value">${fmtMoney(mrr)}</div></div>
+    <div class="stat-card"><div class="stat-label">Receita confirmada (30 dias)</div><div class="stat-value">${fmtMoney(stats.revenue)}</div><div style="font-size:12px; color:var(--ink-faint); margin-top:6px;">${stats.count} pagamento${stats.count===1?'':'s'} confirmado${stats.count===1?'':'s'}</div></div>
   </div>
   <div class="admin-panel">
     <div class="admin-panel-head"><h3>Últimos cadastros</h3><a href="#/admin/usuarios" class="section-link">Ver todos</a></div>
@@ -829,7 +1134,60 @@ function AdminDashboard(){
       <thead><tr><th>Nome</th><th>E-mail</th><th>Plano</th><th>Cadastrado em</th><th>Status</th></tr></thead>
       <tbody>${recentUsers.map(u=>`<tr><td class="strong">${esc(u.name)}</td><td>${esc(u.email)}</td><td>${esc(planById(u.plan)?.name||'')}</td><td>${fmtDate(u.createdAt)}</td><td>${StatusBadge(u)}</td></tr>`).join("") || `<tr><td colspan="5" style="text-align:center; color:var(--ink-faint);">Nenhum usuário ainda.</td></tr>`}</tbody>
     </table></div>
+  </div>
+  <div class="admin-panel">
+    <div class="admin-panel-head"><h3>Sistema</h3></div>
+    <p style="color:var(--ink-muted); font-size:13.5px; margin:0 0 14px; line-height:1.6;">Use estes botões para conferir se os e-mails estão configurados. O resumo diário, os avisos de vencimento e a conferência de pagamentos rodam sozinhos todo dia (agendador externo, veja o README).</p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="btn btn-ghost btn-sm" onclick="adminSendTestEmail(this)">Enviar e-mail de teste para mim</button>
+      <button class="btn btn-ghost btn-sm" onclick="adminRunDaily(this)">Rodar a rotina diária agora</button>
+    </div>
+    <pre id="sys-out" style="display:none; margin:14px 0 0; background:var(--bg-elev-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px; font-size:12px; color:var(--ink-muted); white-space:pre-wrap;"></pre>
   </div>`;
+}
+async function adminSendTestEmail(btn){
+  btn.disabled = true;
+  try{ const r = await api("/email/test", { method:"POST" }); showSysOut(r.message); }
+  catch(e){ showSysOut(e.message); }
+  btn.disabled = false;
+}
+async function adminRunDaily(btn){
+  btn.disabled = true;
+  try{ const r = await api("/cron/run-now", { method:"POST" }); showSysOut(JSON.stringify(r, null, 2)); }
+  catch(e){ showSysOut(e.message); }
+  btn.disabled = false;
+}
+function showSysOut(t){ const el = qs("#sys-out"); if(el){ el.style.display = "block"; el.textContent = t; } }
+
+/* ---- Admin: Pagamentos ---- */
+let adminPayPage = 1, adminPayStatus = "", adminPayData = null;
+async function loadAdminPayments(){
+  adminPayData = await api(`/payments/admin/list?page=${adminPayPage}${adminPayStatus ? "&status=" + adminPayStatus : ""}`);
+}
+async function goToAdminPayPage(n){
+  adminPayPage = Math.max(1, n); await loadAdminPayments();
+  qs("#admin-main").innerHTML = AdminPayments();
+}
+async function setAdminPayStatus(v){ adminPayStatus = v; adminPayPage = 1; await loadAdminPayments(); qs("#admin-main").innerHTML = AdminPayments(); }
+function AdminPayments(){
+  const d = adminPayData;
+  return `
+  <div class="admin-topbar"><h1 class="admin-h1">Pagamentos</h1>
+    <select class="search-input" onchange="setAdminPayStatus(this.value)">
+      ${[["","Todos"],["paid","Pagos"],["pending","Aguardando"],["expired","Expirados"],["canceled","Cancelados"]].map(([v,l])=>`<option value="${v}" ${adminPayStatus===v?'selected':''}>${l}</option>`).join("")}
+    </select>
+  </div>
+  <div class="stat-grid" style="grid-template-columns:repeat(2,1fr);">
+    <div class="stat-card"><div class="stat-label">Receita confirmada (30 dias)</div><div class="stat-value">${fmtMoney(d.last30.revenue)}</div></div>
+    <div class="stat-card"><div class="stat-label">Pagamentos confirmados (30 dias)</div><div class="stat-value">${d.last30.count}</div></div>
+  </div>
+  <div class="admin-panel"><div class="table-scroll">
+    ${d.payments.length === 0 ? EmptyState(ICO.ticket, "Nenhum pagamento por aqui", "Quando alguém assinar um plano, aparece nesta lista.") : `
+    <table><thead><tr><th>Data</th><th>Usuário</th><th>Plano</th><th>Valor</th><th>Status</th><th>Válido até</th></tr></thead>
+    <tbody>${d.payments.map(p=>{ const [t,c] = PAY_LABEL[p.status] || [p.status,"badge-neutral"];
+      return `<tr><td>${fmtDate(p.createdAt)}</td><td class="strong">${esc(p.userName)}<div style="font-weight:400; font-size:12px; color:var(--ink-faint);">${esc(p.userEmail)}</div></td><td>${esc(p.planName)}</td><td>${fmtMoney(p.amount)}</td><td><span class="badge ${c}">${t}</span></td><td>${p.validUntil ? fmtDate(p.validUntil) : "—"}</td></tr>`; }).join("")}</tbody></table>`}
+  </div></div>
+  ${PaginationControls({ page: d.page, totalPages: d.totalPages, total: d.total }, "goToAdminPayPage")}`;
 }
 function StatusBadge(u){
   if(u.status==="bloqueado") return `<span class="badge badge-off">Bloqueado</span>`;
@@ -1314,6 +1672,61 @@ async function deletePlan(id){
   if(!confirm("Excluir este plano?")) return;
   try{ await api("/plans/" + id, { method:"DELETE" }); toast("Plano excluído."); render(); }
   catch(e){ toast(e.message); }
+}
+
+/* --------------------------- APP INSTALÁVEL (PWA) -------------------------- */
+function registerServiceWorker(){
+  if("serviceWorker" in navigator){
+    window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js").catch(()=>{}); });
+  }
+}
+let deferredInstall = null;
+function isStandalone(){ return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true; }
+function isIos(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream; }
+window.addEventListener("beforeinstallprompt", (e)=>{ e.preventDefault(); deferredInstall = e; });
+window.addEventListener("appinstalled", ()=>{ deferredInstall = null; removeInstallBanner(); toast("App instalado! Procure o Mini Drama na sua tela inicial 🎭"); });
+
+function removeInstallBanner(){ const b = document.getElementById("install-banner"); if(b) b.remove(); }
+function dismissInstallBanner(){ try{ localStorage.setItem("md_install_dismissed", String(Date.now())); }catch(e){} removeInstallBanner(); }
+
+// Instala (Android/Chrome/Edge/desktop) ou ensina o caminho (iPhone/Safari, que não tem botão automático).
+async function promptInstall(){
+  if(isStandalone()){ toast("O app já está instalado neste aparelho."); return; }
+  if(deferredInstall){
+    deferredInstall.prompt();
+    const choice = await deferredInstall.userChoice.catch(()=>null);
+    deferredInstall = null; removeInstallBanner();
+    if(choice && choice.outcome !== "accepted") try{ localStorage.setItem("md_install_dismissed", String(Date.now())); }catch(e){}
+    return;
+  }
+  if(isIos()){ showInstallBanner(true); return; }
+  toast("No menu do navegador, escolha “Instalar app” ou “Adicionar à tela inicial”.");
+}
+
+function showInstallBanner(force){
+  if(document.getElementById("install-banner")) return;
+  const ios = isIos() && !deferredInstall;
+  const b = document.createElement("div");
+  b.id = "install-banner"; b.className = "install-banner";
+  b.innerHTML = `<img src="/icons/icon-192.png" alt="">
+    <div class="ib-text">
+      <p class="ib-title">Instale o app Mini Drama</p>
+      <p class="ib-sub">${ios ? 'Toque em <b>Compartilhar</b> <span aria-hidden="true">⬆️</span> e depois em <b>“Adicionar à Tela de Início”</b>.' : 'Acesso direto da tela inicial, abre mais rápido e em tela cheia.'}</p>
+      ${ios ? '' : '<button class="btn btn-gold btn-sm" style="margin-top:8px;" onclick="promptInstall()">Instalar app</button>'}
+    </div>
+    <button class="ib-close" aria-label="Fechar" onclick="dismissInstallBanner()">&times;</button>`;
+  document.body.appendChild(b);
+}
+
+// Mostra o convite alguns segundos depois de abrir (sem atrapalhar), no máximo 1x a cada 7 dias.
+function scheduleInstallBanner(){
+  if(isStandalone()) return;
+  let last = 0; try{ last = parseInt(localStorage.getItem("md_install_dismissed"), 10) || 0; }catch(e){}
+  if(Date.now() - last < 7*86400000) return;
+  setTimeout(()=>{
+    if(isStandalone() || document.getElementById("install-banner")) return;
+    if(deferredInstall || (isIos() && /safari/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent))) showInstallBanner();
+  }, 6000);
 }
 </script>
 </body>

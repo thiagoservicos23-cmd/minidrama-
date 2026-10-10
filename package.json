@@ -10,7 +10,8 @@
     "migrate": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "seed": "node prisma/seed.js",
-    "postinstall": "node node_modules/prisma/build/index.js generate"
+    "postinstall": "node node_modules/prisma/build/index.js generate",
+    "test": "node --test tests/payments.test.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -18,12 +19,18 @@
   "dependencies": {
     "@prisma/client": "^5.18.0",
     "bcryptjs": "^2.4.3",
+    "compression": "^1.7.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "jsonwebtoken": "^9.0.2"
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "qrcode": "^1.5.4"
   },
   "devDependencies": {
     "prisma": "^5.18.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

@@ -58,19 +58,23 @@ async function main() {
     }
   ];
   for (const p of plans) {
-    await prisma.plan.upsert({ where: { id: p.id }, update: p, create: p });
+    // "update: {}" = nunca sobrescreve um plano que já existe (preços editados no painel ficam como estão).
+    await prisma.plan.upsert({ where: { id: p.id }, update: {}, create: p });
   }
 
   // ---------- Usuários ----------
-  const adminPass = await bcrypt.hash("admin123", 10);
-  const demoPass = await bcrypt.hash("123456", 10);
+  // Em produção, defina ADMIN_EMAIL e ADMIN_PASSWORD (senha forte) antes de rodar o seed.
+  const adminEmail = (process.env.ADMIN_EMAIL || "admin@minidrama.app").toLowerCase();
+  const adminPlain = process.env.ADMIN_PASSWORD || "admin123";
+  const adminPass = await bcrypt.hash(adminPlain, 10);
+  if (!process.env.ADMIN_PASSWORD) console.warn("⚠️  ADMIN_PASSWORD não definida: usando a senha padrão 'admin123'. TROQUE antes de divulgar o site.");
 
   await prisma.user.upsert({
-    where: { email: "admin@minidrama.app" },
+    where: { email: adminEmail },
     update: {},
     create: {
       name: "Direção Geral",
-      email: "admin@minidrama.app",
+      email: adminEmail,
       password: adminPass,
       role: "admin",
       plan: "camarote",
@@ -79,19 +83,24 @@ async function main() {
     }
   });
 
-  await prisma.user.upsert({
-    where: { email: "convidado@minidrama.app" },
-    update: {},
-    create: {
-      name: "Espectador Convidado",
-      email: "convidado@minidrama.app",
-      password: demoPass,
-      role: "user",
-      plan: "balcao",
-      planExpiry: daysFromNow(20),
-      status: "ativo"
-    }
-  });
+  // Conta de demonstração com plano pago: SÓ é criada se SEED_DEMO_USER=1 (nunca use em produção).
+  if (process.env.SEED_DEMO_USER === "1") {
+    const demoPass = await bcrypt.hash("123456", 10);
+    await prisma.user.upsert({
+      where: { email: "convidado@minidrama.app" },
+      update: {},
+      create: {
+        name: "Espectador Convidado",
+        email: "convidado@minidrama.app",
+        password: demoPass,
+        role: "user",
+        plan: "balcao",
+        planExpiry: daysFromNow(20),
+        status: "ativo"
+      }
+    });
+    console.log("Usuário demo criado: convidado@minidrama.app / 123456");
+  }
 
   // ---------- Peças ----------
   const plays = [
@@ -144,13 +153,17 @@ async function main() {
       videoUrl: "", requiresPlan: "plateia", featured: false
     }
   ];
-  for (const p of plays) {
-    await prisma.play.upsert({ where: { id: p.id }, update: p, create: p });
+  // Peças de exemplo: só entram se o catálogo estiver vazio (não ressuscita o que o grupo apagou).
+  if ((await prisma.play.count()) === 0) {
+    for (const p of plays) {
+      await prisma.play.create({ data: p });
+    }
+  } else {
+    console.log("Catálogo já tem peças: as de exemplo não foram adicionadas.");
   }
 
   console.log("Banco semeado com sucesso.");
-  console.log("Login admin: admin@minidrama.app / admin123");
-  console.log("Login usuário demo: convidado@minidrama.app / 123456");
+  console.log("Login admin: " + adminEmail);
 }
 
 main()
