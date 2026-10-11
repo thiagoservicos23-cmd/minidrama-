@@ -1262,6 +1262,7 @@ function AdminPlays(){
   <div class="admin-topbar"><h1 class="admin-h1">Peças</h1>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <input class="search-input" id="play-search" placeholder="Buscar peça..." value="${esc(adminPlaySearch)}">
+      <button class="btn btn-ghost btn-sm" onclick="openMovePlansModal()">Mover séries de plano</button>
       <button class="btn btn-ghost btn-sm" onclick="openBatchModal()">Cadastrar várias peças</button>
       <button class="btn btn-gold btn-sm" onclick="openPlayModal()">+ Nova peça</button>
     </div>
@@ -1279,7 +1280,8 @@ function AdminPlays(){
   </div></div>
   ${PaginationControls(adminPlaysMeta, "goToAdminPlaysPage")}
   ${Modal("play-modal")}
-  ${Modal("batch-modal")}`;
+  ${Modal("batch-modal")}
+  ${Modal("move-modal")}`;
 }
 function EmptyState(icon, title, sub){ return `<div class="empty-state">${icon}<h3 style="font-family:var(--font-display); color:var(--ink); margin:0 0 6px;">${esc(title)}</h3><p style="margin:0;">${esc(sub)}</p></div>`; }
 function Modal(id){ return `<div class="modal-overlay" id="${id}"><div class="modal-box" id="${id}-box"></div></div>`; }
@@ -1430,8 +1432,64 @@ async function uploadVideoToBunny(){
   upload.start();
 }
 
+
+/* ---- Admin: mover todas as séries de um plano para outro ---- */
+let moveCounts = {};
+async function openMovePlansModal(){
+  try{ moveCounts = (await api("/plays/admin/plan-counts")).counts; }
+  catch(e){ toast(e.message); return; }
+  const plans = DB.plans;
+  const fromDefault = (plans.find(p => (moveCounts[p.id] || 0) > 0) || plans[0]).id;
+  const toDefault = (plans.find(p => p.id !== fromDefault && p.price > 0) || plans.find(p => p.id !== fromDefault)).id;
+  const opts = (sel) => plans.map(p => `<option value="${esc(p.id)}" ${p.id === sel ? "selected" : ""}>${esc(p.name)} (${moveCounts[p.id] || 0} série${(moveCounts[p.id] || 0) === 1 ? "" : "s"})</option>`).join("");
+  qs("#move-modal-box").innerHTML = `
+    <div class="modal-head"><h3>Mover séries de plano</h3><button class="modal-close" onclick="closeModal('move-modal')">&times;</button></div>
+    <p style="color:var(--ink-muted); font-size:13px; margin:0 0 16px; line-height:1.6;">Escolha o plano de origem e o de destino: <b>todas</b> as séries do plano de origem passam a exigir o plano de destino.</p>
+    <div class="form-grid-2">
+      <div class="field"><label>De (plano atual das séries)</label><select id="move-from">${opts(fromDefault)}</select></div>
+      <div class="field"><label>Para (novo plano exigido)</label><select id="move-to">${opts(toDefault)}</select></div>
+    </div>
+    <div id="move-summary" style="background:var(--bg-elev-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; font-size:13.5px; line-height:1.6; margin-bottom:6px;"></div>
+    <div class="field-hint">Não dá para desfazer automaticamente: depois de juntar, o site não sabe quais eram de cada plano. Se precisar voltar, mova de novo (ou edite as séries uma a uma).</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('move-modal')">Cancelar</button>
+      <button type="button" class="btn btn-gold btn-sm" id="move-go" onclick="confirmMovePlans()">Mover</button>
+    </div>`;
+  openModal("move-modal");
+  qs("#move-from").addEventListener("change", updateMoveSummary);
+  qs("#move-to").addEventListener("change", updateMoveSummary);
+  updateMoveSummary();
+}
+function updateMoveSummary(){
+  const from = qs("#move-from").value, to = qs("#move-to").value;
+  const n = moveCounts[from] || 0, a = planById(from), b = planById(to);
+  const btn = qs("#move-go"), box = qs("#move-summary");
+  let html, ok = true;
+  if(from === to){ html = "Escolha dois planos diferentes."; ok = false; }
+  else if(n === 0){ html = `Nenhuma série está no plano <b>${esc(a.name)}</b>. Não há o que mover.`; ok = false; }
+  else{
+    html = `<b>${n} série${n === 1 ? "" : "s"}</b> ${n === 1 ? "vai" : "vão"} passar de <b>${esc(a.name)}</b> para <b>${esc(b.name)}</b>.`;
+    if(a.price === 0 && b.price > 0) html += `<br><span style="color:#E8938C;">⚠ O plano gratuito (${esc(a.name)}) ficará sem nenhuma série liberada: quem não assina só verá as sinopses.</span>`;
+  }
+  box.innerHTML = html; btn.disabled = !ok;
+  btn.textContent = ok ? `Mover ${n} série${n === 1 ? "" : "s"}` : "Mover";
+}
+async function confirmMovePlans(){
+  const from = qs("#move-from").value, to = qs("#move-to").value;
+  const a = planById(from), b = planById(to), n = moveCounts[from] || 0;
+  if(!confirm(`Mover ${n} série(s) de "${a.name}" para "${b.name}"?`)) return;
+  const btn = qs("#move-go"); btn.disabled = true; btn.textContent = "Movendo...";
+  try{
+    const r = await api("/plays/bulk-plan", { method:"POST", body:{ from, to } });
+    closeModal("move-modal");
+    toast(`${r.moved} série${r.moved === 1 ? "" : "s"} movida${r.moved === 1 ? "" : "s"} de ${r.from} para ${r.to}.`);
+    goToAdminPlaysPage(1);
+  }catch(err){ toast(err.message); updateMoveSummary(); }
+}
+
 // ---------- Cadastro em lote (vários vídeos de uma vez) ----------
 let batchFiles = [];
+let batchPlan = "balcao";
 
 // ---------- Planilha de capas (CSV com as colunas "nome" e "url_capa") ----------
 let coverMap = new Map();
@@ -1529,6 +1587,8 @@ async function onBatchCsvChosen(e){
 
 function openBatchModal(){
   batchFiles = []; coverMap = new Map(); coverInfo = null;
+  // Todas as séries do lote entram no plano Balcão (dá para trocar aqui antes de enviar).
+  batchPlan = (DB.plans.find(p => p.id === "balcao") || DB.plans.find(p => p.price > 0) || DB.plans[0]).id;
   qs("#batch-modal-box").innerHTML = `
     <div class="modal-head"><h3>Cadastrar várias peças de uma vez</h3><button class="modal-close" onclick="closeModal('batch-modal'); goToAdminPlaysPage(1);">&times;</button></div>
     <p style="color:var(--ink-muted); font-size:13px; margin-bottom:14px; line-height:1.6;">
@@ -1542,6 +1602,10 @@ function openBatchModal(){
       <textarea id="batch-links-input" rows="4" placeholder="A Farsa do Silêncio | https://drive.google.com/file/d/XXXXX/view
 Ventos de Dona Flor | https://drive.google.com/file/d/YYYYY/view"></textarea>
       <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="onBatchLinksSubmit()">Adicionar esses links à lista</button>
+    </div>
+    <div class="field">
+      <label>Plano exigido para assistir às séries deste lote</label>
+      <select id="batch-plan" onchange="batchPlan=this.value">${DB.plans.map(p=>`<option value="${esc(p.id)}" ${p.id===batchPlan?'selected':''}>${esc(p.name)}</option>`).join("")}</select>
     </div>
     <div class="field">
       <label>Planilha de capas (CSV com as colunas <b>nome</b> e <b>url_capa</b>)</label>
@@ -1633,7 +1697,7 @@ async function processBatchItem(i){
     setStatus("Criando peça...");
     const created = await api("/plays", { method:"POST", body:{
       title: item.title, genre: guessGenre(item.title), releaseYear: new Date().getFullYear(),
-      durationMinutes: item.duration, requiresPlan: "plateia",
+      durationMinutes: item.duration, requiresPlan: batchPlan,
       synopsis: ".",
       director: "", cast: "",
       posterUrl: lookupCover(item) || "https://images.unsplash.com/photo-1503095396549-807759245b35?q=80&w=800&auto=format&fit=crop",

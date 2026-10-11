@@ -60,6 +60,33 @@ router.get("/:id/image/:kind", async (req, res) => {
   res.send(Buffer.from(m[2], "base64"));
 });
 
+// Admin: quantas peças existem em cada plano (para o aviso antes de mover em massa).
+router.get("/admin/plan-counts", requireAuth, requireAdmin, async (req, res) => {
+  const rows = await prisma.play.groupBy({ by: ["requiresPlan"], _count: { _all: true } });
+  const counts = {};
+  rows.forEach((r) => { counts[r.requiresPlan] = r._count._all; });
+  res.json({ counts, total: Object.values(counts).reduce((a, b) => a + b, 0) });
+});
+
+// Admin: move TODAS as peças de um plano para outro (ex.: de Plateia para Balcão).
+router.post("/bulk-plan", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { from, to } = req.body || {};
+    if (!from || !to) return res.status(400).json({ error: "Escolha o plano de origem e o de destino." });
+    if (from === to) return res.status(400).json({ error: "Escolha dois planos diferentes." });
+    const [a, b] = await Promise.all([
+      prisma.plan.findUnique({ where: { id: String(from) } }),
+      prisma.plan.findUnique({ where: { id: String(to) } })
+    ]);
+    if (!a || !b) return res.status(400).json({ error: "Plano inválido." });
+    const r = await prisma.play.updateMany({ where: { requiresPlan: a.id }, data: { requiresPlan: b.id } });
+    res.json({ ok: true, moved: r.count, from: a.name, to: b.name });
+  } catch (e) {
+    console.error("[bulk-plan]", e.message);
+    res.status(500).json({ error: "Não foi possível mover as peças." });
+  }
+});
+
 // Detalhe de uma peça. Só devolve a URL real do vídeo se o visitante tiver direito.
 router.get("/:id", attachUserIfPresent, async (req, res) => {
   const play = await prisma.play.findUnique({ where: { id: req.params.id }, select: PLAY_LIST_SELECT });

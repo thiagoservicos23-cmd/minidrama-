@@ -125,6 +125,14 @@ mais rápido que subir pela internet de casa.
   mas não é 100% garantido; se um vídeo específico não importar, baixe ele do
   Drive e suba como arquivo mesmo (a outra opção do mesmo formulário).
 
+### Mover séries de plano em massa
+Em **Peças → Mover séries de plano** você escolhe o plano de origem e o de destino (cada um mostra quantas séries tem)
+e **todas** as séries do plano de origem passam a exigir o de destino — por exemplo, de Plateia para Balcão.
+O botão mostra a quantidade (“Mover 4 séries”), pede uma confirmação e avisa quando o plano gratuito ficaria sem nenhuma série.
+Não há “desfazer” automático (depois de juntar, o site não sabe quais eram de cada plano).
+Em **Cadastrar várias peças**, o campo **Plano exigido para assistir às séries deste lote** já vem em **Balcão**
+(dá para trocar antes de enviar).
+
 ### Capas em massa por planilha (CSV)
 Ideal para quando um designer entrega as capas já hospedadas (ex.: Supabase Storage). Em
 **Peças → Cadastrar várias peças**, use o campo **Planilha de capas**:
