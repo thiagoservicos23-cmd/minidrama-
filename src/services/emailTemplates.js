@@ -132,4 +132,24 @@ function payment(user, planName, amount, validUntil) {
   return { subject, html: layout({ preheader: `Plano ${planName} ativo até ${fmtDate(validUntil)}.`, title: subject, body, user, marketing: false }), text: `Pagamento confirmado. Plano ${planName} ativo até ${fmtDate(validUntil)}.` };
 }
 
-module.exports = { welcome, digest, expiry, expired, missYou, featured, payment };
+function resetPassword(user, link) {
+  const subject = "Crie uma nova senha no Mini Drama 🔑";
+  const body = h1("Vamos recuperar o seu acesso") +
+    p(`Oi, ${firstName(user)}! Recebemos um pedido para criar uma nova senha na sua conta do Mini Drama.`) +
+    p(`Clique no botão abaixo para escolher a nova senha. O link vale por <b>60 minutos</b> e só pode ser usado <b>uma vez</b>.`) +
+    button("Criar nova senha", link) +
+    p(`<span style="color:#B9A9A0;font-size:14px;">Se o botão não abrir, copie e cole este endereço no navegador:<br><span style="word-break:break-all;color:#8A7A72;">${esc(link)}</span></span>`) +
+    p(`<span style="color:#B9A9A0;font-size:14px;">Não foi você? Pode ignorar este e-mail com tranquilidade: sua senha continua a mesma.</span>`);
+  return { subject, html: layout({ preheader: "O link vale por 60 minutos.", title: subject, body, user, marketing: false }), text: `Para criar uma nova senha, abra: ${link} (vale por 60 minutos e só pode ser usado uma vez). Se não foi você, ignore este e-mail.` };
+}
+
+function passwordChanged(user) {
+  const subject = "Sua senha do Mini Drama foi alterada ✅";
+  const body = h1("Senha alterada com sucesso") +
+    p(`${firstName(user)}, a senha da sua conta acabou de ser alterada e você foi desconectado dos outros aparelhos.`) +
+    p(`Foi você? Então está tudo certo, nada a fazer. <b>Se não foi você</b>, crie uma nova senha agora para proteger a sua conta.`) +
+    button("Recuperar minha conta", `${siteUrl()}/#/esqueci-senha`);
+  return { subject, html: layout({ preheader: "Se não foi você, recupere sua conta agora.", title: subject, body, user, marketing: false }), text: `A senha da sua conta foi alterada. Se não foi você, recupere o acesso: ${siteUrl()}/#/esqueci-senha` };
+}
+
+module.exports = { welcome, digest, expiry, expired, missYou, featured, payment, resetPassword, passwordChanged };

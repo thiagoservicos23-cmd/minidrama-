@@ -279,6 +279,19 @@ Regras: e-mails de divulgação têm link de **descadastro** (e a pessoa também
 avisos de vencimento e comprovantes continuam sempre. Ninguém recebe o mesmo e-mail duas vezes, o limite
 diário (`EMAIL_DAILY_LIMIT`) é respeitado e quem recebeu uma divulgação nas últimas 20h não recebe o resumo no mesmo dia.
 
+### 4.3.1 "Esqueci minha senha" (recuperação por e-mail)
+Na tela de login há o link **Esqueci minha senha**. A pessoa digita o e-mail, recebe um link, escolhe a nova senha.
+- **Depende dos e-mails (4.3):** sem a Brevo configurada, o site avisa que a recuperação ainda não está ativa.
+- O link vale **60 minutos** e só pode ser usado **uma vez**; pedir um novo link invalida o anterior.
+- O site responde igual exista a conta ou não (ninguém descobre quem tem cadastro) e limita os pedidos
+  (3 e-mails/hora por endereço, 8/hora por IP).
+- No banco ficam só o **hash** do link, nunca o link em si.
+- Depois de trocar a senha (por recuperação ou em **Minha conta**), **os logins antigos deixam de valer**
+  e a pessoa recebe um e-mail avisando da alteração.
+- **Atenção com o admin:** a conta criada pelo seed usa `admin@minidrama.app`, que não é uma caixa de entrada real,
+  então ela **não consegue** receber o link. Para ter um admin recuperável, rode o seed com `ADMIN_EMAIL` (um e-mail seu
+  de verdade) e `ADMIN_PASSWORD`, entre com essa conta e, na conta antiga, troque a senha por uma bem longa.
+
 ### 4.4 Agendador gratuito (obrigatório) — e site sempre rápido
 O Render gratuito “dorme” quando ninguém acessa — por isso um agendador **externo** é necessário
 (o servidor dormindo não consegue disparar nada sozinho). Crie conta grátis em **cron-job.org** e 2 tarefas:

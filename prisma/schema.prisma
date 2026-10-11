@@ -30,6 +30,9 @@ model User {
   lastMissYouAt DateTime?                 // última mensagem "sentimos sua falta"
   emailOptOut   Boolean  @default(false)  // true = não quer e-mails de divulgação
 
+  // Logins emitidos ANTES desta data deixam de valer (troca/recuperação de senha).
+  passwordChangedAt DateTime?
+
   payments   Payment[]
 }
 
@@ -101,4 +104,17 @@ model EmailLog {
 
   @@unique([userId, type, key])
   @@index([sentAt])
+}
+
+// Pedidos de recuperação de senha. Guardamos só o HASH do token (como uma senha):
+// quem ler o banco não consegue usar os links. Cada link vale 60 min e 1 uso.
+model PasswordReset {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }

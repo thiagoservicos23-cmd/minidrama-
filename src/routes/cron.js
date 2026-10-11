@@ -4,7 +4,13 @@ const { runDaily } = require("../services/emailJobs");
 const { reconcile } = require("../services/payments");
 const { requireAuth, requireAdmin } = require("../middleware/auth");
 
+const prisma = require("../prismaClient");
+
 const router = express.Router();
+
+async function cleanup() {
+  try { await prisma.passwordReset.deleteMany({ where: { expiresAt: { lt: new Date(Date.now() - 7 * 86400000) } } }); } catch (e) { /* não é crítico */ }
+}
 
 function authorized(req) {
   const expected = process.env.CRON_SECRET || "";
@@ -19,6 +25,7 @@ function authorized(req) {
 router.all("/daily", async (req, res) => {
   if (!authorized(req)) return res.status(404).end();
   try {
+    await cleanup();
     const pagamentos = await reconcile();
     const emails = await runDaily();
     res.json({ ok: true, pagamentos, emails });

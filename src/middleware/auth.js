@@ -17,6 +17,11 @@ async function attachUserIfPresent(req, res, next) {
     const payload = verifyToken(token);
     if (!payload) { req.user = null; return next(); }
     const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+    // Se a senha foi trocada/recuperada depois que este login foi emitido, ele não vale mais.
+    if (user && user.passwordChangedAt && payload.iat && payload.iat < Math.floor(new Date(user.passwordChangedAt).getTime() / 1000)) {
+      req.user = null;
+      return next();
+    }
     req.user = user || null;
     next();
   } catch (e) {

@@ -471,6 +471,8 @@ async function render(){
     initPlayerIfNeeded();
     return;
   }
+  if(hash === "#/esqueci-senha") { app.innerHTML = ForgotPage(); attachRecoveryEvents(); return; }
+  if(hash.startsWith("#/redefinir-senha")) { app.innerHTML = ResetPage(hash); attachRecoveryEvents(); return; }
   if(hash === "#/login") { app.innerHTML = LoginPage(); attachAuthEvents(); return; }
   if(hash === "#/cadastro") { app.innerHTML = SignupPage(); attachAuthEvents(); return; }
   if(hash === "#/planos") { app.innerHTML = PublicShell(PlansPage()); afterPublicRender(); return; }
@@ -942,7 +944,8 @@ function LoginPage(){
       <div class="field"><label>Senha</label><input type="password" name="password" required placeholder="••••••••"></div>
       <button class="btn btn-gold btn-block" type="submit">Entrar</button>
     </form>
-    <p class="auth-foot">Não tem conta? <a href="#/cadastro">Cadastre-se</a></p>
+    <p class="auth-foot" style="margin-top:14px;"><a href="#/esqueci-senha">Esqueci minha senha</a></p>
+    <p class="auth-foot" style="margin-top:8px;">Não tem conta? <a href="#/cadastro">Cadastre-se</a></p>
   </div></div>`;
 }
 function SignupPage(){
@@ -957,6 +960,59 @@ function SignupPage(){
     </form>
     <p class="auth-foot">Já tem conta? <a href="#/login">Entrar</a></p>
   </div></div>`;
+}
+function ForgotPage(){
+  return `<div class="auth-wrap"><div class="auth-card reveal">
+    <div class="auth-brand">${SITE_NAME}</div><p class="auth-sub">Esqueceu a senha? Sem problema. Digite o e-mail da sua conta e enviamos um link para criar uma nova.</p>
+    <div class="form-msg error" id="auth-msg"></div>
+    <form id="forgot-form">
+      <div class="field"><label>E-mail da conta</label><input type="email" name="email" required placeholder="voce@email.com" autocomplete="email"></div>
+      <button class="btn btn-gold btn-block" type="submit">Enviar link por e-mail</button>
+    </form>
+    <p class="auth-foot"><a href="#/login">Voltar para o login</a></p>
+  </div></div>`;
+}
+function ResetPage(hash){
+  const token = new URLSearchParams((hash.split("?")[1] || "")).get("token") || "";
+  if(!token) return `<div class="auth-wrap"><div class="auth-card reveal"><div class="auth-brand">${SITE_NAME}</div>
+    <p class="auth-sub">Este link está incompleto. Peça um novo para criar sua senha.</p>
+    <a class="btn btn-gold btn-block" href="#/esqueci-senha">Pedir novo link</a></div></div>`;
+  return `<div class="auth-wrap"><div class="auth-card reveal">
+    <div class="auth-brand">${SITE_NAME}</div><p class="auth-sub">Escolha a sua nova senha.</p>
+    <div class="form-msg error" id="auth-msg"></div>
+    <form id="reset-form" data-token="${esc(token)}">
+      <div class="field"><label>Nova senha (mínimo 8 caracteres)</label><input type="password" name="password" required minlength="8" autocomplete="new-password"></div>
+      <div class="field"><label>Repita a nova senha</label><input type="password" name="confirm" required minlength="8" autocomplete="new-password"></div>
+      <button class="btn btn-gold btn-block" type="submit">Salvar nova senha</button>
+    </form>
+    <p class="auth-foot"><a href="#/login">Voltar para o login</a></p>
+  </div></div>`;
+}
+function attachRecoveryEvents(){
+  const msg = qs("#auth-msg");
+  const show = (t, ok) => { msg.className = "form-msg " + (ok ? "ok" : "error"); msg.textContent = t; msg.style.display = "block"; };
+  const ff = qs("#forgot-form");
+  if(ff) ff.addEventListener("submit", async e=>{
+    e.preventDefault();
+    const btn = ff.querySelector("button"); btn.disabled = true; btn.textContent = "Enviando...";
+    try{
+      const r = await api("/auth/forgot-password", { method:"POST", body:{ email: ff.email.value } });
+      show(r.message, true);
+      ff.style.display = "none";
+    }catch(err){ show(err.message, false); btn.disabled = false; btn.textContent = "Enviar link por e-mail"; }
+  });
+  const rf = qs("#reset-form");
+  if(rf) rf.addEventListener("submit", async e=>{
+    e.preventDefault();
+    if(rf.password.value !== rf.confirm.value){ show("As duas senhas não são iguais.", false); return; }
+    const btn = rf.querySelector("button"); btn.disabled = true; btn.textContent = "Salvando...";
+    try{
+      await api("/auth/reset-password", { method:"POST", body:{ token: rf.dataset.token, newPassword: rf.password.value } });
+      clearToken(); DB.me = null; saveCache();      // por segurança, entra de novo com a senha nova
+      toast("Senha alterada! Entre com a sua nova senha.");
+      go("#/login");
+    }catch(err){ show(err.message, false); btn.disabled = false; btn.textContent = "Salvar nova senha"; }
+  });
 }
 function attachAuthEvents(){
   const loginForm = qs("#login-form");
@@ -1042,7 +1098,8 @@ async function attachAccountEvents(){
     e.preventDefault();
     const msg = qs("#pw-msg");
     try{
-      await api("/auth/change-password", { method:"POST", body:{ currentPassword: pf.current.value, newPassword: pf.next.value } });
+      const r = await api("/auth/change-password", { method:"POST", body:{ currentPassword: pf.current.value, newPassword: pf.next.value } });
+      if(r.token) setToken(r.token);   // os outros aparelhos são desconectados; este continua logado
       msg.className = "form-msg ok"; msg.textContent = "Senha alterada com sucesso."; msg.style.display = "block"; pf.reset();
     }catch(err){ msg.className = "form-msg error"; msg.textContent = err.message; msg.style.display = "block"; }
   });
