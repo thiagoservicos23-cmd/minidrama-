@@ -125,6 +125,24 @@ mais rápido que subir pela internet de casa.
   mas não é 100% garantido; se um vídeo específico não importar, baixe ele do
   Drive e suba como arquivo mesmo (a outra opção do mesmo formulário).
 
+### Capas em massa por planilha (CSV)
+Ideal para quando um designer entrega as capas já hospedadas (ex.: Supabase Storage). Em
+**Peças → Cadastrar várias peças**, use o campo **Planilha de capas**:
+
+```
+nome;url_capa
+A Farsa do Silêncio;https://SEU-PROJETO.supabase.co/storage/v1/object/public/capas/farsa.png
+Ventos de Dona Flor;https://SEU-PROJETO.supabase.co/storage/v1/object/public/capas/dona-flor.jpg
+```
+- Duas colunas: **nome** e **url_capa** (vírgula ou ponto e vírgula; com ou sem cabeçalho; aceita CSV do Excel).
+- O site compara o `nome` com o **título do vídeo** (ou o nome do arquivo) ignorando maiúsculas,
+  acentos, `_` e `-`. Se achar, preenche a capa sozinho; a tela mostra uma **miniatura** de cada capa
+  encontrada e avisa das que não casaram e das que sobraram na planilha.
+- Nesse lote, a **sinopse** entra como `.` e o **banner** fica vazio (a página inicial usa a capa como reserva).
+- A URL precisa ser **pública** (no Supabase, o bucket deve ser público) e começar com `https://`.
+  Se a miniatura não aparecer na tela do lote, o link está errado ou o bucket é privado.
+- Nome repetido na planilha: vale a primeira linha. URLs inválidas são ignoradas e listadas.
+
 ### Cadastro em lote (várias peças de uma vez)
 Em Peças → "Cadastrar várias peças": escolha vários arquivos de vídeo do
 computador, ou cole vários links (formato acima), ou combine os dois. Cada

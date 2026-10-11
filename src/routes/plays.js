@@ -78,7 +78,8 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
     if (!duration || duration < 60) return res.status(400).json({ error: "A peça precisa ter no mínimo 60 minutos de duração." });
 
     const poster = imageFieldUpdate("poster", b.posterUrl || "");
-    const backdrop = imageFieldUpdate("backdrop", b.backdropUrl || b.posterUrl || "");
+    // Banner vazio fica vazio: na hora de EXIBIR, o site usa a capa como reserva (ver publicPlay).
+    const backdrop = imageFieldUpdate("backdrop", b.backdropUrl || "");
     if (poster.error || backdrop.error) return res.status(400).json({ error: poster.error || backdrop.error });
 
     const play = await prisma.play.create({

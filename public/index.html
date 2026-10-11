@@ -1258,7 +1258,7 @@ async function openPlayModal(id){
       </div>
       <div class="field">
         <label>Imagem de destaque (banner, horizontal)</label>
-        <input type="url" name="backdropUrl" id="backdrop-url-field" value="${p?esc(p.backdropUrl):''}" placeholder="https://... ou escolha um arquivo abaixo">
+        <input type="url" name="backdropUrl" id="backdrop-url-field" value="${p && p.backdropUrl !== p.posterUrl ? esc(p.backdropUrl) : ''}" placeholder="Opcional — se vazio, o site usa a capa">
         <input type="file" id="backdrop-file-input" accept="image/png,image/jpeg" style="margin-top:6px;">
       </div>
       <div class="field"><label>URL do vídeo da peça</label><input type="url" name="videoUrl" id="video-url-field" value="${p?esc(p.videoUrl):''}" placeholder="https://..."></div>
@@ -1309,7 +1309,7 @@ async function openPlayModal(id){
       title: fd.get("title").trim(), genre: fd.get("genre"), releaseYear: parseInt(fd.get("releaseYear"),10),
       durationMinutes: parseInt(fd.get("durationMinutes"),10), requiresPlan: fd.get("requiresPlan"),
       synopsis: fd.get("synopsis").trim(), director: fd.get("director").trim(), cast: fd.get("cast").trim(),
-      posterUrl: fd.get("posterUrl").trim(), backdropUrl: fd.get("backdropUrl").trim() || fd.get("posterUrl").trim(),
+      posterUrl: fd.get("posterUrl").trim(), backdropUrl: fd.get("backdropUrl").trim(),
       videoUrl: fd.get("videoUrl").trim(), featured: fd.get("featured")==="on"
     };
     const existingId = fd.get("id");
@@ -1376,14 +1376,108 @@ async function uploadVideoToBunny(){
 // ---------- Cadastro em lote (vários vídeos de uma vez) ----------
 let batchFiles = [];
 
+// ---------- Planilha de capas (CSV com as colunas "nome" e "url_capa") ----------
+let coverMap = new Map();
+let coverInfo = null;
+
+// Compara nomes sem se importar com maiúsculas, acentos, "_", "-" ou pontuação.
+function normName(str){
+  return String(str || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    .replace(/[_\-.]+/g, " ").replace(/[^a-z0-9 ]/g, "").replace(/\s+/g, " ").trim();
+}
+
+// Lê CSV (aceita vírgula, ponto e vírgula ou tab, aspas, BOM e quebras de linha do Windows).
+function parseCsv(text){
+  text = String(text).replace(/^\uFEFF/, "");
+  const firstLine = text.split(/\r?\n/, 1)[0] || "";
+  const count = (ch) => firstLine.split(ch).length - 1;
+  const delim = count(";") > count(",") ? ";" : (count("\t") > count(",") ? "\t" : ",");
+  const rows = []; let row = [], cur = "", inQ = false;
+  const endRow = () => { row.push(cur); cur = ""; if(row.some(x => x.trim() !== "")) rows.push(row); row = []; };
+  for(let i = 0; i < text.length; i++){
+    const c = text[i];
+    if(inQ){
+      if(c === '"'){ if(text[i+1] === '"'){ cur += '"'; i++; } else inQ = false; }
+      else cur += c;
+    } else if(c === '"') inQ = true;
+    else if(c === delim){ row.push(cur); cur = ""; }
+    else if(c === "\n" || c === "\r"){ if(c === "\r" && text[i+1] === "\n") i++; endRow(); }
+    else cur += c;
+  }
+  if(cur !== "" || row.length) endRow();
+  return rows;
+}
+
+// Transforma o CSV em { map, total, invalid, duplicates }. Cada URL é conferida (só http/https).
+function parseCoverCsv(text){
+  const rows = parseCsv(text);
+  const out = { map: new Map(), total: 0, invalid: [], duplicates: [] };
+  if(!rows.length) return out;
+  const head = rows[0].map(h => normName(h).replace(/ /g, "_"));
+  const hasHeader = head.includes("nome") || head.includes("url_capa");
+  let iName = 0, iUrl = 1;
+  if(hasHeader){ if(head.includes("nome")) iName = head.indexOf("nome"); if(head.includes("url_capa")) iUrl = head.indexOf("url_capa"); }
+  for(const r of rows.slice(hasHeader ? 1 : 0)){
+    const name = (r[iName] || "").trim(), rawUrl = (r[iUrl] || "").trim();
+    if(!name && !rawUrl) continue;
+    out.total++;
+    let url = "";
+    try{
+      const u = new URL(rawUrl);
+      if(u.protocol === "http:" || u.protocol === "https:") url = u.href.replace(/'/g, "%27");  // espaços viram %20
+    }catch(e){}
+    if(!name || !url){ out.invalid.push(name || "(sem nome)"); continue; }
+    const key = normName(name);
+    if(!key){ out.invalid.push(name); continue; }
+    if(out.map.has(key)){ out.duplicates.push(name); continue; }   // vale a primeira linha
+    out.map.set(key, { name, url });
+  }
+  return out;
+}
+
+// Acha a capa de um item do lote pelo título e (se for arquivo) pelo nome do arquivo.
+function lookupCover(item){
+  if(!coverMap.size) return null;
+  const keys = [normName(item.title)];
+  if(item.file && item.file.name) keys.push(normName(item.file.name.replace(/\.[^.]+$/, "")));
+  for(const k of keys){ if(k && coverMap.has(k)) return coverMap.get(k).url; }
+  return null;
+}
+
+// Excel em português costuma salvar CSV em Windows-1252: tenta UTF-8 e, se falhar, usa esse.
+async function readTextFile(file){
+  const buf = await file.arrayBuffer();
+  try{ return new TextDecoder("utf-8", { fatal: true }).decode(buf); }
+  catch(e){ return new TextDecoder("windows-1252").decode(buf); }
+}
+
+async function onBatchCsvChosen(e){
+  const file = e.target.files[0];
+  const info = qs("#batch-csv-info");
+  if(!file){ coverMap = new Map(); coverInfo = null; renderBatchList(); return; }
+  try{
+    const r = parseCoverCsv(await readTextFile(file));
+    coverMap = r.map; coverInfo = r;
+    const extra = [];
+    if(r.invalid.length) extra.push(`${r.invalid.length} linha(s) ignorada(s) por URL inválida: ${r.invalid.slice(0,3).map(esc).join(", ")}${r.invalid.length>3?"…":""}`);
+    if(r.duplicates.length) extra.push(`${r.duplicates.length} nome(s) repetido(s) (vale o primeiro): ${r.duplicates.slice(0,3).map(esc).join(", ")}${r.duplicates.length>3?"…":""}`);
+    info.innerHTML = `<b style="color:var(--gold-soft);">✔ ${r.map.size} capas carregadas.</b>${extra.length ? "<br>⚠ " + extra.join("<br>⚠ ") : ""}`;
+  }catch(err){
+    coverMap = new Map(); coverInfo = null;
+    info.textContent = "Não consegui ler esse arquivo. Salve como CSV (separado por vírgula ou ponto e vírgula) com as colunas nome e url_capa.";
+  }
+  renderBatchList();
+}
+
+
 function openBatchModal(){
-  batchFiles = [];
+  batchFiles = []; coverMap = new Map(); coverInfo = null;
   qs("#batch-modal-box").innerHTML = `
     <div class="modal-head"><h3>Cadastrar várias peças de uma vez</h3><button class="modal-close" onclick="closeModal('batch-modal'); goToAdminPlaysPage(1);">&times;</button></div>
     <p style="color:var(--ink-muted); font-size:13px; margin-bottom:14px; line-height:1.6;">
       Escolha os vídeos do computador <b>ou</b> cole links do Google Drive (bem mais rápido — o Bunny busca
       direto do Drive, sem passar pela sua internet). Título e gênero são sugeridos automaticamente
-      (dá pra ajustar). Depois de enviadas, edite cada peça pra completar sinopse, elenco e pôster.
+      (dá pra ajustar). As peças entram com sinopse "." e banner vazio; depois, edite cada uma para completar sinopse e elenco.
     </p>
     <div class="field"><label>Arquivos do computador</label><input type="file" id="batch-file-input" accept="video/*" multiple></div>
     <div class="field">
@@ -1392,6 +1486,11 @@ function openBatchModal(){
 Ventos de Dona Flor | https://drive.google.com/file/d/YYYYY/view"></textarea>
       <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px;" onclick="onBatchLinksSubmit()">Adicionar esses links à lista</button>
     </div>
+    <div class="field">
+      <label>Planilha de capas (CSV com as colunas <b>nome</b> e <b>url_capa</b>)</label>
+      <input type="file" id="batch-csv-input" accept=".csv,text/csv,text/plain">
+      <div class="field-hint" id="batch-csv-info">Opcional. Quando o nome do vídeo for igual ao "nome" da planilha, a capa é preenchida sozinha (não importa maiúsculas, acentos ou "_").</div>
+    </div>
     <div id="batch-list" style="margin-top:16px; display:flex; flex-direction:column; gap:10px;"></div>
     <div class="modal-actions">
       <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('batch-modal'); goToAdminPlaysPage(1);">Fechar</button>
@@ -1399,6 +1498,7 @@ Ventos de Dona Flor | https://drive.google.com/file/d/YYYYY/view"></textarea>
     </div>`;
   openModal("batch-modal");
   qs("#batch-file-input").addEventListener("change", onBatchFilesChosen);
+  qs("#batch-csv-input").addEventListener("change", onBatchCsvChosen);
 }
 
 function onBatchLinksSubmit(){
@@ -1432,15 +1532,30 @@ async function onBatchFilesChosen(e){
 function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
 function renderBatchList(){
-  qs("#batch-list").innerHTML = batchFiles.map((f,i)=>`
+  let summary = "";
+  if(coverMap.size && batchFiles.length){
+    const matched = batchFiles.filter(f => lookupCover(f)).length;
+    const used = new Set(batchFiles.map(f => normName(f.title)).concat(batchFiles.filter(f => f.file).map(f => normName(f.file.name.replace(/\.[^.]+$/, "")))));
+    const unused = [...coverMap.entries()].filter(([k]) => !used.has(k)).map(([, v]) => v.name);
+    summary = `<div class="field-hint" style="margin:0;"><b>${matched} de ${batchFiles.length}</b> vídeo(s) com capa encontrada na planilha.${unused.length ? `<br>Capas da planilha sem vídeo nesta lista: ${unused.slice(0,5).map(esc).join(", ")}${unused.length>5?` e mais ${unused.length-5}`:""}.` : ""}</div>`;
+  }
+  qs("#batch-list").innerHTML = summary + batchFiles.map((f,i)=>{
+    const cover = lookupCover(f);
+    const coverLine = coverMap.size
+      ? (cover ? `<div style="display:flex; align-items:center; gap:8px; margin-top:6px; font-size:12px; color:var(--gold-soft);"><img src="${esc(cover)}" alt="" style="height:46px; border-radius:3px; background:var(--bg-elev-2);"> capa encontrada na planilha</div>`
+               : `<div style="margin-top:6px; font-size:12px; color:#E8938C;">⚠ sem capa na planilha para este nome (vai com uma imagem padrão; dá pra trocar depois)</div>`)
+      : "";
+    return `
     <div style="border:1px solid var(--line); border-radius:4px; padding:10px;">
-      <div style="font-size:11px; color:var(--ink-faint); margin-bottom:6px;">${f.file ? "📁 arquivo local" : "🔗 link (" + esc(f.driveUrl) + ")"}</div>
+      <div style="font-size:11px; color:var(--ink-faint); margin-bottom:6px;">${f.file ? "📁 arquivo: " + esc(f.file.name) : "🔗 link (" + esc(f.driveUrl) + ")"}</div>
       <div class="form-grid-2">
-        <div class="field" style="margin-bottom:6px;"><label>Título</label><input type="text" value="${esc(f.title)}" onchange="batchFiles[${i}].title=this.value"></div>
+        <div class="field" style="margin-bottom:6px;"><label>Título</label><input type="text" value="${esc(f.title)}" onchange="batchFiles[${i}].title=this.value; renderBatchList()"></div>
         <div class="field" style="margin-bottom:0;"><label>Duração (min)</label><input type="number" min="60" value="${f.duration}" onchange="batchFiles[${i}].duration=parseInt(this.value,10)||60"></div>
       </div>
+      ${coverLine}
       <div style="font-size:12px; color:var(--ink-faint); margin-top:4px;" id="batch-status-${i}">${esc(f.status)}</div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 }
 
 async function startBatchUpload(){
@@ -1462,10 +1577,10 @@ async function processBatchItem(i){
     const created = await api("/plays", { method:"POST", body:{
       title: item.title, genre: guessGenre(item.title), releaseYear: new Date().getFullYear(),
       durationMinutes: item.duration, requiresPlan: "plateia",
-      synopsis: "Sinopse a definir — edite esta peça para completar os detalhes.",
+      synopsis: ".",
       director: "", cast: "",
-      posterUrl: "https://images.unsplash.com/photo-1503095396549-807759245b35?q=80&w=800&auto=format&fit=crop",
-      backdropUrl: "https://images.unsplash.com/photo-1503095396549-807759245b35?q=80&w=1600&auto=format&fit=crop",
+      posterUrl: lookupCover(item) || "https://images.unsplash.com/photo-1503095396549-807759245b35?q=80&w=800&auto=format&fit=crop",
+      backdropUrl: "",
       videoUrl: "", featured: false
     }});
     const playId = created.play.id;

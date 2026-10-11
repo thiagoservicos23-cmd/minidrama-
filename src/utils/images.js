@@ -39,7 +39,7 @@ function imageFieldUpdate(kind, incoming) {
     return { [url]: "", [data]: incoming, [has]: true };
   }
   const clean = String(incoming || "").trim();
-  if (clean && !/^https?:\/\//i.test(clean)) return { error: "O link da imagem precisa começar com http:// ou https://" };
+  if (clean && !/^https?:\/\/[^\s'"<>\\]+$/i.test(clean)) return { error: "Link de imagem inválido: precisa começar com http:// ou https:// e não pode ter espaços nem aspas." };
   return { [url]: clean, [data]: null, [has]: false };
 }
 
