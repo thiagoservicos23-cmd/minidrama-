@@ -46,6 +46,31 @@ router.get("/", attachUserIfPresent, async (req, res) => {
   }
 });
 
+// Dados da página inicial: TODAS as séries em destaque (banner) + as mais recentes de cada gênero.
+// Assim o banner não depende de quantas séries existem no catálogo.
+router.get("/feed/home", attachUserIfPresent, async (req, res) => {
+  try {
+    const [featured, genreRows] = await Promise.all([
+      prisma.play.findMany({ where: { featured: true }, orderBy: { createdAt: "desc" }, take: 10, select: PLAY_LIST_SELECT }),
+      prisma.play.groupBy({ by: ["genre"], _count: { _all: true } })
+    ]);
+    const top = genreRows.slice().sort((a, b) => b._count._all - a._count._all).slice(0, 12);
+    const rows = await Promise.all(top.map(async (g) => ({
+      genre: g.genre,
+      total: g._count._all,
+      plays: await Promise.all((await prisma.play.findMany({ where: { genre: g.genre }, orderBy: { createdAt: "desc" }, take: 20, select: PLAY_LIST_SELECT })).map((p) => withAccess(req.user, p)))
+    })));
+    res.json({
+      featured: await Promise.all(featured.map((p) => withAccess(req.user, p))),
+      genres: rows,
+      total: genreRows.reduce((n, g) => n + g._count._all, 0)
+    });
+  } catch (e) {
+    console.error("[home]", e);
+    res.status(500).json({ error: "Não foi possível carregar a página inicial." });
+  }
+});
+
 // Imagem da peça (poster ou backdrop) enviada por arquivo. Cache longo no navegador:
 // o "?v=" muda sempre que a peça é editada, então nunca fica desatualizada.
 router.get("/:id/image/:kind", async (req, res) => {

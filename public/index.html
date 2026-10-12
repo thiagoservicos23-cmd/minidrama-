@@ -396,19 +396,22 @@ window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", boot);
 
 /* ---- cache local: a 2ª visita em diante abre NA HORA, mesmo com o servidor dormindo ---- */
-const CACHE_KEY = "minidrama_cache_v2";
+const CACHE_KEY = "minidrama_cache_v3";
 function loadCache(){
+  try{ localStorage.removeItem("minidrama_cache_v2"); }catch(e){}
   try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)); if(c && Date.now() - c.t < 14*86400000) return c; }catch(e){}
   return null;
 }
 function saveCache(){
-  try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), plays: DB.plays, plans: DB.plans, me: DB.me, hasToken: !!getToken() })); }catch(e){}
+  try{ localStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), home: DB.home, plans: DB.plans, me: DB.me, hasToken: !!getToken() })); }catch(e){}
 }
 
 // Busca catálogo, planos e (se logado) os dados do usuário. Só desloga em 401/403 — falha de rede não desloga ninguém.
 async function loadFresh(){
-  const [playsRes, plansRes] = await Promise.all([ api("/plays"), api("/plans") ]);
-  DB.plays = playsRes.plays; DB.plans = plansRes.plans;
+  const [homeRes, plansRes] = await Promise.all([ api("/plays/feed/home"), api("/plans") ]);
+  DB.home = homeRes; DB.plans = plansRes.plans; DB.playsTotal = homeRes.total;
+  const seen = new Set();
+  DB.plays = [...homeRes.featured, ...homeRes.genres.flatMap(g => g.plays)].filter(p => !seen.has(p.id) && seen.add(p.id));
   if(getToken()){
     try{ DB.me = (await api("/auth/me")).user; }
     catch(e){ if(e.httpError && (e.status === 401 || e.status === 403)){ clearToken(); DB.me = null; } }
@@ -418,9 +421,9 @@ async function loadFresh(){
 
 async function refreshInBackground(){
   try{
-    const before = JSON.stringify([DB.plays, DB.plans, DB.me]);
+    const before = JSON.stringify([DB.home, DB.plans, DB.me]);
     await loadFresh();
-    const changed = before !== JSON.stringify([DB.plays, DB.plans, DB.me]);
+    const changed = before !== JSON.stringify([DB.home, DB.plans, DB.me]);
     if(changed && ["#/home", "#/planos"].includes(location.hash || "#/home")) render();
   }catch(e){ /* silencioso: o usuário já está vendo a versão guardada */ }
 }
@@ -428,8 +431,10 @@ async function refreshInBackground(){
 async function boot(){
   registerServiceWorker();
   const cached = loadCache();
-  if(cached && cached.hasToken === !!getToken() && (cached.plans || []).length){
-    DB.plays = cached.plays || []; DB.plans = cached.plans; DB.me = cached.me || null;
+  if(cached && cached.hasToken === !!getToken() && (cached.plans || []).length && cached.home){
+    DB.home = cached.home; DB.plans = cached.plans; DB.me = cached.me || null;
+    const seen = new Set();
+    DB.plays = [...cached.home.featured, ...cached.home.genres.flatMap(g => g.plays)].filter(p => !seen.has(p.id) && seen.add(p.id));
     render();
     refreshInBackground();
     scheduleInstallBanner();
@@ -450,7 +455,9 @@ async function boot(){
 
 const ADMIN_ROUTES = ["#/admin","#/admin/pecas","#/admin/usuarios","#/admin/planos"];
 
+let renderSeq = 0;   // cada navegação ganha um número; resposta atrasada de uma navegação antiga é descartada
 async function render(){
+  const seq = ++renderSeq;
   let hash = location.hash || "#/home";
   const user = currentUser();
 
@@ -462,11 +469,12 @@ async function render(){
   const app = document.getElementById("app");
   window.scrollTo(0,0);
 
-  if(hash.startsWith("#/admin")) { app.innerHTML = AdminLayout(hash); await afterAdminRender(hash); return; }
+  if(hash.startsWith("#/admin")) { app.innerHTML = AdminLayout(hash); await afterAdminRender(hash, seq); return; }
   if(hash.startsWith("#/peca/")) {
     const id = hash.split("/")[2];
     app.innerHTML = PublicShell(`<div class="page-wrap"><p>Carregando peça...</p></div>`); afterPublicRender();
     const html = await PlayDetail(id);
+    if(seq !== renderSeq) return;
     qs("#app main").outerHTML = `<main>${html}</main>`; afterPublicRender();
     initPlayerIfNeeded();
     return;
@@ -483,6 +491,7 @@ async function render(){
   if(hash === "#/catalogo") {
     app.innerHTML = PublicShell(`<div class="page-wrap"><p>Carregando catálogo...</p></div>`); afterPublicRender();
     const html = await CatalogPage();
+    if(seq !== renderSeq) return;
     qs("#app main").outerHTML = `<main>${html}</main>`; afterPublicRender(); attachCatalogEvents();
     return;
   }
@@ -559,16 +568,16 @@ function afterPublicRender(){
 /* --------------------------- HOME PAGE ---------------------------------- */
 let heroIndex = 0, heroTimer = null;
 function HomePage(){
-  const featured = DB.plays.filter(p=>p.featured);
-  const genres = [...new Set(DB.plays.map(p=>p.genre))];
-  return `
+  const home = DB.home || { featured: [], genres: [] };
+  const featured = home.featured || [];
+  const hero = featured.length ? `
   <section class="hero" id="hero">
     ${featured.map((p,i)=>`
       <div class="hero-slide ${i===0?'active':''}" data-i="${i}" data-bg="${esc(p.backdropUrl)}" ${i===0?`style="background-image:url('${esc(p.backdropUrl)}')"`:''}>
         <div class="hero-content reveal">
           <div class="hero-eyebrow"><span class="dot"></span> Em cartaz na plataforma</div>
           <h1 class="hero-title">${esc(p.title)}</h1>
-          <div class="hero-meta"><span>${ICO.clock} ${fmtDuration(p.durationMinutes)}</span><span>${p.genre}</span><span>${p.releaseYear}</span></div>
+          <div class="hero-meta"><span>${ICO.clock} ${fmtDuration(p.durationMinutes)}</span><span>${esc(p.genre)}</span><span>${p.releaseYear}</span></div>
           <p class="hero-desc">${esc(p.synopsis)}</p>
           <div class="hero-actions">
             <a href="#/peca/${p.id}" class="btn btn-gold">${ICO.play} Assistir agora</a>
@@ -577,12 +586,15 @@ function HomePage(){
         </div>
       </div>`).join("")}
     <div class="hero-dots">${featured.map((_,i)=>`<button class="${i===0?'active':''}" onclick="setHero(${i})"></button>`).join("")}</div>
-  </section>
-  <div class="container">${genres.map(g => PlayRow(g, DB.plays.filter(p=>p.genre===g))).join("")}</div>`;
+  </section>` : `<div style="height:84px;"></div>`;
+  const rows = (home.genres || []).map(g => PlayRow(g.genre, g.plays, g.total)).join("");
+  return `${hero}
+  <div class="container">${rows || `<p style="color:var(--ink-muted); text-align:center; padding:60px 0;">As primeiras peças estão chegando. Volte em breve! 🎭</p>`}</div>`;
 }
-function PlayRow(title, plays){
+function setCatalogGenre(g){ catalogGenre = g; catalogPage = 1; }
+function PlayRow(title, plays, total){
   return `<div class="section-row">
-    <div class="section-row-head"><h2 class="section-title">${esc(title)}</h2><a href="#/catalogo" class="section-link">Ver tudo</a></div>
+    <div class="section-row-head"><h2 class="section-title">${esc(title)}</h2><a href="#/catalogo" class="section-link" data-genre="${esc(title)}" onclick="setCatalogGenre(this.dataset.genre)">Ver tudo${total > plays.length ? ` (${total})` : ""}</a></div>
     <div class="rail">${plays.map(p=>PlayCard(p)).join("")}</div></div>`;
 }
 function PlayCard(p){
@@ -638,8 +650,10 @@ async function CatalogPage(){
   </div>`;
 }
 async function goToCatalogPage(n){
+  const seq = renderSeq;
   catalogPage = Math.max(1, n);
   const html = await CatalogPage();
+  if(seq !== renderSeq) return;
   qs("#app main").innerHTML = html;
   attachCatalogEvents();
   window.scrollTo(0,0);
@@ -647,8 +661,10 @@ async function goToCatalogPage(n){
 function attachCatalogEvents(){
   qsa("#genre-filters .chip").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
+      const seq = renderSeq;
       catalogGenre = btn.dataset.genre; catalogPage = 1;
       const html = await CatalogPage();
+      if(seq !== renderSeq) return;
       qs("#app main").innerHTML = html;
       attachCatalogEvents();
     });
@@ -1132,8 +1148,10 @@ async function loadAdminPlaysPage(){
   adminPlaysMeta = r;
 }
 async function goToAdminPlaysPage(n){
+  const seq = renderSeq;
   adminPlaysPage = Math.max(1, n);
   await loadAdminPlaysPage();
+  if(seq !== renderSeq || !qs("#admin-main")) return;
   qs("#admin-main").innerHTML = AdminPlays();
   attachAdminPlaysEvents();
 }
@@ -1157,18 +1175,20 @@ function AdminLayout(hash){
     <div class="admin-main" id="admin-main"><p style="color:var(--ink-faint);">Carregando...</p></div>
   </div>`;
 }
-async function afterAdminRender(hash){
+async function afterAdminRender(hash, seq){
   const section = hash.split("/")[2] || "";
   const main = qs("#admin-main");
+  const stale = () => seq !== undefined && seq !== renderSeq;
   try{
-    if(section==="pecas") { adminPlaysPage = 1; await loadAdminPlaysPage(); main.innerHTML = AdminPlays(); attachAdminPlaysEvents(); return; }
-    if(section==="usuarios") { await refreshUsers(); main.innerHTML = AdminUsers(); attachAdminUsersEvents(); return; }
-    if(section==="planos") { await refreshPlans(); main.innerHTML = AdminPlans(); return; }
-    if(section==="pagamentos") { await refreshPlans(); adminPayPage = 1; await loadAdminPayments(); main.innerHTML = AdminPayments(); return; }
+    if(section==="pecas") { adminPlaysPage = 1; await loadAdminPlaysPage(); if(stale()) return; main.innerHTML = AdminPlays(); attachAdminPlaysEvents(); return; }
+    if(section==="usuarios") { await refreshUsers(); if(stale()) return; main.innerHTML = AdminUsers(); attachAdminUsersEvents(); return; }
+    if(section==="planos") { await refreshPlans(); if(stale()) return; main.innerHTML = AdminPlans(); return; }
+    if(section==="pagamentos") { await refreshPlans(); adminPayPage = 1; await loadAdminPayments(); if(stale()) return; main.innerHTML = AdminPayments(); return; }
     const [, , , pay] = await Promise.all([refreshPlays(), refreshUsers(), refreshPlans(), api("/payments/admin/list?page=1")]);
+    if(stale()) return;
     DB.payStats = pay.last30;
     main.innerHTML = AdminDashboard();
-  }catch(e){ main.innerHTML = `<p style="color:var(--danger);">${esc(e.message)}</p>`; }
+  }catch(e){ if(!stale()) main.innerHTML = `<p style="color:var(--danger);">${esc(e.message)}</p>`; }
 }
 
 function AdminDashboard(){
@@ -1225,10 +1245,12 @@ async function loadAdminPayments(){
   adminPayData = await api(`/payments/admin/list?page=${adminPayPage}${adminPayStatus ? "&status=" + adminPayStatus : ""}`);
 }
 async function goToAdminPayPage(n){
+  const seq = renderSeq;
   adminPayPage = Math.max(1, n); await loadAdminPayments();
+  if(seq !== renderSeq || !qs("#admin-main")) return;
   qs("#admin-main").innerHTML = AdminPayments();
 }
-async function setAdminPayStatus(v){ adminPayStatus = v; adminPayPage = 1; await loadAdminPayments(); qs("#admin-main").innerHTML = AdminPayments(); }
+async function setAdminPayStatus(v){ const seq = renderSeq; adminPayStatus = v; adminPayPage = 1; await loadAdminPayments(); if(seq !== renderSeq || !qs("#admin-main")) return; qs("#admin-main").innerHTML = AdminPayments(); }
 function AdminPayments(){
   const d = adminPayData;
   return `
@@ -1811,8 +1833,10 @@ function attachAdminPlaysEvents(){
     adminPlaySearch = s.value;
     clearTimeout(adminPlaySearchDebounce);
     adminPlaySearchDebounce = setTimeout(async ()=>{
+      const seq = renderSeq;
       adminPlaysPage = 1;
       await loadAdminPlaysPage();
+      if(seq !== renderSeq || !qs("#admin-main")) return;
       qs("#admin-main").innerHTML = AdminPlays();
       attachAdminPlaysEvents();
     }, 350);
@@ -1914,11 +1938,16 @@ async function deletePlan(id){
 }
 
 /* --------------------------- APP INSTALÁVEL (PWA) -------------------------- */
+let swUpdateReady = false;
 function registerServiceWorker(){
   if("serviceWorker" in navigator){
+    const hadController = !!navigator.serviceWorker.controller;
+    // Saiu versão nova do site: marca para recarregar na PRÓXIMA navegação (nunca no meio de um formulário).
+    navigator.serviceWorker.addEventListener("controllerchange", ()=>{ if(hadController) swUpdateReady = true; });
     window.addEventListener("load", ()=>{ navigator.serviceWorker.register("/sw.js").catch(()=>{}); });
   }
 }
+window.addEventListener("hashchange", ()=>{ if(swUpdateReady){ swUpdateReady = false; location.reload(); } });
 let deferredInstall = null;
 function isStandalone(){ return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true; }
 function isIos(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream; }
