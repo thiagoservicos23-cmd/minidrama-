@@ -3,8 +3,19 @@ const prisma = require("../prismaClient");
 const { attachUserIfPresent, requireAuth, requireAdmin } = require("../middleware/auth");
 const { userCanWatch } = require("../utils/planRules");
 const { PLAY_LIST_SELECT, imageFieldUpdate, publicPlay } = require("../utils/images");
+const { GENRES, GENRE_IDS, resolveGenre, normTitle, cleanGenreIds, loadLabels, labelOf, currentGenres } = require("../utils/genres");
 
 const router = express.Router();
+
+// Rotas assíncronas do Express 4 não capturam erros sozinhas: sem isto, uma falha do banco deixaria
+// o visitante esperando para sempre. Aqui qualquer erro vira uma resposta 500 clara.
+const safe = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch((e) => {
+  console.error("[plays]", req.method, req.path, e && e.message);
+  if (!res.headersSent) res.status(500).json({ error: "Não foi possível concluir agora. Tente novamente em instantes." });
+});
+
+// Garante que os nomes personalizados dos gêneros estejam carregados (cache de 30 s).
+router.use(async (req, res, next) => { await loadLabels(); next(); });
 
 // Remove o link do vídeo e acrescenta as flags de acesso.
 async function withAccess(user, p) {
@@ -20,7 +31,7 @@ router.get("/", attachUserIfPresent, async (req, res) => {
   try {
     const { page, pageSize, genre, search } = req.query;
     const where = {};
-    if (genre && genre !== "Todos") where.genre = String(genre);
+    if (genre && !["Todos", "novos"].includes(String(genre))) where.genres = { some: { genre: String(genre) } };
     if (search) where.title = { contains: String(search) };
 
     const usePagination = !!page;
@@ -46,24 +57,29 @@ router.get("/", attachUserIfPresent, async (req, res) => {
   }
 });
 
-// Dados da página inicial: TODAS as séries em destaque (banner) + as mais recentes de cada gênero.
-// Assim o banner não depende de quantas séries existem no catálogo.
+// Dados da página inicial: séries em destaque (banner), "Novos Na Plataforma" (as mais recentes, em ordem de chegada)
+// e uma seção por gênero. Uma série com vários gêneros aparece em todas as seções dela.
 router.get("/feed/home", attachUserIfPresent, async (req, res) => {
   try {
-    const [featured, genreRows] = await Promise.all([
+    const [featured, novos, counts] = await Promise.all([
       prisma.play.findMany({ where: { featured: true }, orderBy: { createdAt: "desc" }, take: 10, select: PLAY_LIST_SELECT }),
-      prisma.play.groupBy({ by: ["genre"], _count: { _all: true } })
+      prisma.play.findMany({ orderBy: { createdAt: "desc" }, take: 20, select: PLAY_LIST_SELECT }),
+      prisma.playGenre.groupBy({ by: ["genre"], _count: { _all: true } })
     ]);
-    const top = genreRows.slice().sort((a, b) => b._count._all - a._count._all).slice(0, 12);
-    const rows = await Promise.all(top.map(async (g) => ({
-      genre: g.genre,
-      total: g._count._all,
-      plays: await Promise.all((await prisma.play.findMany({ where: { genre: g.genre }, orderBy: { createdAt: "desc" }, take: 20, select: PLAY_LIST_SELECT })).map((p) => withAccess(req.user, p)))
+    const total = await prisma.play.count();
+    const countOf = Object.fromEntries(counts.map((c) => [c.genre, c._count._all]));
+    const rows = await Promise.all(GENRES.filter((g) => countOf[g.id] > 0).map(async (g) => ({
+      id: g.id,
+      label: labelOf(g.id),
+      total: countOf[g.id],
+      plays: await Promise.all((await prisma.play.findMany({ where: { genres: { some: { genre: g.id } } }, orderBy: { createdAt: "desc" }, take: 20, select: PLAY_LIST_SELECT })).map((p) => withAccess(req.user, p)))
     })));
     res.json({
       featured: await Promise.all(featured.map((p) => withAccess(req.user, p))),
+      novos: await Promise.all(novos.map((p) => withAccess(req.user, p))),
       genres: rows,
-      total: genreRows.reduce((n, g) => n + g._count._all, 0)
+      catalog: currentGenres(),
+      total
     });
   } catch (e) {
     console.error("[home]", e);
@@ -71,9 +87,122 @@ router.get("/feed/home", attachUserIfPresent, async (req, res) => {
   }
 });
 
+// Admin: lista os gêneros com o nome que aparece no site, o nome original e quantas séries há em cada um.
+router.get("/admin/genres", requireAuth, requireAdmin, safe(async (req, res) => {
+  await loadLabels(true);
+  const counts = await prisma.playGenre.groupBy({ by: ["genre"], _count: { _all: true } });
+  const total = Object.fromEntries(counts.map((c) => [c.genre, c._count._all]));
+  res.json({ genres: GENRES.map((g) => ({ id: g.id, label: labelOf(g.id), defaultLabel: g.label, renamed: labelOf(g.id) !== g.label, total: total[g.id] || 0 })) });
+}));
+
+// Admin: renomeia um gênero. Só o NOME muda: as séries seguem ligadas ao gênero pelo id.
+router.put("/admin/genres/:id", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const id = req.params.id;
+    if (!GENRE_IDS.has(id)) return res.status(404).json({ error: "Gênero não encontrado." });
+    const b = req.body || {};
+    await loadLabels(true);
+
+    if (b.reset) {                                           // volta ao nome original
+      await prisma.genreLabel.deleteMany({ where: { id } });
+      await loadLabels(true);
+      return res.json({ ok: true, label: labelOf(id) });
+    }
+    const label = String(b.label || "").trim().replace(/\s+/g, " ");
+    if (!label) return res.status(400).json({ error: "Digite o novo nome do gênero." });
+    if (label.length > 40) return res.status(400).json({ error: "O nome pode ter no máximo 40 caracteres." });
+    if (/[<>]/.test(label)) return res.status(400).json({ error: "O nome não pode ter os símbolos < ou >." });
+    const clash = resolveGenre(label);
+    if (clash && clash.ignored) return res.status(400).json({ error: "Esse nome é reservado pelo site (seção automática)." });
+    if (clash && clash.id && clash.id !== id) return res.status(400).json({ error: `Esse nome já é usado por outro gênero (“${labelOf(clash.id)}”).` });
+
+    const original = GENRES.find((g) => g.id === id).label;
+    if (label === original) await prisma.genreLabel.deleteMany({ where: { id } });
+    else await prisma.genreLabel.upsert({ where: { id }, update: { label }, create: { id, label } });
+    await loadLabels(true);
+    res.json({ ok: true, label: labelOf(id) });
+  } catch (e) {
+    console.error("[renomear gênero]", e.message);
+    res.status(500).json({ error: "Não foi possível renomear o gênero." });
+  }
+});
+
+// Admin: atualiza os gêneros das séries que JÁ estão no site, a partir de uma planilha (nome + gênero).
+// Primeiro "dryRun" (só mostra o que aconteceria), depois aplica. Uma série pode ter vários gêneros.
+router.post("/genres-import", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { rows, mode, dryRun } = req.body || {};
+    if (!Array.isArray(rows) || !rows.length) return res.status(400).json({ error: "A planilha está vazia." });
+    if (rows.length > 50000) return res.status(400).json({ error: "Planilha grande demais (máximo 50.000 linhas)." });
+    const replace = mode !== "add";
+
+    const plays = await prisma.play.findMany({ select: { id: true, title: true } });
+    const byTitle = new Map();
+    for (const p of plays) { const k = normTitle(p.title); if (!k) continue; if (!byTitle.has(k)) byTitle.set(k, []); byTitle.get(k).push(p.id); }
+
+    const wanted = new Map();            // nome normalizado -> { name, genres:Set }
+    const unknown = new Map();           // texto de gênero não reconhecido -> quantas linhas
+    for (const r of rows) {
+      const name = String((r && r.name) || "").trim().slice(0, 300);
+      const k = normTitle(name);
+      if (!k) continue;
+      const e = wanted.get(k) || { name, genres: new Set() };
+      for (const raw of (Array.isArray(r.genres) ? r.genres : []).slice(0, 30)) {
+        const g = resolveGenre(String(raw).slice(0, 120));
+        if (g && g.id) e.genres.add(g.id);
+        else if (g === null) unknown.set(String(raw).trim(), (unknown.get(String(raw).trim()) || 0) + 1);
+      }
+      wanted.set(k, e);
+    }
+
+    const plan = new Map();              // playId -> Set(genreId)
+    const unmatched = [], ambiguous = [], noGenre = [];
+    for (const [k, e] of wanted) {
+      const ids = byTitle.get(k);
+      if (!ids) { unmatched.push(e.name); continue; }
+      if (!e.genres.size) { noGenre.push(e.name); continue; }   // sem gênero reconhecido: não mexe (evita apagar por engano)
+      if (ids.length > 1) ambiguous.push(e.name);
+      for (const id of ids) plan.set(id, e.genres);
+    }
+
+    const byGenre = {};
+    for (const set of plan.values()) for (const g of set) byGenre[g] = (byGenre[g] || 0) + 1;
+
+    const summary = {
+      dryRun: !!dryRun, mode: replace ? "replace" : "add",
+      namesInSheet: wanted.size, playsToUpdate: plan.size, byGenre,
+      unmatchedCount: unmatched.length, unmatched: unmatched.slice(0, 30),
+      ambiguousCount: ambiguous.length, ambiguous: ambiguous.slice(0, 10),
+      noGenreCount: noGenre.length, noGenre: noGenre.slice(0, 10),
+      unknownGenres: [...unknown.entries()].slice(0, 20).map(([name, count]) => ({ name, count }))
+    };
+    if (dryRun || plan.size === 0) return res.json({ ...summary, applied: false });
+
+    const ids = [...plan.keys()];
+    const ops = [];
+    let pairs = [];
+    if (replace) {
+      for (let i = 0; i < ids.length; i += 1000) ops.push(prisma.playGenre.deleteMany({ where: { playId: { in: ids.slice(i, i + 1000) } } }));
+      for (const [playId, set] of plan) for (const genre of set) pairs.push({ playId, genre });
+    } else {
+      const have = new Set();
+      for (let i = 0; i < ids.length; i += 1000) {
+        (await prisma.playGenre.findMany({ where: { playId: { in: ids.slice(i, i + 1000) } } })).forEach((x) => have.add(x.playId + "|" + x.genre));
+      }
+      for (const [playId, set] of plan) for (const genre of set) if (!have.has(playId + "|" + genre)) pairs.push({ playId, genre });
+    }
+    for (let i = 0; i < pairs.length; i += 1000) ops.push(prisma.playGenre.createMany({ data: pairs.slice(i, i + 1000) }));
+    await prisma.$transaction(ops);            // tudo ou nada: se algo falhar, nenhuma série fica pela metade
+    res.json({ ...summary, applied: true, updated: plan.size });
+  } catch (e) {
+    console.error("[genres-import]", e);
+    res.status(500).json({ error: "Não foi possível atualizar os gêneros. Nada foi alterado." });
+  }
+});
+
 // Imagem da peça (poster ou backdrop) enviada por arquivo. Cache longo no navegador:
 // o "?v=" muda sempre que a peça é editada, então nunca fica desatualizada.
-router.get("/:id/image/:kind", async (req, res) => {
+router.get("/:id/image/:kind", safe(async (req, res) => {
   const kind = req.params.kind === "backdrop" ? "backdrop" : "poster";
   const field = kind === "poster" ? "posterData" : "backdropData";
   const p = await prisma.play.findUnique({ where: { id: req.params.id }, select: { posterData: true, backdropData: true } });
@@ -83,15 +212,15 @@ router.get("/:id/image/:kind", async (req, res) => {
   res.set("Content-Type", m[1]);
   res.set("Cache-Control", "public, max-age=31536000, immutable");
   res.send(Buffer.from(m[2], "base64"));
-});
+}));
 
 // Admin: quantas peças existem em cada plano (para o aviso antes de mover em massa).
-router.get("/admin/plan-counts", requireAuth, requireAdmin, async (req, res) => {
+router.get("/admin/plan-counts", requireAuth, requireAdmin, safe(async (req, res) => {
   const rows = await prisma.play.groupBy({ by: ["requiresPlan"], _count: { _all: true } });
   const counts = {};
   rows.forEach((r) => { counts[r.requiresPlan] = r._count._all; });
   res.json({ counts, total: Object.values(counts).reduce((a, b) => a + b, 0) });
-});
+}));
 
 // Admin: move TODAS as peças de um plano para outro (ex.: de Plateia para Balcão).
 router.post("/bulk-plan", requireAuth, requireAdmin, async (req, res) => {
@@ -113,14 +242,14 @@ router.post("/bulk-plan", requireAuth, requireAdmin, async (req, res) => {
 });
 
 // Detalhe de uma peça. Só devolve a URL real do vídeo se o visitante tiver direito.
-router.get("/:id", attachUserIfPresent, async (req, res) => {
+router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
   const play = await prisma.play.findUnique({ where: { id: req.params.id }, select: PLAY_LIST_SELECT });
   if (!play) return res.status(404).json({ error: "Peça não encontrada." });
   const canWatch = await userCanWatch(req.user, play);
   const payload = publicPlay(play);
   if (!canWatch) payload.videoUrl = "";
   res.json({ play: payload, canWatch });
-});
+}));
 
 router.post("/", requireAuth, requireAdmin, async (req, res) => {
   try {
@@ -137,7 +266,6 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
     const play = await prisma.play.create({
       data: {
         title: b.title.trim(),
-        genre: b.genre || "Drama",
         durationMinutes: duration,
         releaseYear: parseInt(b.releaseYear, 10) || new Date().getFullYear(),
         synopsis: b.synopsis || "",
@@ -146,6 +274,7 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
         videoUrl: b.videoUrl || "",
         requiresPlan: b.requiresPlan || "plateia",
         featured: !!b.featured,
+        genres: { create: cleanGenreIds(b.genres).map((g) => ({ genre: g })) },
         ...poster,
         ...backdrop
       },
@@ -173,7 +302,6 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
       where: { id: req.params.id },
       data: {
         title: b.title?.trim(),
-        genre: b.genre,
         durationMinutes: duration || undefined,
         releaseYear: b.releaseYear ? parseInt(b.releaseYear, 10) : undefined,
         synopsis: b.synopsis,
@@ -182,6 +310,7 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
         videoUrl: b.videoUrl,
         requiresPlan: b.requiresPlan,
         featured: typeof b.featured === "boolean" ? b.featured : undefined,
+        ...(Array.isArray(b.genres) ? { genres: { deleteMany: {}, create: cleanGenreIds(b.genres).map((g) => ({ genre: g })) } } : {}),
         ...poster,
         ...backdrop
       },

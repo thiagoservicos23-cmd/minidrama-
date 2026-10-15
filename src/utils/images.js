@@ -1,12 +1,14 @@
 const prisma = require("../prismaClient");
+const { ORDER, labelOf } = require("./genres");
 
 // Campos da peça que podem ir em listagens (SEM as imagens pesadas em base64
 // e SEM o link do vídeo, que só a página de detalhe entrega a quem tem direito).
 const PLAY_LIST_SELECT = {
-  id: true, title: true, genre: true, durationMinutes: true, releaseYear: true,
+  id: true, title: true, durationMinutes: true, releaseYear: true,
   synopsis: true, director: true, cast: true, posterUrl: true, backdropUrl: true,
   videoUrl: true, requiresPlan: true, featured: true, createdAt: true, updatedAt: true,
-  hasPosterData: true, hasBackdropData: true, announcedAt: true
+  hasPosterData: true, hasBackdropData: true, announcedAt: true,
+  genres: { select: { genre: true } }
 };
 
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 4 MB por imagem
@@ -46,9 +48,14 @@ function imageFieldUpdate(kind, incoming) {
 // Transforma uma peça do banco no formato público da API.
 function publicPlay(p) {
   const v = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
-  const { posterData, backdropData, ...rest } = p;
+  const { posterData, backdropData, genres: rawGenres, genre: legacyGenre, ...rest } = p;
+  // "genres": ids na ordem oficial; "genreLabels": nomes para exibir; "genre": o 1º nome (compatibilidade).
+  const ids = (rawGenres || []).map((g) => (typeof g === "string" ? g : g.genre)).filter((id) => id in ORDER).sort((a, b) => ORDER[a] - ORDER[b]);
   return {
     ...rest,
+    genres: ids,
+    genreLabels: ids.map((id) => labelOf(id)),
+    genre: ids.length ? labelOf(ids[0]) : "",
     posterUrl: p.hasPosterData ? `/api/plays/${p.id}/image/poster?v=${v}` : p.posterUrl,
     backdropUrl: p.hasBackdropData ? `/api/plays/${p.id}/image/backdrop?v=${v}` : (p.backdropUrl || (p.hasPosterData ? `/api/plays/${p.id}/image/poster?v=${v}` : p.posterUrl))
   };

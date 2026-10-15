@@ -46,7 +46,7 @@ function playCard(play) {
     ${img ? `<td width="84" valign="top"><img src="${esc(img)}" width="72" alt="" style="border-radius:3px;display:block;"></td>` : ""}
     <td valign="top" style="font-family:Arial,Helvetica,sans-serif;">
       <a href="${siteUrl()}/#/peca/${esc(play.id)}" style="color:#F4ECE3;font-weight:bold;font-size:16px;text-decoration:none;">${esc(play.title)}</a>
-      <div style="color:#B9A9A0;font-size:13px;margin-top:3px;">${esc(play.genre)} &middot; ${Math.floor(play.durationMinutes / 60)}h${String(play.durationMinutes % 60).padStart(2, "0")}</div>
+      <div style="color:#B9A9A0;font-size:13px;margin-top:3px;">${play.genre ? esc(play.genre) + " &middot; " : ""}${Math.floor(play.durationMinutes / 60)}h${String(play.durationMinutes % 60).padStart(2, "0")}</div>
     </td></tr></table>`;
 }
 
@@ -114,7 +114,7 @@ function featured(user, play, canWatch, planName) {
   const img = abs(play.backdropUrl || play.posterUrl);
   const body = (img ? `<img src="${esc(img)}" width="540" alt="" style="width:100%;max-width:540px;border-radius:4px;display:block;margin:0 0 20px;">` : "") +
     h1(esc(play.title)) +
-    `<div style="color:#B9A9A0;font-size:14px;margin:-6px 0 14px;">${esc(play.genre)} &middot; ${Math.floor(play.durationMinutes / 60)}h${String(play.durationMinutes % 60).padStart(2, "0")}</div>` +
+    `<div style="color:#B9A9A0;font-size:14px;margin:-6px 0 14px;">${play.genre ? esc(play.genre) + " &middot; " : ""}${Math.floor(play.durationMinutes / 60)}h${String(play.durationMinutes % 60).padStart(2, "0")}</div>` +
     p(`${firstName(user)}, uma nova obra acabou de subir para o destaque do Mini Drama:`) +
     p(esc((play.synopsis || "").slice(0, 220)) + ((play.synopsis || "").length > 220 ? "…" : "")) +
     (canWatch

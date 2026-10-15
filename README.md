@@ -133,6 +133,47 @@ Não há “desfazer” automático (depois de juntar, o site não sabe quais er
 Em **Cadastrar várias peças**, o campo **Plano exigido para assistir às séries deste lote** já vem em **Balcão**
 (dá para trocar antes de enviar).
 
+### Gêneros do catálogo (várias seções por série)
+O catálogo usa estes gêneros (eles **substituem** os antigos Drama, Comédia, etc.):
+**Dublados · 🇧🇷 Brasileiras · 🤖 IA · Animes · BL & GL · Identidade Escondida · Amor à Primeira Vista ·
+Bebês e Gravidezes · Relacionamento Tabu · Homem-lobo🐺 e Vampiro🧛**.
+- **Novos Na Plataforma** não é um gênero que você marca: é uma seção **automática** (a primeira da página
+  inicial) com as séries mais recentes, na ordem em que foram adicionadas.
+- Uma série pode ter **vários gêneros** e **aparece em todas as seções** correspondentes. Seções sem séries não aparecem.
+- Em **Nova peça / editar**, marque quantas caixas quiser. No cadastro em lote, o site sugere gêneros pelo título
+  (palavras-chave; é só uma sugestão — não é uma IA lendo a série — e dá para corrigir depois).
+- Séries que já estavam no site ficam, por enquanto, **sem gênero** (aparecem só em “Novos Na Plataforma”) até você
+  importar a planilha abaixo.
+
+### Renomear gêneros (sem tirar as séries)
+No painel, **Gêneros** (menu lateral) lista os 10 gêneros com o **nome que aparece no site**, quantas séries há em cada
+um e o nome original. Edite o nome, clique em **Salvar nome** (ou Enter) e pronto. Dá para usar emoji (até 40 caracteres).
+- **Só o nome muda.** As séries ficam ligadas ao gênero por um identificador interno que nunca muda, então nenhuma série
+  sai da seção, do filtro ou da planilha por causa da troca de nome.
+- O nome novo vale na hora para a página inicial, os filtros do catálogo, os formulários, o painel e os e-mails.
+- **Voltar ao original** restaura o nome de fábrica. O site recusa nome vazio, nome igual ao de outro gênero e nomes reservados.
+- Na planilha de gêneros, tanto o nome novo quanto o original continuam sendo reconhecidos.
+- “Novos Na Plataforma” é uma seção automática e não é renomeável por aqui.
+
+### Atualizar gêneros por planilha (CSV)
+Em **Peças → Atualizar gêneros (CSV)** você envia uma planilha com o **nome** da série e o(s) **gênero(s)**:
+```
+nome;genero
+A Farsa do Silêncio;Dublados, Animes
+A Farsa do Silêncio;🇧🇷 Brasileiras
+Ventos de Dona Flor;BL & GL
+```
+- O nome é comparado com o título da série ignorando maiúsculas, acentos e `_`/`-`.
+- Vários gêneros: na mesma célula (separados por vírgula, ponto e vírgula, `|` ou `/`), em **várias linhas** com o mesmo
+  nome, ou em **várias colunas** (`genero_1`, `genero_2`…). Tudo se soma.
+- Os gêneros podem vir com ou sem emoji, com “&” ou “e”, no singular ou plural (“Anime”, “BL e GL”, “Brasileira”…).
+  “Novos Na Plataforma” na planilha é ignorado (é automático).
+- Antes de aplicar, o site mostra uma **prévia** (quantas séries serão atualizadas, quantas em cada gênero, nomes que não
+  foram encontrados, gêneros não reconhecidos) **sem alterar nada**.
+- Modo **Substituir** (recomendado) troca os gêneros das séries da planilha; modo **Acrescentar** mantém os que já tinham.
+  Série que aparece na planilha só com gêneros não reconhecidos **não é alterada**. A aplicação é “tudo ou nada”.
+- Funciona com CSV do Excel (acentos) e aguenta planilhas grandes (até 50.000 linhas).
+
 ### Capas em massa por planilha (CSV)
 Ideal para quando um designer entrega as capas já hospedadas (ex.: Supabase Storage). Em
 **Peças → Cadastrar várias peças**, use o campo **Planilha de capas**:

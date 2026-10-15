@@ -105,7 +105,7 @@ async function main() {
   // ---------- Peças ----------
   const plays = [
     {
-      id: "p1", title: "A Farsa do Silêncio", genre: "Drama", durationMinutes: 95, releaseYear: 2024,
+      id: "p1", title: "A Farsa do Silêncio", durationMinutes: 95, releaseYear: 2024,
       synopsis: "Numa cidade tomada pelo medo, um grupo de vizinhos descobre que o silêncio pode ser a maior das mentiras. Um drama sobre memória, culpa e o preço de calar.",
       director: "Marina Kessler", cast: "Bia Torres, Renato Alves, Duda Ferraz",
       posterUrl: "https://images.unsplash.com/photo-1503095396549-807759245b35?q=80&w=800&auto=format&fit=crop",
@@ -113,7 +113,7 @@ async function main() {
       videoUrl: "", requiresPlan: "balcao", featured: true
     },
     {
-      id: "p2", title: "Ventos de Dona Flor", genre: "Comédia", durationMinutes: 110, releaseYear: 2023,
+      id: "p2", title: "Ventos de Dona Flor", durationMinutes: 110, releaseYear: 2023,
       synopsis: "Uma comédia de costumes sobre uma senhora que decide reabrir o bar do falecido marido — e vira a cabeça de toda a rua no processo.",
       director: "João Petrucci", cast: "Célia Nunes, Otávio Reis, Marli Cassoni",
       posterUrl: "https://images.unsplash.com/photo-1509824227185-9c5a01ceba0d?q=80&w=800&auto=format&fit=crop",
@@ -121,7 +121,7 @@ async function main() {
       videoUrl: "", requiresPlan: "plateia", featured: true
     },
     {
-      id: "p3", title: "O Relógio de Antígona", genre: "Clássico", durationMinutes: 130, releaseYear: 2022,
+      id: "p3", title: "O Relógio de Antígona", durationMinutes: 130, releaseYear: 2022,
       synopsis: "Releitura contemporânea da tragédia grega, ambientada numa fábrica têxtil em greve. A lei do Estado contra a lei do coração.",
       director: "Helena Brito", cast: "Sofia Damacena, Igor Pontes",
       posterUrl: "https://images.unsplash.com/photo-1519669417670-68775a50919c?q=80&w=800&auto=format&fit=crop",
@@ -129,7 +129,7 @@ async function main() {
       videoUrl: "", requiresPlan: "camarote", featured: true
     },
     {
-      id: "p4", title: "Cordel de Vidro", genre: "Musical", durationMinutes: 100, releaseYear: 2024,
+      id: "p4", title: "Cordel de Vidro", durationMinutes: 100, releaseYear: 2024,
       synopsis: "Um casamento arranjado no sertão vira musical de viola e sanfona quando a noiva decide fugir na véspera — para dentro do próprio circo da cidade.",
       director: "Zeca Montenegro", cast: "Luzia Prado, Bento Aguiar, Cacá Ribas",
       posterUrl: "https://images.unsplash.com/photo-1516307365426-bea591f05011?q=80&w=800&auto=format&fit=crop",
@@ -137,7 +137,7 @@ async function main() {
       videoUrl: "", requiresPlan: "balcao", featured: false
     },
     {
-      id: "p5", title: "Sala de Espera", genre: "Suspense", durationMinutes: 88, releaseYear: 2023,
+      id: "p5", title: "Sala de Espera", durationMinutes: 88, releaseYear: 2023,
       synopsis: "Seis desconhecidos presos numa sala de espera de hospital durante um apagão. Um deles não deveria estar ali — e todos sabem disso.",
       director: "Marina Kessler", cast: "Renato Alves, Paula Vidigal, Tomás Neri",
       posterUrl: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?q=80&w=800&auto=format&fit=crop",
@@ -145,7 +145,7 @@ async function main() {
       videoUrl: "", requiresPlan: "camarote", featured: false
     },
     {
-      id: "p6", title: "O Baú da Vovó Chica", genre: "Infantil", durationMinutes: 65, releaseYear: 2024,
+      id: "p6", title: "O Baú da Vovó Chica", durationMinutes: 65, releaseYear: 2024,
       synopsis: "Duas crianças encontram um baú mágico no sótão e caem em histórias esquecidas da avó — com direito a dragão de papel e réveillon ao contrário.",
       director: "Bento Aguiar", cast: "Cacá Ribas, Duda Ferraz, Companhia Mirim",
       posterUrl: "https://images.unsplash.com/photo-1503516459261-40c66117780a?q=80&w=800&auto=format&fit=crop",

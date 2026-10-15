@@ -39,7 +39,7 @@ model User {
 model Play {
   id              String   @id @default(cuid())
   title           String
-  genre           String
+  genre           String   @default("")   // legado (não é mais usado): os gêneros ficam na tabela PlayGenre
   durationMinutes Int
   releaseYear     Int
   synopsis        String
@@ -61,6 +61,8 @@ model Play {
   hasBackdropData Boolean  @default(false)
 
   announcedAt     DateTime? // quando o e-mail "nova obra em destaque" foi disparado
+
+  genres          PlayGenre[]
 }
 
 model Plan {
@@ -117,4 +119,22 @@ model PasswordReset {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+// Uma linha por (série, gênero): a série pode ter vários gêneros e aparecer em várias seções.
+model PlayGenre {
+  playId String
+  genre  String   // id do gênero (ver src/utils/genres.js), ex.: "dublados"
+  play   Play     @relation(fields: [playId], references: [id], onDelete: Cascade)
+
+  @@id([playId, genre])
+  @@index([genre])
+}
+
+// Nome PERSONALIZADO de um gênero (o admin pode renomear no painel). O "id" do gênero nunca muda,
+// e é ele que liga as séries ao gênero (PlayGenre) — por isso renomear não tira nenhuma série.
+model GenreLabel {
+  id        String   @id          // id do gênero (ver src/utils/genres.js), ex.: "dublados"
+  label     String
+  updatedAt DateTime @updatedAt
 }

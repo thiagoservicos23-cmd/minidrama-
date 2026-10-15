@@ -137,6 +137,8 @@ input,select,textarea{font-family:inherit;}
 .auth-foot a{color:var(--gold-soft); font-weight:600;}
 .form-msg{padding:10px 12px; border-radius:var(--radius); font-size:13px; margin-bottom:16px; display:none;}
 .form-msg:empty{display:none !important;}
+.genre-checks{display:grid; grid-template-columns:repeat(2,1fr); gap:9px 14px; background:var(--bg-elev-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;}
+@media (max-width:480px){.genre-checks{grid-template-columns:1fr;}}
 .form-msg.error{display:block; background:rgba(196,69,60,.12); color:#E8938C; border:1px solid rgba(196,69,60,.3);}
 .form-msg.ok{display:block; background:rgba(92,138,90,.14); color:#9CC79A; border:1px solid rgba(92,138,90,.3);}
 .demo-note{background:var(--bg-elev-2); border:1px dashed var(--line); border-radius:var(--radius); padding:10px 12px; font-size:11.5px; color:var(--ink-faint); margin-top:18px; line-height:1.5;}
@@ -396,9 +398,9 @@ window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", boot);
 
 /* ---- cache local: a 2ª visita em diante abre NA HORA, mesmo com o servidor dormindo ---- */
-const CACHE_KEY = "minidrama_cache_v3";
+const CACHE_KEY = "minidrama_cache_v4";
 function loadCache(){
-  try{ localStorage.removeItem("minidrama_cache_v2"); }catch(e){}
+  try{ localStorage.removeItem("minidrama_cache_v2"); localStorage.removeItem("minidrama_cache_v3"); }catch(e){}
   try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)); if(c && Date.now() - c.t < 14*86400000) return c; }catch(e){}
   return null;
 }
@@ -411,7 +413,7 @@ async function loadFresh(){
   const [homeRes, plansRes] = await Promise.all([ api("/plays/feed/home"), api("/plans") ]);
   DB.home = homeRes; DB.plans = plansRes.plans; DB.playsTotal = homeRes.total;
   const seen = new Set();
-  DB.plays = [...homeRes.featured, ...homeRes.genres.flatMap(g => g.plays)].filter(p => !seen.has(p.id) && seen.add(p.id));
+  DB.plays = [...homeRes.featured, ...homeRes.novos, ...homeRes.genres.flatMap(g => g.plays)].filter(p => !seen.has(p.id) && seen.add(p.id));
   if(getToken()){
     try{ DB.me = (await api("/auth/me")).user; }
     catch(e){ if(e.httpError && (e.status === 401 || e.status === 403)){ clearToken(); DB.me = null; } }
@@ -431,10 +433,10 @@ async function refreshInBackground(){
 async function boot(){
   registerServiceWorker();
   const cached = loadCache();
-  if(cached && cached.hasToken === !!getToken() && (cached.plans || []).length && cached.home){
+  if(cached && cached.hasToken === !!getToken() && (cached.plans || []).length && cached.home && cached.home.catalog){
     DB.home = cached.home; DB.plans = cached.plans; DB.me = cached.me || null;
     const seen = new Set();
-    DB.plays = [...cached.home.featured, ...cached.home.genres.flatMap(g => g.plays)].filter(p => !seen.has(p.id) && seen.add(p.id));
+    DB.plays = [...cached.home.featured, ...(cached.home.novos || []), ...cached.home.genres.flatMap(g => g.plays)].filter(p => !seen.has(p.id) && seen.add(p.id));
     render();
     refreshInBackground();
     scheduleInstallBanner();
@@ -577,7 +579,7 @@ function HomePage(){
         <div class="hero-content reveal">
           <div class="hero-eyebrow"><span class="dot"></span> Em cartaz na plataforma</div>
           <h1 class="hero-title">${esc(p.title)}</h1>
-          <div class="hero-meta"><span>${ICO.clock} ${fmtDuration(p.durationMinutes)}</span><span>${esc(p.genre)}</span><span>${p.releaseYear}</span></div>
+          <div class="hero-meta"><span>${ICO.clock} ${fmtDuration(p.durationMinutes)}</span>${p.genre ? `<span>${esc(p.genre)}</span>` : ""}<span>${p.releaseYear}</span></div>
           <p class="hero-desc">${esc(p.synopsis)}</p>
           <div class="hero-actions">
             <a href="#/peca/${p.id}" class="btn btn-gold">${ICO.play} Assistir agora</a>
@@ -587,14 +589,17 @@ function HomePage(){
       </div>`).join("")}
     <div class="hero-dots">${featured.map((_,i)=>`<button class="${i===0?'active':''}" onclick="setHero(${i})"></button>`).join("")}</div>
   </section>` : `<div style="height:84px;"></div>`;
-  const rows = (home.genres || []).map(g => PlayRow(g.genre, g.plays, g.total)).join("");
+  const sections = [];
+  if((home.novos || []).length) sections.push(PlayRow("Novos Na Plataforma", "novos", home.novos, home.total));
+  (home.genres || []).forEach(g => sections.push(PlayRow(g.label, g.id, g.plays, g.total)));
+  const rows = sections.join("");
   return `${hero}
   <div class="container">${rows || `<p style="color:var(--ink-muted); text-align:center; padding:60px 0;">As primeiras peças estão chegando. Volte em breve! 🎭</p>`}</div>`;
 }
 function setCatalogGenre(g){ catalogGenre = g; catalogPage = 1; }
-function PlayRow(title, plays, total){
+function PlayRow(title, genreId, plays, total){
   return `<div class="section-row">
-    <div class="section-row-head"><h2 class="section-title">${esc(title)}</h2><a href="#/catalogo" class="section-link" data-genre="${esc(title)}" onclick="setCatalogGenre(this.dataset.genre)">Ver tudo${total > plays.length ? ` (${total})` : ""}</a></div>
+    <div class="section-row-head"><h2 class="section-title">${esc(title)}</h2><a href="#/catalogo" class="section-link" data-genre="${esc(genreId)}" onclick="setCatalogGenre(this.dataset.genre)">Ver tudo${total > plays.length ? ` (${total})` : ""}</a></div>
     <div class="rail">${plays.map(p=>PlayCard(p)).join("")}</div></div>`;
 }
 function PlayCard(p){
@@ -603,7 +608,7 @@ function PlayCard(p){
     ${!p.canWatch ? `<span class="card-lock">${ICO.lock}</span>` : ``}
     <img class="card-poster" src="${esc(p.posterUrl)}" alt="${esc(p.title)}" loading="lazy">
     <div class="card-body"><p class="card-title">${esc(p.title)}</p>
-    <div class="card-sub"><span>${p.genre}</span><span>${fmtDuration(p.durationMinutes)}</span></div></div></a>`;
+    <div class="card-sub"><span>${esc(p.genre || "")}</span><span>${fmtDuration(p.durationMinutes)}</span></div></div></a>`;
 }
 function loadHeroBg(i){
   const el = qsa(".hero-slide")[i];
@@ -622,7 +627,7 @@ function attachHomeEvents(){
 }
 
 /* --------------------------- CATALOG PAGE -------------------------------- */
-let catalogGenre = "Todos";
+let catalogGenre = "novos";
 let catalogPage = 1;
 let catalogMeta = { total: 0, totalPages: 1 };
 
@@ -639,10 +644,10 @@ function PaginationControls(meta, gotoFnName){
 async function CatalogPage(){
   const r = await api(`/plays?page=${catalogPage}&pageSize=24&genre=${encodeURIComponent(catalogGenre)}`);
   catalogMeta = r;
-  const genres = ["Todos", ...GENRE_OPTIONS.filter(g=>g!=="Outro")];
+  const genres = [{ id:"novos", label:"Novos Na Plataforma" }, ...genreList()];
   return `<div class="container" style="padding-top:36px;">
     <h1 class="page-title" style="margin-bottom:22px;">Catálogo completo</h1>
-    <div class="genre-filters" id="genre-filters">${genres.map(g=>`<button class="chip ${g===catalogGenre?'active':''}" data-genre="${esc(g)}">${esc(g)}</button>`).join("")}</div>
+    <div class="genre-filters" id="genre-filters">${genres.map(g=>`<button class="chip ${g.id===catalogGenre?'active':''}" data-genre="${esc(g.id)}">${esc(g.label)}</button>`).join("")}</div>
     <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:18px; margin-bottom:24px;">
       ${r.plays.length ? r.plays.map(p=>PlayCard(p)).join("") : `<p style="color:var(--ink-faint); grid-column:1/-1;">Nenhuma peça encontrada nesse gênero.</p>`}
     </div>
@@ -702,23 +707,31 @@ function fileToDataUrl(file){
   });
 }
 
-// "Intuição" de gênero por palavras-chave no título (heurística simples, não é IA
-// entendendo a peça de verdade — serve pra dar um ponto de partida, sempre editável).
-const GENRE_OPTIONS = ["Drama","Comédia","Romance","Ação","Clássico","Musical","Suspense","Infantil","Outro"];
-const GENRE_KEYWORDS = [
-  { genre: "Comédia", words: ["comedia","farsa","riso","hilari","engracad"] },
-  { genre: "Romance", words: ["romance","amor","paixao","coracao","namoro","casamento"] },
-  { genre: "Suspense", words: ["suspense","misterio","crime","assassinato","investiga","enigma"] },
-  { genre: "Ação", words: ["acao","luta","guerra","batalha","persegui"] },
-  { genre: "Infantil", words: ["infantil","crianca","criancas","bicho","fada","dragao","conto"] },
-  { genre: "Clássico", words: ["classico","tragedia","grecia","shakespeare","mitologia","antigona"] },
-  { genre: "Musical", words: ["musical","cancao","viola","sanfona","opera","canta"] }
+// Lista de gêneros: vem do servidor (única fonte). Esta cópia só serve de reserva.
+const GENRES_FALLBACK = [
+  {id:"dublados",label:"Dublados"},{id:"brasileiras",label:"🇧🇷 Brasileiras"},{id:"ia",label:"🤖 IA"},{id:"animes",label:"Animes"},
+  {id:"bl-gl",label:"BL & GL"},{id:"identidade-escondida",label:"Identidade Escondida"},{id:"amor-a-primeira-vista",label:"Amor à Primeira Vista"},
+  {id:"bebes-e-gravidezes",label:"Bebês e Gravidezes"},{id:"relacionamento-tabu",label:"Relacionamento Tabu"},{id:"homem-lobo-e-vampiro",label:"Homem-lobo🐺 e Vampiro🧛"}];
+function genreList(){ return (DB.home && DB.home.catalog) || DB.genreList || GENRES_FALLBACK; }
+function genreLabel(id){ const g = genreList().find(x => x.id === id); return g ? g.label : id; }
+
+// Sugestão de gêneros por palavras-chave no título (ponto de partida: não é IA lendo a série; sempre editável).
+const GENRE_RULES = [
+  { id:"homem-lobo-e-vampiro", words:["lobo","lobisomem","vampir"] },
+  { id:"bebes-e-gravidezes", words:["bebe","gravid","gestan","gestac","maternidade"] },
+  { id:"amor-a-primeira-vista", words:["primeira vista","primeiro olhar"] },
+  { id:"identidade-escondida", words:["identidade","disfarc","incognit","escondid"] },
+  { id:"relacionamento-tabu", words:["tabu","proibid","padrasto","madrasta","cunhad"] },
+  { id:"animes", words:["anime"] },
+  { id:"dublados", words:["dublad","dublagem"] },
+  { id:"brasileiras", words:["brasil"] },
+  { id:"ia", words:["inteligencia artificial","robo"], re:/\bia\b/ },
+  { id:"bl-gl", words:["boys love","girls love"], re:/\b(bl|gl)\b/ }
 ];
 function normalizeText(s){ return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
-function guessGenre(text){
+function guessGenres(text){
   const t = normalizeText(text);
-  for(const rule of GENRE_KEYWORDS){ if(rule.words.some(w => t.includes(w))) return rule.genre; }
-  return "Drama";
+  return GENRE_RULES.filter(r => r.words.some(w => t.includes(w)) || (r.re && r.re.test(t))).map(r => r.id);
 }
 
 let currentPlayData = null;
@@ -760,7 +773,7 @@ async function PlayDetail(id){
   <div class="detail-wrap">
     <h1 class="detail-title">${esc(play.title)}</h1>
     <div class="detail-meta">
-      <span>${ICO.clock} ${fmtDuration(play.durationMinutes)}</span><span>${play.genre}</span><span>${play.releaseYear}</span>
+      <span>${ICO.clock} ${fmtDuration(play.durationMinutes)}</span>${play.genreLabels && play.genreLabels.length ? `<span>${play.genreLabels.map(esc).join(" · ")}</span>` : ""}<span>${play.releaseYear}</span>
       <span>Necessário: plano ${esc(planById(play.requiresPlan)?.name||'Plateia')}</span>
     </div>
     <div class="player-shell" style="margin-bottom:26px;">
@@ -1162,6 +1175,7 @@ function AdminLayout(hash){
     { key:"", label:"Visão geral", icon:ICO.grid, href:"#/admin" },
     { key:"pecas", label:"Peças", icon:ICO.film, href:"#/admin/pecas" },
     { key:"usuarios", label:"Usuários", icon:ICO.users, href:"#/admin/usuarios" },
+    { key:"generos", label:"Gêneros", icon:ICO.grid, href:"#/admin/generos" },
     { key:"planos", label:"Planos", icon:ICO.ticket, href:"#/admin/planos" },
     { key:"pagamentos", label:"Pagamentos", icon:ICO.ticket, href:"#/admin/pagamentos" }
   ];
@@ -1182,6 +1196,7 @@ async function afterAdminRender(hash, seq){
   try{
     if(section==="pecas") { adminPlaysPage = 1; await loadAdminPlaysPage(); if(stale()) return; main.innerHTML = AdminPlays(); attachAdminPlaysEvents(); return; }
     if(section==="usuarios") { await refreshUsers(); if(stale()) return; main.innerHTML = AdminUsers(); attachAdminUsersEvents(); return; }
+    if(section==="generos") { adminGenres = (await api("/plays/admin/genres")).genres; if(stale()) return; main.innerHTML = AdminGenres(); return; }
     if(section==="planos") { await refreshPlans(); if(stale()) return; main.innerHTML = AdminPlans(); return; }
     if(section==="pagamentos") { await refreshPlans(); adminPayPage = 1; await loadAdminPayments(); if(stale()) return; main.innerHTML = AdminPayments(); return; }
     const [, , , pay] = await Promise.all([refreshPlays(), refreshUsers(), refreshPlans(), api("/payments/admin/list?page=1")]);
@@ -1239,6 +1254,51 @@ async function adminRunDaily(btn){
 }
 function showSysOut(t){ const el = qs("#sys-out"); if(el){ el.style.display = "block"; el.textContent = t; } }
 
+
+/* ---- Admin: Gêneros (renomear o que aparece no site) ---- */
+let adminGenres = [];
+function AdminGenres(){
+  return `
+  <div class="admin-topbar"><h1 class="admin-h1">Gêneros</h1></div>
+  <p style="color:var(--ink-muted); font-size:13.5px; margin:-14px 0 20px; max-width:680px; line-height:1.6;">Mude o <b>nome que aparece no site</b> (seções da página inicial, filtros do catálogo e e-mails). <b>As séries continuam em cada gênero</b>: só o nome muda. Pode usar emoji. "Novos Na Plataforma" é uma seção automática e não pode ser renomeada aqui.</p>
+  <div class="admin-panel"><div class="table-scroll"><table>
+    <thead><tr><th>Nome no site</th><th>Séries</th><th>Nome original</th><th></th></tr></thead>
+    <tbody>${adminGenres.map(g => `
+      <tr>
+        <td style="min-width:260px;"><input class="search-input" style="width:100%;" id="gn-${esc(g.id)}" maxlength="40" value="${esc(g.label)}" onkeydown="if(event.key==='Enter') saveGenreName('${esc(g.id)}')"></td>
+        <td class="strong">${g.total}</td>
+        <td>${g.renamed ? esc(g.defaultLabel) : '<span style="color:var(--ink-faint);">—</span>'}</td>
+        <td><div class="row-actions" style="flex-wrap:wrap;">
+          <button onclick="saveGenreName('${esc(g.id)}')">Salvar nome</button>
+          ${g.renamed ? `<button onclick="resetGenreName('${esc(g.id)}')">Voltar ao original</button>` : ""}
+        </div></td>
+      </tr>`).join("")}</tbody>
+  </table></div></div>`;
+}
+async function reloadAdminGenres(){
+  adminGenres = (await api("/plays/admin/genres")).genres;
+  if(qs("#admin-main") && location.hash === "#/admin/generos") qs("#admin-main").innerHTML = AdminGenres();
+  loadFresh().catch(()=>{});      // atualiza os nomes usados nos formulários e na página inicial
+}
+async function saveGenreName(id){
+  const input = qs("#gn-" + id);
+  const label = (input.value || "").trim();
+  const cur = adminGenres.find(g => g.id === id);
+  if(cur && label === cur.label){ toast("O nome não mudou."); return; }
+  try{
+    const r = await api("/plays/admin/genres/" + id, { method:"PUT", body:{ label } });
+    toast(`Gênero renomeado para “${r.label}”. As séries continuam nele.`);
+    await reloadAdminGenres();
+  }catch(err){ toast(err.message); }
+}
+async function resetGenreName(id){
+  try{
+    const r = await api("/plays/admin/genres/" + id, { method:"PUT", body:{ reset:true } });
+    toast(`Nome original restaurado: “${r.label}”.`);
+    await reloadAdminGenres();
+  }catch(err){ toast(err.message); }
+}
+
 /* ---- Admin: Pagamentos ---- */
 let adminPayPage = 1, adminPayStatus = "", adminPayData = null;
 async function loadAdminPayments(){
@@ -1284,6 +1344,7 @@ function AdminPlays(){
   <div class="admin-topbar"><h1 class="admin-h1">Peças</h1>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
       <input class="search-input" id="play-search" placeholder="Buscar peça..." value="${esc(adminPlaySearch)}">
+      <button class="btn btn-ghost btn-sm" onclick="openGenresModal()">Atualizar gêneros (CSV)</button>
       <button class="btn btn-ghost btn-sm" onclick="openMovePlansModal()">Mover séries de plano</button>
       <button class="btn btn-ghost btn-sm" onclick="openBatchModal()">Cadastrar várias peças</button>
       <button class="btn btn-gold btn-sm" onclick="openPlayModal()">+ Nova peça</button>
@@ -1295,7 +1356,7 @@ function AdminPlays(){
     <tbody>${list.map(p=>`
       <tr>
         <td class="strong" style="display:flex; align-items:center; gap:10px;"><img src="${esc(p.posterUrl)}" style="width:34px;height:48px;object-fit:cover;border-radius:2px;" onerror="this.style.visibility='hidden'">${esc(p.title)}</td>
-        <td>${esc(p.genre)}</td><td>${fmtDuration(p.durationMinutes)}</td><td>${esc(planById(p.requiresPlan)?.name||'')}</td>
+        <td>${esc((p.genreLabels || []).join(", ") || "—")}</td><td>${fmtDuration(p.durationMinutes)}</td><td>${esc(planById(p.requiresPlan)?.name||'')}</td>
         <td>${p.hasVideo ? `<span class="badge badge-ok">Cadastrado</span>` : `<span class="badge badge-neutral">Pendente</span>`}</td>
         <td><div class="row-actions"><button onclick="openPlayModal('${p.id}')">${ICO.edit}</button><button onclick="deletePlay('${p.id}')">${ICO.trash}</button></div></td>
       </tr>`).join("")}</tbody></table>`}
@@ -1303,7 +1364,8 @@ function AdminPlays(){
   ${PaginationControls(adminPlaysMeta, "goToAdminPlaysPage")}
   ${Modal("play-modal")}
   ${Modal("batch-modal")}
-  ${Modal("move-modal")}`;
+  ${Modal("move-modal")}
+  ${Modal("genres-modal")}`;
 }
 function EmptyState(icon, title, sub){ return `<div class="empty-state">${icon}<h3 style="font-family:var(--font-display); color:var(--ink); margin:0 0 6px;">${esc(title)}</h3><p style="margin:0;">${esc(sub)}</p></div>`; }
 function Modal(id){ return `<div class="modal-overlay" id="${id}"><div class="modal-box" id="${id}-box"></div></div>`; }
@@ -1313,16 +1375,16 @@ function closeModal(id){ qs("#"+id).classList.remove("open"); }
 async function openPlayModal(id){
   let p = null;
   if(id){ try{ const r = await api("/plays/" + id); p = r.play; }catch(e){ toast(e.message); return; } }
-  const genres = GENRE_OPTIONS;
   qs("#play-modal-box").innerHTML = `
     <div class="modal-head"><h3>${p? "Editar peça" : "Nova peça"}</h3><button class="modal-close" onclick="closeModal('play-modal')">&times;</button></div>
     <form id="play-form">
       <input type="hidden" name="id" value="${p?p.id:''}">
       <div class="field"><label>Título da peça</label><input type="text" name="title" required value="${p?esc(p.title):''}"></div>
-      <div class="form-grid-2">
-        <div class="field"><label>Gênero</label><select name="genre">${genres.map(g=>`<option ${p&&p.genre===g?'selected':''}>${g}</option>`).join("")}</select></div>
-        <div class="field"><label>Ano</label><input type="number" name="releaseYear" value="${p?p.releaseYear:new Date().getFullYear()}"></div>
+      <div class="field">
+        <label>Gêneros (marque quantos quiser — a série aparece em todas as seções marcadas)</label>
+        <div class="genre-checks">${genreList().map(g=>`<label class="checkbox-row"><input type="checkbox" name="genres" value="${esc(g.id)}" ${p && (p.genres||[]).includes(g.id) ? 'checked' : ''}> ${esc(g.label)}</label>`).join("")}</div>
       </div>
+      <div class="field"><label>Ano</label><input type="number" name="releaseYear" value="${p?p.releaseYear:new Date().getFullYear()}"></div>
       <div class="form-grid-2">
         <div class="field"><label>Duração (minutos) — mínimo 60</label><input type="number" name="durationMinutes" min="60" required value="${p?p.durationMinutes:65}"></div>
         <div class="field"><label>Plano mínimo exigido</label><select name="requiresPlan">${DB.plans.map(pl=>`<option value="${pl.id}" ${p&&p.requiresPlan===pl.id?'selected':''}>${esc(pl.name)}</option>`).join("")}</select></div>
@@ -1334,12 +1396,12 @@ async function openPlayModal(id){
       </div>
       <div class="field">
         <label>Pôster (imagem vertical)</label>
-        <input type="url" name="posterUrl" id="poster-url-field" value="${p?esc(p.posterUrl):''}" placeholder="https://... ou escolha um arquivo abaixo">
+        <input type="text" inputmode="url" name="posterUrl" id="poster-url-field" value="${p?esc(p.posterUrl):''}" placeholder="https://... ou escolha um arquivo abaixo">
         <input type="file" id="poster-file-input" accept="image/png,image/jpeg" style="margin-top:6px;">
       </div>
       <div class="field">
         <label>Imagem de destaque (banner, horizontal)</label>
-        <input type="url" name="backdropUrl" id="backdrop-url-field" value="${p && p.backdropUrl !== p.posterUrl ? esc(p.backdropUrl) : ''}" placeholder="Opcional — se vazio, o site usa a capa">
+        <input type="text" inputmode="url" name="backdropUrl" id="backdrop-url-field" value="${p && p.backdropUrl !== p.posterUrl ? esc(p.backdropUrl) : ''}" placeholder="Opcional — se vazio, o site usa a capa">
         <input type="file" id="backdrop-file-input" accept="image/png,image/jpeg" style="margin-top:6px;">
       </div>
       <div class="field"><label>URL do vídeo da peça</label><input type="url" name="videoUrl" id="video-url-field" value="${p?esc(p.videoUrl):''}" placeholder="https://..."></div>
@@ -1380,14 +1442,14 @@ async function openPlayModal(id){
     if(titleField && !titleField.value.trim()) titleField.value = titleFromFilename(file.name);
     const minutes = await detectVideoDuration(file);
     if(minutes){ qs('#play-form [name="durationMinutes"]').value = Math.max(minutes, 60); toast("Duração detectada: " + minutes + " min."); }
-    const genreSelect = qs('#play-form [name="genre"]');
-    if(genreSelect) genreSelect.value = guessGenre(titleField.value);
+    const boxes = qsa('#play-form [name="genres"]');
+    if(!boxes.some(b => b.checked)) guessGenres(titleField.value).forEach(id => { const b = boxes.find(x => x.value === id); if(b) b.checked = true; });
   });
   qs("#play-form").addEventListener("submit", async e=>{
     e.preventDefault();
     const fd = new FormData(e.target);
     const data = {
-      title: fd.get("title").trim(), genre: fd.get("genre"), releaseYear: parseInt(fd.get("releaseYear"),10),
+      title: fd.get("title").trim(), genres: fd.getAll("genres"), releaseYear: parseInt(fd.get("releaseYear"),10),
       durationMinutes: parseInt(fd.get("durationMinutes"),10), requiresPlan: fd.get("requiresPlan"),
       synopsis: fd.get("synopsis").trim(), director: fd.get("director").trim(), cast: fd.get("cast").trim(),
       posterUrl: fd.get("posterUrl").trim(), backdropUrl: fd.get("backdropUrl").trim(),
@@ -1454,6 +1516,109 @@ async function uploadVideoToBunny(){
   upload.start();
 }
 
+
+
+/* ---- Admin: atualizar gêneros das séries que já estão no site, por planilha ---- */
+let genreRows = null;
+
+// Lê a planilha: coluna do nome + uma ou mais colunas de gênero (ou vários gêneros na mesma célula).
+function parseGenreSheet(text){
+  const rows = parseCsv(text);
+  if(!rows.length) return [];
+  const head = rows[0].map(h => normName(h).replace(/ /g, "_"));
+  const nameKeys = ["nome", "titulo", "serie", "peca", "name"];
+  const isGenreCol = (h) => ["genero", "categoria", "genre"].some(k => h.startsWith(k));
+  let iName = head.findIndex(h => nameKeys.includes(h));
+  let iGen = head.map((h, i) => isGenreCol(h) ? i : -1).filter(i => i >= 0);
+  const hasHeader = iName >= 0 || iGen.length > 0;
+  if(iName < 0) iName = 0;
+  if(!iGen.length) iGen = rows[0].map((_, i) => i).filter(i => i !== iName);   // sem cabeçalho: todas as outras colunas
+  const out = [];
+  for(const r of rows.slice(hasHeader ? 1 : 0)){
+    const name = (r[iName] || "").trim();
+    if(!name) continue;
+    const genres = iGen.flatMap(i => String(r[i] || "").split(/[,;|\/+]/)).map(x => x.trim()).filter(Boolean);
+    out.push({ name, genres });
+  }
+  return out;
+}
+
+function openGenresModal(){
+  genreRows = null;
+  qs("#genres-modal-box").innerHTML = `
+    <div class="modal-head"><h3>Atualizar gêneros por planilha</h3><button class="modal-close" onclick="closeModal('genres-modal'); goToAdminPlaysPage(1);">&times;</button></div>
+    <p style="color:var(--ink-muted); font-size:13px; margin:0 0 12px; line-height:1.6;">Envie um CSV com o <b>nome</b> da série e o(s) <b>gênero(s)</b>. O site procura cada série pelo nome (ignora maiúsculas, acentos e "_") e atualiza os gêneros. Uma série pode ter <b>vários gêneros</b>: coloque todos na mesma célula separados por vírgula, ponto e vírgula ou barra, ou repita a linha.</p>
+    <pre style="margin:0 0 14px; background:var(--bg-elev-2); border:1px solid var(--line); border-radius:var(--radius); padding:10px 12px; font-size:12px; color:var(--ink-muted); overflow:auto;">nome;genero
+A Farsa do Silêncio;Dublados, Animes
+A Farsa do Silêncio;🇧🇷 Brasileiras
+Ventos de Dona Flor;BL &amp; GL</pre>
+    <div class="field"><label>Planilha (CSV)</label><input type="file" id="genres-csv" accept=".csv,text/csv,text/plain"></div>
+    <div class="field">
+      <label>O que fazer com os gêneros que a série já tem?</label>
+      <label class="checkbox-row" style="margin-bottom:6px;"><input type="radio" name="gmode" value="replace" checked> Substituir pelos da planilha (recomendado)</label>
+      <label class="checkbox-row"><input type="radio" name="gmode" value="add"> Acrescentar aos que já tem</label>
+    </div>
+    <div id="genres-result" style="font-size:13px; line-height:1.7; color:var(--ink-muted);"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('genres-modal'); goToAdminPlaysPage(1);">Fechar</button>
+      <button type="button" class="btn btn-gold btn-sm" id="genres-apply" style="display:none;" onclick="applyGenres()">Aplicar</button>
+    </div>`;
+  openModal("genres-modal");
+  qs("#genres-csv").addEventListener("change", onGenresCsvChosen);
+  qsa('[name="gmode"]').forEach(r => r.addEventListener("change", ()=>{ if(genreRows && genreRows.length) analyzeGenres(); }));
+}
+function genresMode(){ return (qs('[name="gmode"]:checked') || {}).value || "replace"; }
+
+async function onGenresCsvChosen(e){
+  const file = e.target.files[0];
+  const box = qs("#genres-result"), btn = qs("#genres-apply");
+  btn.style.display = "none";
+  if(!file){ genreRows = null; box.innerHTML = ""; return; }
+  try{ genreRows = parseGenreSheet(await readTextFile(file)); }
+  catch(err){ genreRows = null; box.innerHTML = `<span style="color:#E8938C;">Não consegui ler esse arquivo. Salve como CSV com as colunas nome e genero.</span>`; return; }
+  if(!genreRows.length){ box.innerHTML = `<span style="color:#E8938C;">Não encontrei nenhuma linha com nome de série nessa planilha.</span>`; return; }
+  await analyzeGenres();
+}
+
+// Prévia: mostra o que vai acontecer SEM alterar nada.
+async function analyzeGenres(){
+  const box = qs("#genres-result"), btn = qs("#genres-apply");
+  btn.style.display = "none"; box.textContent = "Analisando a planilha…";
+  try{
+    const r = await api("/plays/genres-import", { method:"POST", body:{ rows: genreRows, mode: genresMode(), dryRun: true } });
+    renderGenresResult(r);
+  }catch(err){ box.innerHTML = `<span style="color:#E8938C;">${esc(err.message)}</span>`; }
+}
+function renderGenresResult(r){
+  const box = qs("#genres-result"), btn = qs("#genres-apply");
+  const fmt = (n) => Number(n).toLocaleString("pt-BR");
+  const by = genreList().filter(g => r.byGenre[g.id]).map(g => `${esc(g.label)}: <b>${fmt(r.byGenre[g.id])}</b>`).join(" &nbsp;·&nbsp; ");
+  let html = `<div style="background:var(--bg-elev-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;">
+    <b style="color:var(--gold-soft);">${fmt(r.playsToUpdate)} série${r.playsToUpdate === 1 ? "" : "s"}</b> ${r.playsToUpdate === 1 ? "será atualizada" : "serão atualizadas"} (${fmt(r.namesInSheet)} nome${r.namesInSheet === 1 ? "" : "s"} na planilha).
+    ${by ? `<div style="margin-top:6px;">${by}</div>` : ""}</div>`;
+  const warn = [];
+  if(r.unmatchedCount) warn.push(`<b>${fmt(r.unmatchedCount)}</b> nome(s) da planilha <b>não foram encontrados</b> no site: ${r.unmatched.slice(0,6).map(esc).join(", ")}${r.unmatchedCount > 6 ? "…" : ""}`);
+  if(r.unknownGenres.length) warn.push(`Gêneros não reconhecidos (ignorados): ${r.unknownGenres.slice(0,6).map(g => `“${esc(g.name)}” (${g.count})`).join(", ")}${r.unknownGenres.length > 6 ? "…" : ""}`);
+  if(r.noGenreCount) warn.push(`<b>${fmt(r.noGenreCount)}</b> série(s) ficaram sem gênero reconhecido e <b>não serão alteradas</b>: ${r.noGenre.slice(0,5).map(esc).join(", ")}${r.noGenreCount > 5 ? "…" : ""}`);
+  if(r.ambiguousCount) warn.push(`<b>${fmt(r.ambiguousCount)}</b> nome(s) existem em mais de uma série no site (todas serão atualizadas): ${r.ambiguous.slice(0,4).map(esc).join(", ")}`);
+  if(warn.length) html += `<div style="margin-top:10px; color:#E8C9A0;">⚠ ${warn.join("<br>⚠ ")}</div>`;
+  if(r.playsToUpdate === 0) html += `<div style="margin-top:10px;">Nada para atualizar com essa planilha.</div>`;
+  box.innerHTML = html;
+  if(r.playsToUpdate > 0){ btn.style.display = "inline-block"; btn.disabled = false; btn.textContent = `Aplicar a ${fmt(r.playsToUpdate)} série${r.playsToUpdate === 1 ? "" : "s"}`; }
+}
+async function applyGenres(){
+  const btn = qs("#genres-apply");
+  const mode = genresMode();
+  if(!confirm(mode === "replace" ? "Substituir os gêneros das séries da planilha? Os gêneros atuais delas serão trocados pelos da planilha." : "Acrescentar os gêneros da planilha às séries?")) return;
+  btn.disabled = true; btn.textContent = "Aplicando…";
+  try{
+    const r = await api("/plays/genres-import", { method:"POST", body:{ rows: genreRows, mode } });
+    closeModal("genres-modal");
+    toast(`Gêneros atualizados em ${r.updated} série${r.updated === 1 ? "" : "s"}.`);
+    loadFresh().catch(()=>{});
+    goToAdminPlaysPage(1);
+  }catch(err){ toast(err.message); btn.disabled = false; btn.textContent = "Tentar de novo"; }
+}
 
 /* ---- Admin: mover todas as séries de um plano para outro ---- */
 let moveCounts = {};
@@ -1718,7 +1883,7 @@ async function processBatchItem(i){
   try{
     setStatus("Criando peça...");
     const created = await api("/plays", { method:"POST", body:{
-      title: item.title, genre: guessGenre(item.title), releaseYear: new Date().getFullYear(),
+      title: item.title, genres: guessGenres(item.title), releaseYear: new Date().getFullYear(),
       durationMinutes: item.duration, requiresPlan: batchPlan,
       synopsis: ".",
       director: "", cast: "",

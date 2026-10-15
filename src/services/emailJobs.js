@@ -3,6 +3,7 @@ const mailer = require("./mailer");
 const T = require("./emailTemplates");
 const { userCanWatch } = require("../utils/planRules");
 const { PLAY_LIST_SELECT, publicPlay } = require("../utils/images");
+const { loadLabels } = require("../utils/genres");
 
 const DAY = 24 * 60 * 60 * 1000;
 const dailyLimit = () => parseInt(process.env.EMAIL_DAILY_LIMIT, 10) || 250; // plano grátis da Brevo: 300/dia
@@ -73,6 +74,7 @@ async function ensureBaseline() {
 async function sendFeaturedAnnouncements(sharedBudget) {
   if (!mailer.configured()) return 0;
   await ensureBaseline();
+  await loadLabels();
   const plays = await prisma.play.findMany({
     where: { featured: true, announcedAt: null }, orderBy: { createdAt: "desc" }, take: 3, select: PLAY_LIST_SELECT
   });
@@ -175,6 +177,7 @@ async function runDaily() {
   if (!mailer.configured()) return { skipped: "e-mail não configurado (BREVO_API_KEY / MAIL_FROM_EMAIL)" };
   running = true;
   try {
+    await loadLabels();
     const budget = await newBudget();
     const summary = {};
     summary.vencimentos = await sendExpiryNotices(budget);
