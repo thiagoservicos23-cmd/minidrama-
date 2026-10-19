@@ -63,6 +63,8 @@ model Play {
   announcedAt     DateTime? // quando o e-mail "nova obra em destaque" foi disparado
 
   genres          PlayGenre[]
+  progress        WatchProgress[]
+  listItems       MyListItem[]
 }
 
 model Plan {
@@ -137,4 +139,28 @@ model GenreLabel {
   id        String   @id          // id do gênero (ver src/utils/genres.js), ex.: "dublados"
   label     String
   updatedAt DateTime @updatedAt
+}
+
+// Onde cada pessoa parou em cada série ("Continue Assistindo"). Guardamos só o necessário.
+model WatchProgress {
+  userId    String
+  playId    String
+  position  Int       // segundos já assistidos
+  duration  Int       // duração total em segundos
+  updatedAt DateTime  @default(now()) @updatedAt
+  play      Play      @relation(fields: [playId], references: [id], onDelete: Cascade)
+
+  @@id([userId, playId])
+  @@index([userId, updatedAt])
+}
+
+// "Minha Lista": séries que a pessoa salvou para ver depois.
+model MyListItem {
+  userId    String
+  playId    String
+  createdAt DateTime  @default(now())
+  play      Play      @relation(fields: [playId], references: [id], onDelete: Cascade)
+
+  @@id([userId, playId])
+  @@index([userId, createdAt])
 }

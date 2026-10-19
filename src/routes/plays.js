@@ -2,6 +2,7 @@ const express = require("express");
 const prisma = require("../prismaClient");
 const { attachUserIfPresent, requireAuth, requireAdmin } = require("../middleware/auth");
 const { userCanWatch } = require("../utils/planRules");
+const { withAccess } = require("../utils/playAccess");
 const { PLAY_LIST_SELECT, imageFieldUpdate, publicPlay } = require("../utils/images");
 const { GENRES, GENRE_IDS, resolveGenre, normTitle, cleanGenreIds, loadLabels, labelOf, currentGenres } = require("../utils/genres");
 
@@ -18,11 +19,6 @@ const safe = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).cat
 router.use(async (req, res, next) => { await loadLabels(); next(); });
 
 // Remove o link do vídeo e acrescenta as flags de acesso.
-async function withAccess(user, p) {
-  const { videoUrl, ...rest } = publicPlay(p);
-  const canWatch = await userCanWatch(user, p);
-  return { ...rest, hasVideo: !!videoUrl, canWatch };
-}
 
 // Lista pública do catálogo. Nunca inclui o link do vídeo nem imagens pesadas.
 // Aceita paginação (?page=&pageSize=) e filtros (?genre=&search=). Sem "page"
@@ -248,7 +244,15 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
   const canWatch = await userCanWatch(req.user, play);
   const payload = publicPlay(play);
   if (!canWatch) payload.videoUrl = "";
-  res.json({ play: payload, canWatch });
+  // Onde a pessoa parou (para retomar de onde estava). Falha aqui nunca derruba a página.
+  let resume = null;
+  if (req.user && canWatch) {
+    try {
+      const w = await prisma.watchProgress.findUnique({ where: { userId_playId: { userId: req.user.id, playId: play.id } } });
+      if (w && w.duration > 0 && w.position / w.duration < 0.95) resume = { position: w.position, duration: w.duration };
+    } catch (e) { resume = null; }
+  }
+  res.json({ play: payload, canWatch, resume });
 }));
 
 router.post("/", requireAuth, requireAdmin, async (req, res) => {

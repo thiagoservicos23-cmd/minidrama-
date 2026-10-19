@@ -13,6 +13,7 @@ const bunnyRoutes = require("./routes/bunny");
 const paymentsRoutes = require("./routes/payments");
 const cronRoutes = require("./routes/cron");
 const emailRoutes = require("./routes/email");
+const meRoutes = require("./routes/me");
 const { migrateInlineImages } = require("./utils/images");
 
 const app = express();
@@ -35,6 +36,7 @@ app.use("/api/bunny", bunnyRoutes);
 app.use("/api/payments", paymentsRoutes);
 app.use("/api/cron", cronRoutes);
 app.use("/api/email", emailRoutes);
+app.use("/api/me", meRoutes);
 
 // Leve de propósito (sem banco): serve para "acordar" o servidor rapidamente.
 app.get("/api/health", (req, res) => res.json({ ok: true, time: new Date().toISOString() }));
