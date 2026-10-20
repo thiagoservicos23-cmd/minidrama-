@@ -1710,39 +1710,69 @@ function parseCsv(text){
   return rows;
 }
 
-// Transforma o CSV em { map, total, invalid, duplicates }. Cada URL é conferida (só http/https).
+// Tipo do link de vídeo (só para mostrar na tela e avisar quando não vai tocar no player).
+function videoKind(url){
+  if(isHls(url)) return { label: "HLS (.m3u8)", ok: true };
+  if(isYoutube(url)) return { label: "YouTube", ok: true };
+  if(/\.(mp4|webm|ogv|ogg|mov|m4v)(\?|#|$)/i.test(url)) return { label: "vídeo direto", ok: true };
+  if(/drive\.google\.com|docs\.google\.com|dropbox\.com|mediadelivery\.net\/(embed|play)|vimeo\.com/i.test(url))
+    return { label: "página (não é arquivo de vídeo)", ok: false };
+  return { label: "link", ok: true };   // pode ser um mp4 sem extensão na URL: deixa passar
+}
+
+// Transforma o CSV em { map, total, invalid, invalidVideo, duplicates }. Cada URL é conferida (só http/https).
+// Colunas: nome, url_capa (a capa) e, opcionalmente, url_video (link direto do vídeo) e duracao (minutos).
 function parseCoverCsv(text){
   const rows = parseCsv(text);
-  const out = { map: new Map(), total: 0, invalid: [], duplicates: [] };
+  const out = { map: new Map(), total: 0, invalid: [], invalidVideo: [], duplicates: [] };
   if(!rows.length) return out;
   const head = rows[0].map(h => normName(h).replace(/ /g, "_"));
-  const hasHeader = head.includes("nome") || head.includes("url_capa");
-  let iName = 0, iUrl = 1;
-  if(hasHeader){ if(head.includes("nome")) iName = head.indexOf("nome"); if(head.includes("url_capa")) iUrl = head.indexOf("url_capa"); }
-  for(const r of rows.slice(hasHeader ? 1 : 0)){
-    const name = (r[iName] || "").trim(), rawUrl = (r[iUrl] || "").trim();
-    if(!name && !rawUrl) continue;
-    out.total++;
-    let url = "";
+  const find = (names) => head.findIndex(h => names.includes(h));
+  const iNameH = find(["nome", "titulo", "name"]);
+  const iUrlH = find(["url_capa", "capa"]);
+  const iVidH = find(["url_video", "video", "link_video", "link_do_video", "url_do_video"]);
+  const iDurH = find(["duracao", "duracao_min", "duracao_minutos", "minutos"]);
+  const hasHeader = iNameH >= 0 || iUrlH >= 0 || iVidH >= 0;
+  const iName = iNameH >= 0 ? iNameH : 0;
+  const iUrl = iUrlH >= 0 ? iUrlH : 1;
+  const iVid = hasHeader ? iVidH : 2;          // sem cabeçalho: nome;capa;video;duracao
+  const iDur = hasHeader ? iDurH : 3;
+  const cleanUrl = (raw) => {
+    raw = (raw || "").trim();
+    if(!raw) return "";
     try{
-      const u = new URL(rawUrl);
-      if(u.protocol === "http:" || u.protocol === "https:") url = u.href.replace(/'/g, "%27");  // espaços viram %20
+      const u = new URL(raw);
+      if(u.protocol === "http:" || u.protocol === "https:") return u.href.replace(/'/g, "%27");  // espaços viram %20
     }catch(e){}
-    if(!name || !url){ out.invalid.push(name || "(sem nome)"); continue; }
+    return null;                               // preenchido, mas inválido
+  };
+  for(const r of rows.slice(hasHeader ? 1 : 0)){
+    const name = (r[iName] || "").trim();
+    const rawCover = (r[iUrl] || "").trim(), rawVideo = iVid >= 0 ? (r[iVid] || "").trim() : "";
+    if(!name && !rawCover && !rawVideo) continue;
+    out.total++;
+    const cover = cleanUrl(rawCover), video = cleanUrl(rawVideo);
     const key = normName(name);
-    if(!key){ out.invalid.push(name); continue; }
+    if(!name || !key){ out.invalid.push(name || "(sem nome)"); continue; }
+    if(video === null) out.invalidVideo.push(name);          // link de vídeo quebrado: a linha segue só com a capa
+    const goodVideo = video || "";
+    const goodCover = cover || "";
+    if(!goodCover && !goodVideo){ out.invalid.push(name); continue; }   // nada aproveitável nesta linha
     if(out.map.has(key)){ out.duplicates.push(name); continue; }   // vale a primeira linha
-    out.map.set(key, { name, url });
+    let minutes = 0;
+    if(iDur >= 0){ const m = parseInt(String(r[iDur] || "").replace(/[^\d]/g, ""), 10); if(m > 0) minutes = m; }
+    out.map.set(key, { name, url: goodCover, video: goodVideo, minutes });
   }
   return out;
 }
 
 // Acha a capa de um item do lote pelo título e (se for arquivo) pelo nome do arquivo.
 function lookupCover(item){
+  if(item.coverUrl) return item.coverUrl;                    // item criado direto pela planilha (url_video)
   if(!coverMap.size) return null;
   const keys = [normName(item.title)];
   if(item.file && item.file.name) keys.push(normName(item.file.name.replace(/\.[^.]+$/, "")));
-  for(const k of keys){ if(k && coverMap.has(k)) return coverMap.get(k).url; }
+  for(const k of keys){ if(k && coverMap.has(k) && coverMap.get(k).url) return coverMap.get(k).url; }
   return null;
 }
 
@@ -1753,24 +1783,58 @@ async function readTextFile(file){
   catch(e){ return new TextDecoder("windows-1252").decode(buf); }
 }
 
+// Tira da lista os itens que vieram de uma planilha anterior (para poder trocar de planilha sem duplicar).
+function dropCsvItems(){ batchFiles = batchFiles.filter(f => !f.csv); }
+
+// Linhas da planilha com url_video viram peças da lista (sem upload: só grava capa + link do vídeo).
+function addCsvVideoItems(r){
+  const skipped = [];
+  const existing = new Set();
+  batchFiles.forEach(f => { existing.add(normName(f.title)); if(f.file) existing.add(normName(f.file.name.replace(/\\.[^.]+$/, ""))); });
+  let added = 0;
+  for(const [key, e] of r.map.entries()){
+    if(!e.video) continue;
+    if(existing.has(key)){ skipped.push(e.name); continue; }   // já tem um vídeo na lista com esse nome: vale o da lista
+    batchFiles.push({
+      csv: true, csvKey: key, videoUrl: e.video, coverUrl: e.url || "", title: e.name,
+      duration: Math.max(e.minutes || 60, 60),
+      status: e.minutes ? "Pronto para cadastrar (link direto)" : "Pronto para cadastrar (link direto — ajuste a duração, não dá pra detectar de um link)"
+    });
+    added++;
+  }
+  return { added, skipped };
+}
+
 async function onBatchCsvChosen(e){
   const file = e.target.files[0];
   const info = qs("#batch-csv-info");
-  if(!file){ coverMap = new Map(); coverInfo = null; renderBatchList(); return; }
+  dropCsvItems();
+  if(!file){ coverMap = new Map(); coverInfo = null; renderBatchList(); updateBatchStartBtn(); return; }
   try{
     const r = parseCoverCsv(await readTextFile(file));
     coverMap = r.map; coverInfo = r;
+    const withVideo = addCsvVideoItems(r);
+    const nCovers = [...r.map.values()].filter(v => v.url).length;
     const extra = [];
-    if(r.invalid.length) extra.push(`${r.invalid.length} linha(s) ignorada(s) por URL inválida: ${r.invalid.slice(0,3).map(esc).join(", ")}${r.invalid.length>3?"…":""}`);
+    if(r.invalid.length) extra.push(`${r.invalid.length} linha(s) ignorada(s) por nome ou URL inválida: ${r.invalid.slice(0,3).map(esc).join(", ")}${r.invalid.length>3?"…":""}`);
+    if(r.invalidVideo.length) extra.push(`${r.invalidVideo.length} link(s) de vídeo inválido(s) (precisa começar com http:// ou https://): ${r.invalidVideo.slice(0,3).map(esc).join(", ")}${r.invalidVideo.length>3?"…":""}`);
     if(r.duplicates.length) extra.push(`${r.duplicates.length} nome(s) repetido(s) (vale o primeiro): ${r.duplicates.slice(0,3).map(esc).join(", ")}${r.duplicates.length>3?"…":""}`);
-    info.innerHTML = `<b style="color:var(--gold-soft);">✔ ${r.map.size} capas carregadas.</b>${extra.length ? "<br>⚠ " + extra.join("<br>⚠ ") : ""}`;
+    if(withVideo.skipped.length) extra.push(`${withVideo.skipped.length} nome(s) já têm vídeo na lista acima, então o link da planilha foi ignorado: ${withVideo.skipped.slice(0,3).map(esc).join(", ")}${withVideo.skipped.length>3?"…":""}`);
+    const bad = batchFiles.filter(f => f.csv && !videoKind(f.videoUrl).ok).length;
+    if(bad) extra.push(`${bad} link(s) de vídeo apontam para uma página (Drive, Dropbox, Vimeo…) e <b>não vão tocar</b> no player. Use o .m3u8, um .mp4 direto ou YouTube — ou o campo de links do Google Drive acima.`);
+    info.innerHTML = `<b style="color:var(--gold-soft);">✔ ${nCovers} capa(s) e ${withVideo.added} vídeo(s) por link direto carregados.</b>${extra.length ? "<br>⚠ " + extra.join("<br>⚠ ") : ""}`;
   }catch(err){
     coverMap = new Map(); coverInfo = null;
-    info.textContent = "Não consegui ler esse arquivo. Salve como CSV (separado por vírgula ou ponto e vírgula) com as colunas nome e url_capa.";
+    info.textContent = "Não consegui ler esse arquivo. Salve como CSV (separado por vírgula ou ponto e vírgula) com as colunas nome, url_capa e url_video.";
   }
   renderBatchList();
+  updateBatchStartBtn();
 }
 
+function updateBatchStartBtn(){
+  const b = qs("#batch-start-btn");
+  if(b) b.style.display = batchFiles.length ? "inline-block" : "none";
+}
 
 function openBatchModal(){
   batchFiles = []; coverMap = new Map(); coverInfo = null;
@@ -1795,9 +1859,9 @@ Ventos de Dona Flor | https://drive.google.com/file/d/YYYYY/view"></textarea>
       <select id="batch-plan" onchange="batchPlan=this.value">${DB.plans.map(p=>`<option value="${esc(p.id)}" ${p.id===batchPlan?'selected':''}>${esc(p.name)}</option>`).join("")}</select>
     </div>
     <div class="field">
-      <label>Planilha de capas (CSV com as colunas <b>nome</b> e <b>url_capa</b>)</label>
+      <label>Planilha de capas e vídeos (CSV com as colunas <b>nome</b>, <b>url_capa</b> e <b>url_video</b>)</label>
       <input type="file" id="batch-csv-input" accept=".csv,text/csv,text/plain">
-      <div class="field-hint" id="batch-csv-info">Opcional. Quando o nome do vídeo for igual ao "nome" da planilha, a capa é preenchida sozinha (não importa maiúsculas, acentos ou "_").</div>
+      <div class="field-hint" id="batch-csv-info">Opcional. Cada linha com <b>url_video</b> (link direto: .m3u8, .mp4 ou YouTube) vira uma peça já pronta, com a capa da planilha — sem enviar arquivo. Linhas só com <b>url_capa</b> preenchem a capa dos vídeos acima quando o nome for igual (não importa maiúsculas, acentos ou "_"). Coluna extra opcional: <b>duracao</b> (em minutos).</div>
     </div>
     <div id="batch-list" style="margin-top:16px; display:flex; flex-direction:column; gap:10px;"></div>
     <div class="modal-actions">
@@ -1843,7 +1907,7 @@ function renderBatchList(){
   let summary = "";
   if(coverMap.size && batchFiles.length){
     const matched = batchFiles.filter(f => lookupCover(f)).length;
-    const used = new Set(batchFiles.map(f => normName(f.title)).concat(batchFiles.filter(f => f.file).map(f => normName(f.file.name.replace(/\.[^.]+$/, "")))));
+    const used = new Set(batchFiles.map(f => normName(f.title)).concat(batchFiles.filter(f => f.csvKey).map(f => f.csvKey)).concat(batchFiles.filter(f => f.file).map(f => normName(f.file.name.replace(/\.[^.]+$/, "")))));
     const unused = [...coverMap.entries()].filter(([k]) => !used.has(k)).map(([, v]) => v.name);
     summary = `<div class="field-hint" style="margin:0;"><b>${matched} de ${batchFiles.length}</b> vídeo(s) com capa encontrada na planilha.${unused.length ? `<br>Capas da planilha sem vídeo nesta lista: ${unused.slice(0,5).map(esc).join(", ")}${unused.length>5?` e mais ${unused.length-5}`:""}.` : ""}</div>`;
   }
@@ -1855,7 +1919,8 @@ function renderBatchList(){
       : "";
     return `
     <div style="border:1px solid var(--line); border-radius:4px; padding:10px;">
-      <div style="font-size:11px; color:var(--ink-faint); margin-bottom:6px;">${f.file ? "📁 arquivo: " + esc(f.file.name) : "🔗 link (" + esc(f.driveUrl) + ")"}</div>
+      <div style="font-size:11px; color:var(--ink-faint); margin-bottom:6px; word-break:break-all;">${f.file ? "📁 arquivo: " + esc(f.file.name) : f.videoUrl ? "🎬 vídeo por link direto (" + esc(videoKind(f.videoUrl).label) + "): " + esc(f.videoUrl) : "🔗 link (" + esc(f.driveUrl) + ")"}</div>
+      ${f.videoUrl && !videoKind(f.videoUrl).ok ? `<div style="margin-bottom:6px; font-size:12px; color:#E8938C;">⚠ este link é uma página, não o arquivo do vídeo — não vai tocar no player.</div>` : ""}
       <div class="form-grid-2">
         <div class="field" style="margin-bottom:6px;"><label>Título</label><input type="text" value="${esc(f.title)}" onchange="batchFiles[${i}].title=this.value; renderBatchList()"></div>
         <div class="field" style="margin-bottom:0;"><label>Duração (min)</label><input type="number" min="60" value="${f.duration}" onchange="batchFiles[${i}].duration=parseInt(this.value,10)||60"></div>
@@ -1889,7 +1954,7 @@ async function processBatchItem(i){
       director: "", cast: "",
       posterUrl: lookupCover(item) || "https://images.unsplash.com/photo-1503095396549-807759245b35?q=80&w=800&auto=format&fit=crop",
       backdropUrl: "",
-      videoUrl: "", featured: false
+      videoUrl: item.videoUrl || "", featured: false
     }});
     const playId = created.play.id;
 
@@ -1934,6 +1999,9 @@ async function processBatchItem(i){
       }
       await api("/plays/" + playId, { method:"PUT", body:{ videoUrl: found.playbackUrl } });
       setStatus("✔ Importação iniciada — o Bunny ainda está baixando/processando em segundo plano.");
+    } else if(item.videoUrl){
+      // Link direto (da planilha): o vídeo já está hospedado, então a peça já foi criada com ele.
+      setStatus("✔ Concluído — capa e vídeo gravados direto do link. Edite a peça depois para completar sinopse e elenco.");
     } else {
       setStatus("Nada para enviar (nem arquivo nem link).");
     }

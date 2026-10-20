@@ -174,23 +174,32 @@ Ventos de Dona Flor;BL & GL
   Série que aparece na planilha só com gêneros não reconhecidos **não é alterada**. A aplicação é “tudo ou nada”.
 - Funciona com CSV do Excel (acentos) e aguenta planilhas grandes (até 50.000 linhas).
 
-### Capas em massa por planilha (CSV)
-Ideal para quando um designer entrega as capas já hospedadas (ex.: Supabase Storage). Em
-**Peças → Cadastrar várias peças**, use o campo **Planilha de capas**:
+### Capas e vídeos em massa por planilha (CSV)
+Ideal para quando o material **já está hospedado** (capas da turma de Artes, vídeos da turma de Teatro).
+Em **Peças → Cadastrar várias peças**, use o campo **Planilha de capas e vídeos**:
 
 ```
-nome;url_capa
-A Farsa do Silêncio;https://SEU-PROJETO.supabase.co/storage/v1/object/public/capas/farsa.png
-Ventos de Dona Flor;https://SEU-PROJETO.supabase.co/storage/v1/object/public/capas/dona-flor.jpg
+nome;url_capa;url_video;duracao
+A Farsa do Silêncio;https://SEU-PROJETO.supabase.co/storage/v1/object/public/capas/farsa.png;https://SEU-CDN.b-cdn.net/GUID-1/playlist.m3u8;82
+Ventos de Dona Flor;https://SEU-PROJETO.supabase.co/storage/v1/object/public/capas/dona-flor.jpg;https://exemplo.com/videos/dona-flor.mp4;95
 ```
-- Duas colunas: **nome** e **url_capa** (vírgula ou ponto e vírgula; com ou sem cabeçalho; aceita CSV do Excel).
-- O site compara o `nome` com o **título do vídeo** (ou o nome do arquivo) ignorando maiúsculas,
-  acentos, `_` e `-`. Se achar, preenche a capa sozinho; a tela mostra uma **miniatura** de cada capa
-  encontrada e avisa das que não casaram e das que sobraram na planilha.
+- Colunas: **nome**, **url_capa**, **url_video** (link direto do vídeo) e **duracao** em minutos (opcional).
+  Vírgula ou ponto e vírgula; com ou sem cabeçalho (sem cabeçalho, a ordem é a acima); aceita CSV do Excel.
+  `url_capa` e `url_video` são opcionais, mas cada linha precisa ter pelo menos uma das duas.
+- **Linha com `url_video`** vira uma peça pronta na lista do lote, **sem enviar arquivo**: a capa e o
+  link do vídeo são gravados direto. Basta clicar em **Iniciar cadastro em lote**.
+- **Links de vídeo que tocam no player**: `.m3u8` (HLS, ex.: Bunny Stream), `.mp4`/`.webm` direto e YouTube.
+  Páginas (Google Drive, Dropbox, Vimeo, embed do Bunny) **não tocam**: a tela avisa. Para o Drive, use o
+  campo de links do Google Drive do mesmo modal (o Bunny busca o arquivo).
+- **Linha só com `url_capa`**: continua como antes — quando o nome for igual ao título de um vídeo da lista
+  (escolhido do computador ou colado como link do Drive), a capa é preenchida sozinha. O site compara
+  ignorando maiúsculas, acentos, `_` e `-`; mostra uma **miniatura** de cada capa e avisa das que sobraram.
+- Se o mesmo nome já estiver na lista com um vídeo (arquivo ou Drive), o `url_video` da planilha é ignorado
+  e o aviso aparece. Sem `duracao`, entra 60 min (mínimo do site); ajuste na lista antes de cadastrar.
 - Nesse lote, a **sinopse** entra como `.` e o **banner** fica vazio (a página inicial usa a capa como reserva).
-- A URL precisa ser **pública** (no Supabase, o bucket deve ser público) e começar com `https://`.
-  Se a miniatura não aparecer na tela do lote, o link está errado ou o bucket é privado.
-- Nome repetido na planilha: vale a primeira linha. URLs inválidas são ignoradas e listadas.
+- As URLs precisam ser **públicas** e começar com `http://` ou `https://` (o servidor também recusa
+  `videoUrl` que não seja assim). Se a miniatura não aparecer, o link da capa está errado ou é privado.
+- Nome repetido na planilha: vale a primeira linha. Links inválidos são ignorados e listados.
 
 ### Cadastro em lote (várias peças de uma vez)
 Em Peças → "Cadastrar várias peças": escolha vários arquivos de vídeo do

@@ -255,12 +255,21 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
   res.json({ play: payload, canWatch, resume });
 }));
 
+// O link do vídeo (HLS, mp4, YouTube...) precisa ser http(s). Vazio é permitido (peça sem vídeo ainda).
+function invalidVideoUrl(v) {
+  if (v === undefined || v === null || v === "") return false;
+  if (typeof v !== "string") return true;
+  try { const u = new URL(v.trim()); return u.protocol !== "http:" && u.protocol !== "https:"; } catch (e) { return true; }
+}
+const VIDEO_URL_ERROR = "O link do vídeo é inválido. Ele precisa começar com http:// ou https://.";
+
 router.post("/", requireAuth, requireAdmin, async (req, res) => {
   try {
     const b = req.body || {};
     const duration = parseInt(b.durationMinutes, 10);
     if (!b.title || !b.title.trim()) return res.status(400).json({ error: "Informe o título da peça." });
     if (!duration || duration < 60) return res.status(400).json({ error: "A peça precisa ter no mínimo 60 minutos de duração." });
+    if (invalidVideoUrl(b.videoUrl)) return res.status(400).json({ error: VIDEO_URL_ERROR });
 
     const poster = imageFieldUpdate("poster", b.posterUrl || "");
     // Banner vazio fica vazio: na hora de EXIBIR, o site usa a capa como reserva (ver publicPlay).
@@ -275,7 +284,7 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
         synopsis: b.synopsis || "",
         director: b.director || "",
         cast: b.cast || "",
-        videoUrl: b.videoUrl || "",
+        videoUrl: (b.videoUrl || "").trim(),
         requiresPlan: b.requiresPlan || "plateia",
         featured: !!b.featured,
         genres: { create: cleanGenreIds(b.genres).map((g) => ({ genre: g })) },
@@ -297,6 +306,7 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
     const b = req.body || {};
     const duration = parseInt(b.durationMinutes, 10);
     if (duration && duration < 60) return res.status(400).json({ error: "A peça precisa ter no mínimo 60 minutos de duração." });
+    if (invalidVideoUrl(b.videoUrl)) return res.status(400).json({ error: VIDEO_URL_ERROR });
 
     const poster = imageFieldUpdate("poster", b.posterUrl);
     const backdrop = imageFieldUpdate("backdrop", b.backdropUrl);
@@ -311,7 +321,7 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
         synopsis: b.synopsis,
         director: b.director,
         cast: b.cast,
-        videoUrl: b.videoUrl,
+        videoUrl: typeof b.videoUrl === "string" ? b.videoUrl.trim() : b.videoUrl,
         requiresPlan: b.requiresPlan,
         featured: typeof b.featured === "boolean" ? b.featured : undefined,
         ...(Array.isArray(b.genres) ? { genres: { deleteMany: {}, create: cleanGenreIds(b.genres).map((g) => ({ genre: g })) } } : {}),
