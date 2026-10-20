@@ -28,16 +28,39 @@ router.get("/", attachUserIfPresent, async (req, res) => {
     const { page, pageSize, genre, search } = req.query;
     const where = {};
     if (genre && !["Todos", "novos"].includes(String(genre))) where.genres = { some: { genre: String(genre) } };
-    if (search) where.title = { contains: String(search) };
 
     const usePagination = !!page;
     const take = usePagination ? Math.min(parseInt(pageSize, 10) || 24, 100) : 120;
     const skip = usePagination ? Math.max(parseInt(page, 10) - 1, 0) * take : 0;
 
-    const [plays, total] = await Promise.all([
-      prisma.play.findMany({ where, orderBy: { createdAt: "desc" }, skip, take, select: PLAY_LIST_SELECT }),
-      prisma.play.count({ where })
-    ]);
+    let plays, total;
+    if (search !== undefined && String(search).trim() !== "") {
+      // Pesquisa que ignora maiúsculas e acentos (o "contains" do Postgres diferencia os dois). Procura no título,
+      // na direção e no elenco; o que bate no título vem antes. O catálogo é pequeno, então comparar em memória é barato.
+      const q = normTitle(search);
+      if (!q) { plays = []; total = 0; }
+      else {
+        const rows = await prisma.play.findMany({ where, orderBy: { createdAt: "desc" }, select: { id: true, title: true, director: true, cast: true }, take: 5000 });
+        const rank = (r) => {
+          const t = normTitle(r.title);
+          if (t === q) return 0;
+          if (t.startsWith(q)) return 1;
+          if (t.includes(q)) return 2;
+          return [r.director, r.cast].some((f) => normTitle(f).includes(q)) ? 3 : -1;
+        };
+        const ranked = rows.map((r) => ({ id: r.id, k: rank(r) })).filter((r) => r.k >= 0).sort((a, b) => a.k - b.k);
+        total = ranked.length;
+        const pageIds = ranked.slice(skip, skip + take).map((r) => r.id);
+        const found = pageIds.length ? await prisma.play.findMany({ where: { id: { in: pageIds } }, select: PLAY_LIST_SELECT }) : [];
+        const byId = new Map(found.map((p) => [p.id, p]));
+        plays = pageIds.map((id) => byId.get(id)).filter(Boolean);
+      }
+    } else {
+      [plays, total] = await Promise.all([
+        prisma.play.findMany({ where, orderBy: { createdAt: "desc" }, skip, take, select: PLAY_LIST_SELECT }),
+        prisma.play.count({ where })
+      ]);
+    }
 
     const list = await Promise.all(plays.map((p) => withAccess(req.user, p)));
     res.json({

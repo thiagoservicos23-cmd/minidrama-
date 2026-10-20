@@ -130,6 +130,38 @@ Em **Peças → Mover séries de plano** você escolhe o plano de origem e o de 
 e **todas** as séries do plano de origem passam a exigir o de destino — por exemplo, de Plateia para Balcão.
 O botão mostra a quantidade (“Mover 4 séries”), pede uma confirmação e avisa quando o plano gratuito ficaria sem nenhuma série.
 Não há “desfazer” automático (depois de juntar, o site não sabe quais eram de cada plano).
+### Navegação estilo app: pesquisa, continuar assistindo, minha lista
+- **Barra inferior (celular):** Início, Catálogo, Buscar, Minha lista e Conta. No computador o menu do topo continua, agora com “Minha lista”.
+  Quem ainda não tem plano pago vê o botão **Assinar** ao lado da lupa.
+- **Pesquisa** (`#/buscar`): resultados enquanto digita, buscas recentes e “Ver mais”. No servidor (`GET /api/plays?search=`) a busca
+  **ignora acentos e maiúsculas** (o `contains` do Postgres diferenciava os dois) e procura em **título, direção e elenco**, mostrando antes
+  o que bate no título.
+- **Continue assistindo:** primeira fileira da home para quem está logado, com barra de progresso e “23min restantes”. Tocar retoma o vídeo
+  no StoryReel de onde parou; o **X** tira a peça da fileira. Usa o progresso que o StoryReel já salva (`/api/me/progress`).
+- **Minha lista** (`#/minha-lista`): o coração nos cards e na página da peça salva/remove (`/api/me/list`). Visitantes são levados ao login.
+- **Setas nas fileiras** aparecem no computador ao passar o mouse.
+- Testes: `npm test` (inclui a pesquisa do servidor). Os de fumaça (`tests/smoke/app.smoke.js` e `storyreel.smoke.js`) rodam o site num DOM
+  simulado: `npm install --no-save jsdom && node tests/smoke/app.smoke.js`.
+
+### Player StoryReel (vídeo em tela cheia, estilo Reels/TikTok)
+Ao clicar em **Assistir** (na página da peça) ou em **Assistir agora** (banner da home), o vídeo abre em `#/reel/ID`:
+uma peça por tela, e é só **deslizar para cima/baixo** para a próxima. Feito com **Plyr** (controles) + **hls.js** (`.m3u8`)
+e **`scroll-snap` em CSS puro**, sem framework.
+- **Quem entra no feed:** a peça escolhida primeiro, depois as outras que a pessoa **pode assistir** e que já têm vídeo.
+  Se a peça escolhida estiver bloqueada pelo plano, ela aparece com o aviso e o botão **Ver planos**.
+- **Só a tela ativa carrega o vídeo.** As demais mostram só a capa; ao trocar de tela o player anterior é destruído.
+  O link do vídeo é pedido a `/api/plays/:id` na hora, então quem não tem direito nunca recebe o link.
+- **Formatos de link:** `.m3u8` (HLS), `.mp4`/`.webm` direto e YouTube. Vídeo **horizontal (16:9)** fica numa caixa sobre a capa borrada;
+  vídeo **vertical (9:16)** é detectado sozinho e ocupa a tela toda.
+- **Continuar assistindo:** quem está logado tem a posição salva a cada ~15 s (`PUT /api/me/progress/:id`) e a peça retoma de onde parou.
+  Ao terminar, o reel avança sozinho para a próxima. Visitantes não salvam progresso.
+- **Som:** o navegador pode bloquear áudio automático (comum no iPhone); nesse caso o vídeo começa mudo e o botão de som ativa.
+- **Teclado (computador):** `↑`/`↓` troca de peça, `Espaço` pausa, `←`/`→` volta/avança 10 s, `M` som, `F` tela cheia, `I` detalhes, `Esc` volta.
+- **Dependência externa:** Plyr vem do jsDelivr (versão fixa 3.7.8), como o hls.js. Se o Plyr não carregar, vídeos `.m3u8`/`.mp4` ainda tocam
+  com os controles do navegador e o YouTube volta ao iframe simples.
+- Testes: `npm test` cobre a lógica; o teste de fumaça (`npm install --no-save jsdom && node tests/smoke/storyreel.smoke.js`)
+  roda o site num DOM simulado.
+
 ### Excluir todas as séries de um plano
 Em **Peças → Excluir séries de um plano** você escolhe o plano (cada um mostra quantas séries tem) e **todas** as séries
 que exigem esse plano são **excluídas definitivamente** — por exemplo, tudo de Camarote ou tudo de Plateia.
