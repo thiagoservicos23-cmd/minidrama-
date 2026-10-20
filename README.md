@@ -130,6 +130,17 @@ Em **Peças → Mover séries de plano** você escolhe o plano de origem e o de 
 e **todas** as séries do plano de origem passam a exigir o de destino — por exemplo, de Plateia para Balcão.
 O botão mostra a quantidade (“Mover 4 séries”), pede uma confirmação e avisa quando o plano gratuito ficaria sem nenhuma série.
 Não há “desfazer” automático (depois de juntar, o site não sabe quais eram de cada plano).
+### Excluir todas as séries de um plano
+Em **Peças → Excluir séries de um plano** você escolhe o plano (cada um mostra quantas séries tem) e **todas** as séries
+que exigem esse plano são **excluídas definitivamente** — por exemplo, tudo de Camarote ou tudo de Plateia.
+- O plano em si **não** é apagado, só as séries dele. As séries dos outros planos não são tocadas.
+- Duas travas contra acidente: é preciso **digitar o nome do plano** para o botão liberar (“Excluir 3 séries”),
+  e há uma confirmação final. O servidor também confere a quantidade mostrada: se ela mudou enquanto a janela
+  estava aberta, recusa e pede para abrir de novo.
+- **Não há desfazer.** Junto saem os gêneros, o progresso de quem estava assistindo e a presença na “Minha lista”.
+  Os vídeos hospedados fora (Bunny, Supabase…) **não** são apagados de lá; só deixam de aparecer no site.
+- Para só trocar o plano das séries sem apagar, use **Mover séries de plano**.
+
 Em **Cadastrar várias peças**, o campo **Plano exigido para assistir às séries deste lote** já vem em **Balcão**
 (dá para trocar antes de enviar).
 

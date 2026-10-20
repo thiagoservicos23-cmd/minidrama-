@@ -1346,6 +1346,7 @@ function AdminPlays(){
       <input class="search-input" id="play-search" placeholder="Buscar peça..." value="${esc(adminPlaySearch)}">
       <button class="btn btn-ghost btn-sm" onclick="openGenresModal()">Atualizar gêneros (CSV)</button>
       <button class="btn btn-ghost btn-sm" onclick="openMovePlansModal()">Mover séries de plano</button>
+      <button class="btn btn-danger btn-sm" onclick="openDeletePlanModal()">Excluir séries de um plano</button>
       <button class="btn btn-ghost btn-sm" onclick="openBatchModal()">Cadastrar várias peças</button>
       <button class="btn btn-gold btn-sm" onclick="openPlayModal()">+ Nova peça</button>
     </div>
@@ -1365,6 +1366,7 @@ function AdminPlays(){
   ${Modal("play-modal")}
   ${Modal("batch-modal")}
   ${Modal("move-modal")}
+  ${Modal("delete-plan-modal")}
   ${Modal("genres-modal")}`;
 }
 function EmptyState(icon, title, sub){ return `<div class="empty-state">${icon}<h3 style="font-family:var(--font-display); color:var(--ink); margin:0 0 6px;">${esc(title)}</h3><p style="margin:0;">${esc(sub)}</p></div>`; }
@@ -1672,6 +1674,61 @@ async function confirmMovePlans(){
     toast(`${r.moved} série${r.moved === 1 ? "" : "s"} movida${r.moved === 1 ? "" : "s"} de ${r.from} para ${r.to}.`);
     goToAdminPlaysPage(1);
   }catch(err){ toast(err.message); updateMoveSummary(); }
+}
+
+/* ---- Admin: EXCLUIR todas as séries de um plano ---- */
+let deleteCounts = {};
+async function openDeletePlanModal(){
+  try{ deleteCounts = (await api("/plays/admin/plan-counts")).counts; }
+  catch(e){ toast(e.message); return; }
+  const plans = DB.plans;
+  const first = (plans.find(p => (deleteCounts[p.id] || 0) > 0) || plans[0]).id;
+  const opts = plans.map(p => `<option value="${esc(p.id)}" ${p.id === first ? "selected" : ""}>${esc(p.name)} (${deleteCounts[p.id] || 0} série${(deleteCounts[p.id] || 0) === 1 ? "" : "s"})</option>`).join("");
+  qs("#delete-plan-modal-box").innerHTML = `
+    <div class="modal-head"><h3>Excluir séries de um plano</h3><button class="modal-close" onclick="closeModal('delete-plan-modal')">&times;</button></div>
+    <p style="color:var(--ink-muted); font-size:13px; margin:0 0 16px; line-height:1.6;">Escolha o plano: <b>todas</b> as séries que exigem esse plano serão <b>excluídas definitivamente</b>. O plano em si continua existindo.</p>
+    <div class="field"><label>Plano a esvaziar</label><select id="delplan-select">${opts}</select></div>
+    <div id="delplan-summary" style="background:var(--bg-elev-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px; font-size:13.5px; line-height:1.6; margin-bottom:12px;"></div>
+    <div class="field" id="delplan-confirm-wrap"><label id="delplan-confirm-label">Para confirmar, digite o nome do plano</label><input type="text" id="delplan-confirm" autocomplete="off" placeholder=""></div>
+    <div class="field-hint" style="color:#E8938C;">⚠ Não dá para desfazer. Some também o progresso de quem estava assistindo e essas séries saem da "Minha lista" dos usuários. Os vídeos hospedados no Bunny/outro servidor <b>não</b> são apagados de lá — só saem do site.</div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('delete-plan-modal')">Cancelar</button>
+      <button type="button" class="btn btn-danger btn-sm" id="delplan-go" onclick="confirmDeletePlan()">Excluir</button>
+    </div>`;
+  openModal("delete-plan-modal");
+  qs("#delplan-select").addEventListener("change", () => { qs("#delplan-confirm").value = ""; updateDeletePlanSummary(); });
+  qs("#delplan-confirm").addEventListener("input", updateDeletePlanSummary);
+  updateDeletePlanSummary();
+}
+function updateDeletePlanSummary(){
+  const id = qs("#delplan-select").value, n = deleteCounts[id] || 0, pl = planById(id);
+  const box = qs("#delplan-summary"), btn = qs("#delplan-go"), wrap = qs("#delplan-confirm-wrap");
+  qs("#delplan-confirm").placeholder = pl.name;
+  qs("#delplan-confirm-label").innerHTML = `Para confirmar, digite o nome do plano: <b>${esc(pl.name)}</b>`;
+  if(n === 0){
+    box.innerHTML = `Nenhuma série está no plano <b>${esc(pl.name)}</b>. Não há o que excluir.`;
+    wrap.style.display = "none"; btn.disabled = true; btn.textContent = "Excluir"; return;
+  }
+  wrap.style.display = "";
+  let html = `<b>${n} série${n === 1 ? "" : "s"}</b> do plano <b>${esc(pl.name)}</b> ${n === 1 ? "será excluída" : "serão excluídas"} para sempre.`;
+  if(pl.price === 0) html += `<br><span style="color:#E8938C;">⚠ É o plano gratuito: sem séries nele, quem não assina só verá as sinopses das outras.</span>`;
+  box.innerHTML = html;
+  const typed = qs("#delplan-confirm").value.trim().toLowerCase() === String(pl.name).trim().toLowerCase();
+  btn.disabled = !typed;
+  btn.textContent = `Excluir ${n} série${n === 1 ? "" : "s"}`;
+}
+async function confirmDeletePlan(){
+  const id = qs("#delplan-select").value, pl = planById(id), n = deleteCounts[id] || 0;
+  const typed = qs("#delplan-confirm").value;
+  if(!confirm(`Última chance: excluir ${n} série(s) do plano "${pl.name}" para sempre?`)) return;
+  const btn = qs("#delplan-go"); btn.disabled = true; btn.textContent = "Excluindo...";
+  try{
+    const r = await api("/plays/bulk-delete", { method:"POST", body:{ plan: id, confirmName: typed, expectedCount: n } });
+    closeModal("delete-plan-modal");
+    toast(`${r.deleted} série${r.deleted === 1 ? "" : "s"} excluída${r.deleted === 1 ? "" : "s"} do plano ${r.plan}.`);
+    loadFresh().catch(()=>{});
+    goToAdminPlaysPage(1);
+  }catch(err){ toast(err.message); updateDeletePlanSummary(); }
 }
 
 // ---------- Cadastro em lote (vários vídeos de uma vez) ----------

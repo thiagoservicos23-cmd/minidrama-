@@ -237,6 +237,33 @@ router.post("/bulk-plan", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Admin: EXCLUI todas as peças de um plano (ex.: tudo de Camarote). Não tem volta.
+// Duas travas: (1) é preciso digitar o nome do plano; (2) a quantidade vista na tela precisa ser a de agora
+// (se outra pessoa mexeu enquanto o modal estava aberto, recusa e pede para conferir de novo).
+// Gêneros, progresso de quem assistia e "Minha lista" dessas peças saem junto (onDelete: Cascade).
+router.post("/bulk-delete", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { plan, confirmName, expectedCount } = req.body || {};
+    if (!plan) return res.status(400).json({ error: "Escolha o plano." });
+    const p = await prisma.plan.findUnique({ where: { id: String(plan) } });
+    if (!p) return res.status(400).json({ error: "Plano inválido." });
+    if (String(confirmName || "").trim().toLowerCase() !== String(p.name).trim().toLowerCase()) {
+      return res.status(400).json({ error: `Para confirmar, digite o nome do plano: ${p.name}.` });
+    }
+    const n = await prisma.play.count({ where: { requiresPlan: p.id } });
+    if (n === 0) return res.status(400).json({ error: `Nenhuma peça está no plano ${p.name}.` });
+    if (!Number.isInteger(expectedCount) || expectedCount !== n) {
+      return res.status(409).json({ error: `A quantidade mudou (agora são ${n} peça${n === 1 ? "" : "s"} em ${p.name}). Feche e abra de novo para conferir.` });
+    }
+    const r = await prisma.play.deleteMany({ where: { requiresPlan: p.id } });
+    console.log(`[bulk-delete] ${r.count} peça(s) do plano ${p.id} excluída(s) por ${req.user && req.user.id}`);
+    res.json({ ok: true, deleted: r.count, plan: p.name });
+  } catch (e) {
+    console.error("[bulk-delete]", e.message);
+    res.status(500).json({ error: "Não foi possível excluir as peças." });
+  }
+});
+
 // Detalhe de uma peça. Só devolve a URL real do vídeo se o visitante tiver direito.
 router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
   const play = await prisma.play.findUnique({ where: { id: req.params.id }, select: PLAY_LIST_SELECT });
