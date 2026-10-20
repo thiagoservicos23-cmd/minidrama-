@@ -130,6 +130,16 @@ Em **Peças → Mover séries de plano** você escolhe o plano de origem e o de 
 e **todas** as séries do plano de origem passam a exigir o de destino — por exemplo, de Plateia para Balcão.
 O botão mostra a quantidade (“Mover 4 séries”), pede uma confirmação e avisa quando o plano gratuito ficaria sem nenhuma série.
 Não há “desfazer” automático (depois de juntar, o site não sabe quais eram de cada plano).
+### Filtros do catálogo e tela Surpresa
+- **Filtros** (botão ao lado dos chips de gênero, em `#/catalogo`): abre uma gaveta com **Ordenar por** (mais recentes, título A–Z, ano, mais longas,
+  mais curtas), **Gênero**, **Ano** e **Plano**. Os anos e planos listados são só os que têm peças (com a contagem). O botão mostra quantos filtros
+  estão ativos; **Limpar** zera tudo. Esc ou clique fora fecham sem aplicar. O servidor aceita `?sort=`, `?year=` e `?plan=` em `GET /api/plays`
+  (valores inválidos são ignorados) e `GET /api/plays/facets` devolve as opções.
+- **Surpresa** (`#/surpresa`): baralho de capas e o botão **Sortear peça**. Sorteia entre as peças que a pessoa pode assistir agora (se não houver
+  nenhuma liberada, sorteia entre todas e avisa o plano), nunca repete a anterior e oferece **Assistir** (abre o StoryReel) ou **Minha lista**.
+- A barra inferior do celular agora é Início, Catálogo, **Surpresa**, Minha lista e Conta; a lupa de pesquisa fica no topo de todas as telas.
+- O **rodapé mostra a versão** (`vAAAA.MM.DD-fase2`): serve para conferir se a hospedagem já publicou a versão nova.
+
 ### Navegação estilo app: pesquisa, continuar assistindo, minha lista
 - **Barra inferior (celular):** Início, Catálogo, Buscar, Minha lista e Conta. No computador o menu do topo continua, agora com “Minha lista”.
   Quem ainda não tem plano pago vê o botão **Assinar** ao lado da lupa.

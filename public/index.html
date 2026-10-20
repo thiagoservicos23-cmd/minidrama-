@@ -347,6 +347,59 @@ body.reel-open{overflow:hidden;}
   .install-banner{bottom:calc(84px + env(safe-area-inset-bottom,0px));}
 }
 
+/* ===== Fase 2: filtros do catálogo e tela Surpresa ===== */
+.catalog-bar{display:flex; align-items:center; gap:10px; margin-bottom:22px;}
+.catalog-bar .genre-filters{flex:1; min-width:0; margin-bottom:0;}
+.btn-filters{flex-shrink:0; display:inline-flex; align-items:center; gap:7px; border-radius:20px; padding:8px 16px; font-size:13px;}
+.btn-filters svg{width:15px; height:15px;}
+.chip-count{background:var(--gold); color:#1a1208; border-radius:10px; min-width:18px; height:18px; padding:0 5px; font-size:11px; font-weight:700; display:inline-grid; place-items:center;}
+.catalog-clear{background:none; border:none; color:var(--gold-soft); font-size:13px; text-decoration:underline; padding:0; margin-left:6px;}
+.catalog-empty{grid-column:1/-1; text-align:center; padding:40px 12px; color:var(--ink-faint);}
+body.fdrawer-open{overflow:hidden;}
+.fdrawer-overlay{position:fixed; inset:0; z-index:150; background:rgba(0,0,0,.62); display:flex; justify-content:flex-end; opacity:0; transition:opacity .2s;}
+.fdrawer-overlay.open{opacity:1;}
+.filters-panel{width:min(380px,100%); height:100%; background:var(--bg-elev); border-left:1px solid var(--line); display:flex; flex-direction:column; transform:translateX(28px); transition:transform .22s ease;}
+.fdrawer-overlay.open .filters-panel{transform:none;}
+.filters-head{display:flex; align-items:center; justify-content:space-between; padding:18px 22px; border-bottom:1px solid var(--line);}
+.filters-head h2{font-family:var(--font-display); font-size:21px; margin:0;}
+.filters-close{width:40px; height:40px; border:none; background:none; color:var(--ink-muted); display:grid; place-items:center; border-radius:50%;}
+.filters-close:hover{color:var(--ink);}
+.filters-body{flex:1; overflow-y:auto; padding:22px;}
+.filters-body label{display:block; font-size:11.5px; letter-spacing:.8px; text-transform:uppercase; color:var(--ink-faint); margin:0 0 7px;}
+.filters-body .field{margin-bottom:20px;}
+.filters-actions{display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:16px 22px calc(env(safe-area-inset-bottom,0px) + 16px); border-top:1px solid var(--line);}
+.fdrawer-overlay :focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+
+.surprise-page{padding-top:36px; min-height:70vh; text-align:center;}
+.surprise-page .page-sub{margin:0 auto 12px; max-width:44ch;}
+.deck{position:relative; width:min(100%,420px); height:clamp(230px,62vw,290px); margin:22px auto 8px;}
+.deck-card{position:absolute; left:50%; top:10px; width:clamp(112px,32vw,150px); aspect-ratio:2/3; margin-left:calc(clamp(112px,32vw,150px) / -2); border-radius:10px; background:linear-gradient(160deg, var(--curtain), var(--bg-elev-2)) center/cover; border:1px solid rgba(244,236,227,.14); box-shadow:0 14px 30px rgba(0,0,0,.55); transform-origin:50% 130%; transform:translateX(calc(var(--i) * 15%)) rotate(calc(var(--i) * 9deg)); transition:transform .35s ease, opacity .35s;}
+.deck-card:nth-child(3){z-index:2;}
+.deck.done .deck-card{opacity:.28; transform:translateX(calc(var(--i) * 6%)) rotate(calc(var(--i) * 3deg)) scale(.92);}
+@media (prefers-reduced-motion:no-preference){
+  .deck.shuffling .deck-card{animation:deck-shuffle .8s ease-in-out both; animation-delay:calc((var(--i) + 2) * 45ms);}
+}
+@keyframes deck-shuffle{
+  0%{transform:translateX(calc(var(--i) * 15%)) rotate(calc(var(--i) * 9deg));}
+  45%{transform:translateX(calc(var(--i) * -34%)) rotate(calc(var(--i) * -16deg)) translateY(-14px);}
+  100%{transform:translateX(calc(var(--i) * 15%)) rotate(calc(var(--i) * 9deg));}
+}
+.surprise-actions{display:flex; justify-content:center; margin:14px 0 26px;}
+.surprise-actions .btn{display:inline-flex; align-items:center; gap:9px;}
+.surprise-actions .btn:disabled{opacity:.55;}
+.pick{display:grid; grid-template-columns:minmax(120px,190px) 1fr; gap:22px; max-width:640px; margin:0 auto; text-align:left; background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius-lg); padding:18px;}
+.pick-poster{display:block; border-radius:var(--radius); overflow:hidden; align-self:start;}
+.pick-poster img{display:block; width:100%; aspect-ratio:2/3; object-fit:cover;}
+.pick-tag{font-size:11.5px; letter-spacing:1px; text-transform:uppercase; color:var(--gold-soft);}
+.pick h2{font-family:var(--font-display); font-size:clamp(21px,5vw,28px); line-height:1.15; margin:6px 0 8px;}
+.pick-meta{display:flex; flex-wrap:wrap; gap:12px; font-size:13px; color:var(--ink-muted); margin:0 0 12px;}
+.pick-syn{font-size:14px; line-height:1.65; color:var(--ink-muted); margin:0 0 16px; display:-webkit-box; -webkit-line-clamp:4; -webkit-box-orient:vertical; overflow:hidden;}
+.pick-note{font-size:12.5px; color:var(--ink-faint); margin:0 0 12px;}
+.pick-actions{display:flex; flex-wrap:wrap; gap:10px;}
+@media (prefers-reduced-motion:no-preference){ .pick{animation:pick-in .4s ease both;} }
+@keyframes pick-in{from{opacity:0; transform:translateY(14px);}}
+@media (max-width:560px){ .pick{grid-template-columns:1fr; text-align:center;} .pick-poster{width:150px; margin:0 auto;} .pick-meta, .pick-actions{justify-content:center;} }
+
 .page-wrap{max-width:840px; margin:0 auto; padding:50px 24px 90px;}
 .page-title{font-family:var(--font-display); font-size:32px; margin:0 0 8px;}
 .page-sub{color:var(--ink-muted); font-size:14px; margin-bottom:36px;}
@@ -501,6 +554,8 @@ const ICO = {
   heart: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.5 2.9 4.8 6.5 4.8c2 0 3.7 1.1 5.5 3.2 1.8-2.1 3.5-3.2 5.5-3.2 3.6 0 5.6 3.7 4.1 7-2.1 4.6-9.6 9.2-9.6 9.2z"/></svg>`,
   user: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>`,
   x: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+  shuffle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>`,
+  sliders: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>`,
 };
 
 /* --------------------------- ESTADO LOCAL (cache do que veio da API) ------- */
@@ -630,7 +685,7 @@ const ADMIN_ROUTES = ["#/admin","#/admin/pecas","#/admin/usuarios","#/admin/plan
 let renderSeq = 0;   // cada navegação ganha um número; resposta atrasada de uma navegação antiga é descartada
 async function render(){
   const seq = ++renderSeq;
-  reelTeardown(); document.body.classList.remove("reel-open"); appRenders++;   // sai do StoryReel (se estava nele) antes de qualquer tela
+  reelTeardown(); dropFiltersDrawer(); document.body.classList.remove("reel-open"); appRenders++;   // sai do StoryReel (se estava nele) antes de qualquer tela
   let hash = location.hash || "#/home";
   const user = currentUser();
 
@@ -644,6 +699,7 @@ async function render(){
 
   if(hash.startsWith("#/admin")) { app.innerHTML = AdminLayout(hash); await afterAdminRender(hash, seq); return; }
   if(hash === "#/reel" || hash.startsWith("#/reel/")) { await openReel(hash.split("/")[2] || "", seq); return; }
+  if(hash === "#/surpresa") { app.innerHTML = PublicShell(SurprisePage()); afterPublicRender(); attachSurpriseEvents(); return; }
   if(hash === "#/buscar" || hash.startsWith("#/buscar/")) {
     let q = ""; try{ q = decodeURIComponent(hash.split("/").slice(2).join("/")); }catch(e){ q = ""; }
     app.innerHTML = PublicShell(SearchPage(q)); afterPublicRender(); attachSearchEvents(q); return;
@@ -699,6 +755,7 @@ function PublicShell(innerHtml){
     <nav class="main-nav">
       <a href="#/home" class="${hash==='#/home'?'active':''}">Início</a>
       <a href="#/catalogo" class="${hash==='#/catalogo'?'active':''}">Catálogo</a>
+      <a href="#/surpresa" class="${hash==='#/surpresa'?'active':''}">Surpresa</a>
       <a href="#/planos" class="${hash==='#/planos'?'active':''}">Planos</a>
       ${user ? `<a href="#/minha-lista" class="${hash==='#/minha-lista'?'active':''}">Minha lista</a>` : ``}
       ${user && user.role==='admin' ? `<a href="#/admin">Painel admin</a>` : ``}
@@ -720,6 +777,8 @@ function PublicShell(innerHtml){
     <button class="close-drawer" onclick="toggleDrawer(false)">&times;</button>
     <a href="#/home" onclick="toggleDrawer(false)">Início</a>
     <a href="#/catalogo" onclick="toggleDrawer(false)">Catálogo</a>
+    <a href="#/surpresa" onclick="toggleDrawer(false)">Surpresa</a>
+    <a href="#/buscar" onclick="toggleDrawer(false)">Buscar</a>
     <a href="#/planos" onclick="toggleDrawer(false)">Planos</a>
     ${user ? `<a href="#/conta" onclick="toggleDrawer(false)">Minha conta</a>` : ``}
     ${user && user.role==='admin' ? `<a href="#/admin" onclick="toggleDrawer(false)">Painel admin</a>` : ``}
@@ -738,7 +797,7 @@ function PublicShell(innerHtml){
       <div><h4>Suporte</h4><a href="#/">Central de ajuda</a><a href="#/">Fale conosco</a></div>
       <div><h4>Legal</h4><a href="#/">Termos de uso</a><a href="#/">Privacidade</a></div>
     </div>
-    <div class="footer-bottom">© ${new Date().getFullYear()} ${SITE_NAME}</div>
+    <div class="footer-bottom">© ${new Date().getFullYear()} ${SITE_NAME} <span style="opacity:.45; font-size:11px; margin-left:8px;">v${APP_VERSION}</span></div>
   </footer>
   ${TabBar(user, hash)}`;
 }
@@ -747,7 +806,7 @@ function TabBar(user, hash){
   return `<nav class="tabbar" aria-label="Navegação principal">
     ${tab("#/home", "Início", ICO.home, hash === "#/home" || hash === "#/" || hash === "")}
     ${tab("#/catalogo", "Catálogo", ICO.grid, hash.startsWith("#/catalogo"))}
-    ${tab("#/buscar", "Buscar", ICO.search, hash.startsWith("#/buscar"))}
+    ${tab("#/surpresa", "Surpresa", ICO.shuffle, hash === "#/surpresa")}
     ${tab("#/minha-lista", "Minha lista", ICO.heart, hash === "#/minha-lista")}
     ${user ? tab("#/conta", "Conta", ICO.user, hash === "#/conta") : tab("#/login", "Entrar", ICO.user, false)}
   </nav>`;
@@ -937,6 +996,166 @@ function attachSearchEvents(q0){
   if(!q0) input.focus();
 }
 
+/* --------------------------- FASE 2: filtros do catálogo + Surpresa ------------------------------------ */
+const APP_VERSION = "2026.10.20-fase2";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
+const SORT_LABELS = { recent: "Mais recentes", title: "Título (A–Z)", year: "Ano (mais novo)", longest: "Mais longas", shortest: "Mais curtas" };
+let catalogFilters = { sort: "recent", year: "", plan: "" };
+let catalogFacets = null;
+
+function catalogQuery(){
+  const f = catalogFilters;
+  return `page=${catalogPage}&pageSize=24&genre=${encodeURIComponent(catalogGenre)}`
+    + (f.sort !== "recent" ? `&sort=${encodeURIComponent(f.sort)}` : "")
+    + (f.year ? `&year=${encodeURIComponent(f.year)}` : "")
+    + (f.plan ? `&plan=${encodeURIComponent(f.plan)}` : "");
+}
+function activeFilterCount(){
+  return (catalogFilters.sort !== "recent" ? 1 : 0) + (catalogFilters.year ? 1 : 0) + (catalogFilters.plan ? 1 : 0);
+}
+async function reloadCatalog(){
+  const seq = renderSeq;
+  const html = await CatalogPage();
+  if(seq !== renderSeq) return;
+  qs("#app main").innerHTML = html;
+  attachCatalogEvents();
+  syncHearts();
+}
+function dropFiltersDrawer(){
+  const d = document.getElementById("filters-drawer"); if(d) d.remove();
+  document.body.classList.remove("fdrawer-open");
+  document.removeEventListener("keydown", onFiltersKey);
+}
+function closeFiltersDrawer(){
+  const had = !!document.getElementById("filters-drawer");
+  dropFiltersDrawer();
+  const b = document.getElementById("open-filters"); if(had && b) b.focus();
+}
+function onFiltersKey(e){
+  const d = document.getElementById("filters-drawer"); if(!d) return;
+  if(e.key === "Escape"){ closeFiltersDrawer(); return; }
+  if(e.key === "Tab"){                                          // mantém o foco dentro da gaveta
+    const f = [...d.querySelectorAll("select, button")].filter(x => !x.disabled);
+    if(!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  }
+}
+async function openFiltersDrawer(){
+  if(document.getElementById("filters-drawer")) return;
+  if(!catalogFacets){ try{ catalogFacets = await api("/plays/facets"); }catch(e){ catalogFacets = { years: [], plans: [] }; } }
+  const f = catalogFilters;
+  const genres = [{ id: "novos", label: "Todos os gêneros" }, ...genreList()];
+  const years = catalogFacets.years || [], plans = (catalogFacets.plans || []).filter(p => planById(p.id));
+  const opt = (v, label, cur) => `<option value="${esc(v)}" ${String(v) === String(cur) ? "selected" : ""}>${esc(label)}</option>`;
+  const el = document.createElement("div");
+  el.id = "filters-drawer"; el.className = "fdrawer-overlay";
+  el.innerHTML = `<div class="filters-panel" role="dialog" aria-modal="true" aria-labelledby="filters-title">
+    <div class="filters-head"><h2 id="filters-title">Filtros</h2><button type="button" class="filters-close" data-fclose aria-label="Fechar filtros">${ICO.x}</button></div>
+    <div class="filters-body">
+      <div class="field"><label for="f-sort">Ordenar por</label><select id="f-sort">${Object.entries(SORT_LABELS).map(([v, l]) => opt(v, l, f.sort)).join("")}</select></div>
+      <div class="field"><label for="f-genre">Gênero</label><select id="f-genre">${genres.map(g => opt(g.id, g.label, catalogGenre)).join("")}</select></div>
+      <div class="field"><label for="f-year">Ano</label><select id="f-year">${opt("", "Todos", f.year)}${years.map(y => opt(y.year, `${y.year} (${y.count})`, f.year)).join("")}</select></div>
+      <div class="field"><label for="f-plan">Plano</label><select id="f-plan">${opt("", "Todos", f.plan)}${plans.map(p => opt(p.id, `${planById(p.id).name} (${p.count})`, f.plan)).join("")}</select></div>
+    </div>
+    <div class="filters-actions"><button type="button" class="btn btn-ghost" data-fclear>Limpar</button><button type="button" class="btn btn-gold" data-fapply>Aplicar</button></div>
+  </div>`;
+  document.body.appendChild(el); document.body.classList.add("fdrawer-open");
+  requestAnimationFrame(() => el.classList.add("open"));
+  document.addEventListener("keydown", onFiltersKey);
+  el.addEventListener("click", async (e) => {
+    if(e.target === el || e.target.closest("[data-fclose]")){ closeFiltersDrawer(); return; }
+    const clear = e.target.closest("[data-fclear]"), apply = e.target.closest("[data-fapply]");
+    if(!clear && !apply) return;
+    if(clear){ catalogFilters = { sort: "recent", year: "", plan: "" }; catalogGenre = "novos"; }
+    else {
+      catalogFilters = { sort: el.querySelector("#f-sort").value, year: el.querySelector("#f-year").value, plan: el.querySelector("#f-plan").value };
+      catalogGenre = el.querySelector("#f-genre").value;
+    }
+    catalogPage = 1;
+    closeFiltersDrawer();
+    await reloadCatalog();
+    const nb = document.getElementById("open-filters"); if(nb) nb.focus();   // o catálogo foi redesenhado: devolve o foco ao botão novo
+  });
+  const first = el.querySelector("select"); if(first) first.focus();
+}
+
+/* ---- Surpresa ---- */
+let surprise = { pool: null, lastId: null, busy: false };
+// Sorteia uma peça do conjunto sem repetir a anterior (quando houver mais de uma).
+function pickRandom(pool, lastId, rnd = Math.random){
+  if(!pool.length) return null;
+  const others = pool.filter(p => p.id !== lastId);            // sem laço: nunca trava, mesmo com ids repetidos
+  const src = others.length ? others : pool;
+  return src[Math.min(src.length - 1, Math.floor(rnd() * src.length))];
+}
+function shuffled(list){ const a = list.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function deckHtml(plays){
+  const covers = shuffled(plays.filter(p => p.posterUrl)).slice(0, 5).map(p => p.posterUrl);
+  return `<div class="deck" id="deck" aria-hidden="true">${[0, 1, 2, 3, 4].map(i => `<span class="deck-card" style="--i:${i - 2};${covers[i] ? ` background-image:url('${esc(covers[i])}')` : ""}"></span>`).join("")}</div>`;
+}
+function SurprisePage(){
+  return `<div class="container surprise-page">
+    <h1 class="page-title">Conteúdo surpresa</h1>
+    <p class="page-sub">Não sabe o que assistir? Embaralhe o catálogo e deixe o ${esc(SITE_NAME)} escolher uma peça para você.</p>
+    ${deckHtml(DB.plays || [])}
+    <div class="surprise-actions"><button type="button" class="btn btn-gold" id="surprise-go" disabled>${ICO.shuffle} <span>Preparando o baralho…</span></button></div>
+    <div id="surprise-pick" aria-live="polite"></div>
+  </div>`;
+}
+function pickHtml(p){
+  const plan = planById(p.requiresPlan), canPlay = p.canWatch && p.hasVideo, syn = String(p.synopsis || "").trim();
+  const saved = inMyList(p.id);
+  return `<article class="pick">
+    <a class="pick-poster" href="#/peca/${esc(p.id)}" aria-label="Abrir ${esc(p.title)}"><img src="${esc(p.posterUrl)}" alt="${esc(p.title)}"></a>
+    <div>
+      <span class="pick-tag">Sua peça sorteada</span>
+      <h2>${esc(p.title)}</h2>
+      <p class="pick-meta"><span>${esc(p.genre || "")}</span><span>${fmtDuration(p.durationMinutes)}</span><span>${esc(p.releaseYear)}</span></p>
+      ${syn.length > 2 ? `<p class="pick-syn">${esc(syn)}</p>` : ""}
+      ${!p.canWatch ? `<p class="pick-note">Disponível no plano ${esc(plan ? plan.name : "")}.</p>` : (!p.hasVideo ? `<p class="pick-note">O vídeo desta peça ainda não foi cadastrado.</p>` : "")}
+      <div class="pick-actions">
+        <a class="btn btn-gold" href="#/${canPlay ? "reel" : "peca"}/${esc(p.id)}">${canPlay ? `${ICO.play} Assistir` : "Ver detalhes"}</a>
+        <button type="button" class="btn btn-ghost" data-heart="${esc(p.id)}" aria-pressed="${saved}">${ICO.heart} Minha lista</button>
+      </div>
+    </div>
+  </article>`;
+}
+function attachSurpriseEvents(){
+  const go_ = qs("#surprise-go"), out = qs("#surprise-pick");
+  if(!go_) return;
+  const alive = () => go_.isConnected;
+  const label = (t) => { go_.querySelector("span").textContent = t; };
+  surprise = { pool: null, lastId: null, busy: false };
+  const loadPool = () => {
+    go_.disabled = true; label("Preparando o baralho…");
+    api("/plays?page=1&pageSize=100").then(r => {
+      if(!alive()) return;
+      const all = r.plays || [], playable = all.filter(p => p.canWatch && p.hasVideo);
+      surprise.pool = playable.length ? playable : all;         // prefere o que a pessoa consegue assistir agora
+      if(!surprise.pool.length){ label("Ainda não há peças"); return; }
+      const d = qs("#deck"); if(d) d.outerHTML = deckHtml(all);
+      go_.disabled = false; label("Sortear peça");
+    }).catch(e => { if(alive()){ surprise.pool = null; go_.disabled = false; label("Tentar de novo"); toast(e.message); } });
+  };
+  go_.addEventListener("click", () => {
+    if(surprise.busy) return;
+    if(!surprise.pool){ loadPool(); return; }                   // o carregamento tinha falhado
+    surprise.busy = true; go_.disabled = true; out.innerHTML = "";
+    const d = qs("#deck"); if(d){ d.classList.remove("done"); d.classList.add("shuffling"); }
+    setTimeout(() => {
+      if(!alive()) return;
+      const p = pickRandom(surprise.pool, surprise.lastId);
+      surprise.lastId = p.id; surprise.busy = false;
+      const d2 = qs("#deck"); if(d2){ d2.classList.remove("shuffling"); d2.classList.add("done"); }
+      out.innerHTML = pickHtml(p);
+      go_.disabled = false; label("Sortear outra");
+      syncHearts();
+    }, reelReduced() ? 0 : 800);
+  });
+  loadPool();
+}
+
 /* --------------------------- HOME PAGE ---------------------------------- */
 let heroIndex = 0, heroTimer = null;
 function HomePage(){
@@ -1017,14 +1236,18 @@ function PaginationControls(meta, gotoFnName){
 }
 
 async function CatalogPage(){
-  const r = await api(`/plays?page=${catalogPage}&pageSize=24&genre=${encodeURIComponent(catalogGenre)}`);
+  const r = await api(`/plays?${catalogQuery()}`);
   catalogMeta = r;
   const genres = [{ id:"novos", label:"Novos Na Plataforma" }, ...genreList()];
+  const n = activeFilterCount();
   return `<div class="container" style="padding-top:36px;">
     <h1 class="page-title" style="margin-bottom:22px;">Catálogo completo</h1>
-    <div class="genre-filters" id="genre-filters">${genres.map(g=>`<button class="chip ${g.id===catalogGenre?'active':''}" data-genre="${esc(g.id)}">${esc(g.label)}</button>`).join("")}</div>
+    <div class="catalog-bar">
+      <div class="genre-filters" id="genre-filters">${genres.map(g=>`<button class="chip ${g.id===catalogGenre?'active':''}" data-genre="${esc(g.id)}">${esc(g.label)}</button>`).join("")}</div>
+      <button type="button" class="btn btn-ghost btn-filters" id="open-filters" aria-haspopup="dialog">${ICO.sliders} Filtros${n ? `<span class="chip-count" aria-label="${n} filtro${n === 1 ? "" : "s"} ativo${n === 1 ? "" : "s"}">${n}</span>` : ""}</button>
+    </div>
     <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:18px; margin-bottom:24px;">
-      ${r.plays.length ? r.plays.map(p=>PlayCard(p)).join("") : `<p style="color:var(--ink-faint); grid-column:1/-1;">Nenhuma peça encontrada nesse gênero.</p>`}
+      ${r.plays.length ? r.plays.map(p=>PlayCard(p)).join("") : `<div class="catalog-empty"><p>Nenhuma peça encontrada${n ? " com esses filtros" : " nesse gênero"}.</p>${n ? `<button type="button" class="catalog-clear" data-fclear-inline>Limpar filtros</button>` : ""}</div>`}
     </div>
     ${PaginationControls(catalogMeta, "goToCatalogPage")}
   </div>`;
@@ -1035,20 +1258,13 @@ async function goToCatalogPage(n){
   const html = await CatalogPage();
   if(seq !== renderSeq) return;
   qs("#app main").innerHTML = html;
-  attachCatalogEvents();
+  attachCatalogEvents(); syncHearts();
   window.scrollTo(0,0);
 }
 function attachCatalogEvents(){
-  qsa("#genre-filters .chip").forEach(btn=>{
-    btn.addEventListener("click", async ()=>{
-      const seq = renderSeq;
-      catalogGenre = btn.dataset.genre; catalogPage = 1;
-      const html = await CatalogPage();
-      if(seq !== renderSeq) return;
-      qs("#app main").innerHTML = html;
-      attachCatalogEvents();
-    });
-  });
+  qsa("#genre-filters .chip").forEach(btn => btn.addEventListener("click", () => { catalogGenre = btn.dataset.genre; catalogPage = 1; reloadCatalog(); }));
+  const of = qs("#open-filters"); if(of) of.addEventListener("click", openFiltersDrawer);
+  const cl = qs("[data-fclear-inline]"); if(cl) cl.addEventListener("click", () => { catalogFilters = { sort: "recent", year: "", plan: "" }; catalogPage = 1; reloadCatalog(); });
 }
 
 /* --------------------------- PLAY DETAIL --------------------------------- */

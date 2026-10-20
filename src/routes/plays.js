@@ -23,11 +23,23 @@ router.use(async (req, res, next) => { await loadLabels(); next(); });
 // Lista pública do catálogo. Nunca inclui o link do vídeo nem imagens pesadas.
 // Aceita paginação (?page=&pageSize=) e filtros (?genre=&search=). Sem "page"
 // devolve até 120 peças (usado pela Home para montar as seções).
+// Ordenações aceitas pelo catálogo (?sort=). Qualquer outro valor cai em "recent".
+const LIST_SORTS = {
+  recent: { createdAt: "desc" },
+  title: { title: "asc" },
+  year: [{ releaseYear: "desc" }, { createdAt: "desc" }],
+  longest: { durationMinutes: "desc" },
+  shortest: { durationMinutes: "asc" }
+};
+
 router.get("/", attachUserIfPresent, async (req, res) => {
   try {
-    const { page, pageSize, genre, search } = req.query;
+    const { page, pageSize, genre, search, sort, year, plan } = req.query;
     const where = {};
     if (genre && !["Todos", "novos"].includes(String(genre))) where.genres = { some: { genre: String(genre) } };
+    if (year !== undefined && /^\d{4}$/.test(String(year))) where.releaseYear = parseInt(year, 10);   // filtro do catálogo: ano
+    if (plan) where.requiresPlan = String(plan);                                                       // filtro do catálogo: plano exigido
+    const orderBy = Object.prototype.hasOwnProperty.call(LIST_SORTS, String(sort)) ? LIST_SORTS[String(sort)] : LIST_SORTS.recent;   // só chaves próprias: "constructor"/"__proto__" não valem
 
     const usePagination = !!page;
     const take = usePagination ? Math.min(parseInt(pageSize, 10) || 24, 100) : 120;
@@ -57,7 +69,7 @@ router.get("/", attachUserIfPresent, async (req, res) => {
       }
     } else {
       [plays, total] = await Promise.all([
-        prisma.play.findMany({ where, orderBy: { createdAt: "desc" }, skip, take, select: PLAY_LIST_SELECT }),
+        prisma.play.findMany({ where, orderBy, skip, take, select: PLAY_LIST_SELECT }),
         prisma.play.count({ where })
       ]);
     }
@@ -78,6 +90,18 @@ router.get("/", attachUserIfPresent, async (req, res) => {
 
 // Dados da página inicial: séries em destaque (banner), "Novos Na Plataforma" (as mais recentes, em ordem de chegada)
 // e uma seção por gênero. Uma série com vários gêneros aparece em todas as seções dela.
+// Opções reais para a gaveta de filtros: só aparecem anos e planos que têm peças.
+router.get("/facets", safe(async (req, res) => {
+  const [years, plans] = await Promise.all([
+    prisma.play.groupBy({ by: ["releaseYear"], _count: { _all: true }, orderBy: { releaseYear: "desc" } }),
+    prisma.play.groupBy({ by: ["requiresPlan"], _count: { _all: true } })
+  ]);
+  res.json({
+    years: years.map((y) => ({ year: y.releaseYear, count: y._count._all })),
+    plans: plans.map((p) => ({ id: p.requiresPlan, count: p._count._all }))
+  });
+}));
+
 router.get("/feed/home", attachUserIfPresent, async (req, res) => {
   try {
     const [featured, novos, counts] = await Promise.all([

@@ -103,7 +103,7 @@ const type = async (e, v, wait = 360) => { const i = $(e, "#search-input"); i.va
   const R = (...pl) => ({ plays: pl, total: pl.length, totalPages: 1 });
   e = await makeEnv({ listIds: [], search: async (q, page) => { if (q === "sil") { await tick(450); return R(P("old", "RESULTADO VELHO")); } if (q === "silencio") return R(CATALOG[0]); if (q === "nada") return R(); if (q === "muitas") return page === 1 ? { plays: [P("m1", "M1")], total: 2, totalPages: 2 } : { plays: [P("m2", "M2")], total: 2, totalPages: 2 }; return R(); } });
   await go(e, "#/buscar", 100);
-  ok("página de busca abre com o campo em foco e a aba 'Buscar' ativa", () => { assert.ok($(e, "#search-input")); assert.equal(e.w.document.activeElement.id, "search-input"); assert.equal($(e, ".tabbar a.active").textContent.trim(), "Buscar"); });
+  ok("página de busca abre com o campo em foco; a lupa do topo continua e nenhuma aba fica marcada", () => { assert.ok($(e, "#search-input")); assert.equal(e.w.document.activeElement.id, "search-input"); assert.ok($(e, '.header-actions a[href="#/buscar"]')); assert.equal($(e, ".tabbar a.active"), null); });
   await type(e, "sil", 330); await type(e, "silencio", 330); await tick(250);
   ok("resposta atrasada de uma digitação antiga NÃO sobrescreve a atual", () => { const t = $$(e, "#search-grid .card-title").map(x => x.textContent); assert.deepEqual(t, ["O Silêncio das Cortinas"]); assert.ok(!$(e, "#search-out").textContent.includes("VELHO")); });
   ok("mostra a contagem e a URL acompanha a busca", () => { assert.match($(e, ".search-count").textContent, /1 resultado para “silencio”/); assert.equal(e.w.location.hash, "#/buscar/silencio"); });
