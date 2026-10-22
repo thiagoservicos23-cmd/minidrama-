@@ -29,11 +29,18 @@ async function makeEnv(opts = {}) {
       w.scrollTo = () => {};
       w.Element.prototype.scrollIntoView = function () { w.__scrolled = this.dataset && this.dataset.i; };
       w.HTMLMediaElement.prototype.load = () => {};
+      // Tela cheia simulada: "native" (Android/PC), "reject" (o navegador recusa) ou ausente; opts.ios liga o <video> nativo do iPhone.
+      w.__fs = { el: null, req: [], exit: 0, lock: [], unlock: 0, ios: 0, plyrToggle: 0 };
+      Object.defineProperty(w.document, "fullscreenElement", { get: () => w.__fs.el, configurable: true });
+      w.document.exitFullscreen = () => { w.__fs.exit++; w.__fs.el = null; w.document.dispatchEvent(new w.Event("fullscreenchange")); return Promise.resolve(); };
+      if (opts.fs === "native" || opts.fs === "reject") w.Element.prototype.requestFullscreen = function () { w.__fs.req.push(this.className); if (opts.fs === "reject") return Promise.reject(new Error("denied")); w.__fs.el = this; w.document.dispatchEvent(new w.Event("fullscreenchange")); return Promise.resolve(); };
+      if (opts.ios) w.HTMLMediaElement.prototype.webkitEnterFullscreen = function () { w.__fs.ios++; };
+      Object.defineProperty(w.screen, "orientation", { value: { lock: (o) => { w.__fs.lock.push(o); return Promise.resolve(); }, unlock: () => { w.__fs.unlock++; } }, configurable: true });
       w.__ios = [];
       w.IntersectionObserver = class { constructor(cb) { this.cb = cb; w.__ios.push(this); this.els = []; } observe(e) { this.els.push(e); } disconnect() { this.dead = true; } };
       w.fire = (i) => { const io = w.__ios[w.__ios.length - 1]; const el = io.els.find(e => e.dataset.i == i); io.cb([{ isIntersecting: true, intersectionRatio: 1, target: el }]); };
       w.Plyr = class {
-        constructor(el, o) { this.el = el; this.o = o; this.h = {}; this.destroyed = false; this.currentTime = 0; this.duration = 5400; this.paused = true; this.muted = !!o.muted; plyrs.push(this); this.fullscreen = { toggle() {} }; }
+        constructor(el, o) { this.el = el; this.o = o; this.h = {}; this.destroyed = false; this.currentTime = 0; this.duration = 5400; this.paused = true; this.muted = !!o.muted; plyrs.push(this); this.fullscreen = { toggle() { w.__fs.plyrToggle++; } }; }
         on(e, f) { (this.h[e] = this.h[e] || []).push(f); }
         emit(e) { (this.h[e] || []).forEach(f => f()); }
         play() { if (opts.blockUnmutedAutoplay && !this.muted) return Promise.reject(new Error("NotAllowedError")); this.paused = false; return Promise.resolve(); }
@@ -168,6 +175,75 @@ const ids = (w) => slides(w).map(s => s.dataset.id || "(fim)");
     assert.equal(e.w.__pwn, undefined);
     assert.match(slides(e.w)[0].querySelector(".reel-title").textContent, /<img src=x/);
   });
+  e.w.close();
+
+
+  console.log("\nI) Tela cheia (celular e PC)");
+  const startReel = async (o) => { const env = await makeEnv(o); await open(env, "p3"); env.w.fire(0); await tick(150); return env; };
+  const fsBtn = (env) => env.w.document.querySelector('.reel-slide[data-i="0"] [data-act="fs"]');
+  e = await startReel({ fs: "native" });
+  ok("botão de tela cheia existe no celular e o do computador fica escondido por CSS (regra de ponteiro fino)", () => { assert.ok(fsBtn(e)); assert.match(html, /@media \(hover:hover\) and \(pointer:fine\)\{ \.reel-btn-fs\{display:none;\} \}/); });
+  fsBtn(e).click(); await tick(40);
+  ok("1) pede tela cheia nativa para o PALCO do vídeo (não para a página)", () => { assert.equal(e.w.__fs.req.length, 1); assert.match(e.w.__fs.req[0], /reel-stage/); });
+  ok("vídeo deitado: gira o celular para o modo paisagem sozinho", () => assert.deepEqual(e.w.__fs.lock, ["landscape"]));
+  fsBtn(e).click(); await tick(40);
+  ok("tocar de novo sai da tela cheia e devolve a rotação", () => { assert.equal(e.w.__fs.exit, 1); assert.ok(e.w.__fs.unlock >= 1); });
+  key("f"); await tick(40);
+  ok("tecla F também entra em tela cheia (computador)", () => assert.equal(e.w.__fs.req.length, 2));
+  e.w.location.hash = "#/planos"; await tick(120);
+  ok("sair do reel com a tela cheia ativa fecha a tela cheia", () => assert.ok(e.w.__fs.exit >= 2));
+  e.w.close();
+
+  e = await startReel({ fs: "native" });
+  Object.defineProperty(e.plyrs[0].el, "videoWidth", { value: 720 }); Object.defineProperty(e.plyrs[0].el, "videoHeight", { value: 1280 }); e.plyrs[0].emit("loadedmetadata");
+  fsBtn(e).click(); await tick(40);
+  ok("vídeo em pé (9:16): entra em tela cheia mas NÃO força a tela deitada", () => { assert.equal(e.w.__fs.req.length, 1); assert.deepEqual(e.w.__fs.lock, []); });
+  e.w.close();
+
+  e = await startReel({ fs: "reject", ios: true });
+  fsBtn(e).click(); await tick(40);
+  ok("2) se o navegador recusar a nativa, usa o player nativo do vídeo (iPhone)", () => { assert.equal(e.w.__fs.req.length, 1); assert.equal(e.w.__fs.ios, 1); assert.ok(!e.w.document.querySelector(".is-fs")); });
+  e.w.close();
+  e = await startReel({ ios: true });
+  fsBtn(e).click(); await tick(40);
+  ok("iPhone (sem tela cheia para elementos): vai direto para o player nativo do vídeo", () => assert.equal(e.w.__fs.ios, 1));
+  e.w.close();
+
+  e = await startReel({});
+  fsBtn(e).click(); await tick(40);
+  ok("3) sem nenhum suporte: tela cheia por CSS — o palco cobre a tela e título/botões somem", () => {
+    const slide = e.w.document.querySelector('.reel-slide[data-i="0"]');
+    assert.ok(slide.classList.contains("is-fs")); assert.ok(e.w.document.getElementById("reel").classList.contains("fs-css"));
+    assert.match(html, /\.reel-slide\.is-fs \.reel-info, \.reel-slide\.is-fs \.reel-rail, \.reel-slide\.is-fs::before\{display:none;\}/);
+  });
+  key("Escape"); await tick(40);
+  ok("Esc sai da tela cheia por CSS SEM sair do reel", () => { assert.ok(!e.w.document.querySelector(".is-fs")); assert.ok(e.w.document.getElementById("reel")); });
+  fsBtn(e).click(); await tick(30); e.w.fire(1); await tick(150);
+  ok("trocar de peça limpa a tela cheia por CSS (não fica preso)", () => { assert.ok(!e.w.document.querySelector(".is-fs")); assert.ok(!e.w.document.getElementById("reel").classList.contains("fs-css")); });
+  e.w.close();
+
+  e = await startReel({ fs: "native" });
+  const host = e.w.document.querySelector(".reel-player");
+  host.insertAdjacentHTML("beforeend", '<div class="plyr__controls"><button data-plyr="fullscreen" id="fake-fs">fs</button></div>');
+  e.w.document.getElementById("fake-fs").click(); await tick(40);
+  ok("o botão de tela cheia do próprio Plyr passa pela nossa função (e o do Plyr não roda)", () => { assert.equal(e.w.__fs.req.length, 1); assert.equal(e.w.__fs.plyrToggle, 0); });
+  e.w.document.getElementById("fake-fs").dispatchEvent(new e.w.MouseEvent("dblclick", { bubbles: true, cancelable: true })); await tick(40);
+  ok("duplo clique nos controles não alterna a tela cheia", () => assert.equal(e.w.__fs.exit, 0));
+  host.querySelector("video").dispatchEvent(new e.w.MouseEvent("dblclick", { bubbles: true, cancelable: true })); await tick(40);
+  ok("duplo toque no vídeo alterna a tela cheia (sai, pois já estava ativa)", () => assert.equal(e.w.__fs.exit, 1));
+  e.w.close();
+
+  console.log("\nJ) O título não fica na frente do vídeo");
+  e = await startReel({});
+  const info = () => e.w.document.querySelector('.reel-slide[data-i="0"] .reel-info');
+  ok("enquanto carrega, título e dados aparecem sobre a capa", () => assert.notEqual(e.w.getComputedStyle(info()).visibility, "hidden"));
+  e.plyrs[0].emit("playing"); await tick(20);
+  ok("assim que o vídeo toca, o título some de cima da imagem (e continua assim se pausar)", () => {
+    assert.ok(e.w.document.querySelector(".reel-stage").classList.contains("is-live"));
+    assert.equal(e.w.getComputedStyle(info()).visibility, "hidden");
+    e.plyrs[0].emit("pause"); assert.equal(e.w.getComputedStyle(info()).visibility, "hidden");
+  });
+  ok("os detalhes continuam acessíveis pelo botão ⓘ", () => { e.w.document.querySelector('[data-act="info"]').click(); assert.ok(e.w.document.querySelector("#reel-sheet .reel-title, #reel-sheet h3")); });
   e.w.close();
 
   console.log(`\n${passed} verificações passaram${process.exitCode ? " — COM FALHAS" : ""}`);

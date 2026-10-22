@@ -51,12 +51,7 @@ input,select,textarea{font-family:inherit;}
 @media (max-width:640px){.site-header{padding:14px 16px;}}
 .brand{display:flex; align-items:baseline; gap:6px; font-family:var(--font-display); font-weight:700; font-size:23px; letter-spacing:.2px; flex-shrink:0;}
 .brand .dot{width:7px; height:7px; border-radius:50%; background:var(--curtain-2); margin-left:1px;}
-.main-nav{display:flex; align-items:center; gap:26px; flex:1; margin-left:12px;}
-.main-nav a{font-size:14.5px; color:var(--ink-muted); white-space:nowrap; position:relative; padding:6px 0;}
-.main-nav a:hover, .main-nav a.active{color:var(--ink);}
-.main-nav a.active::after{content:""; position:absolute; left:0; right:0; bottom:-2px; height:2px; background:var(--gold);}
-@media (max-width:900px){.main-nav{display:none;}}
-.header-actions{display:flex; align-items:center; gap:10px; flex-shrink:0;}
+.header-actions{display:flex; align-items:center; gap:10px; flex-shrink:0; margin-left:auto;}
 .icon-btn{background:none; border:1px solid var(--line); color:var(--ink); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center;}
 .icon-btn:hover{border-color:var(--gold);}
 .btn{border:none; border-radius:var(--radius); padding:10px 20px; font-size:14px; font-weight:600; letter-spacing:.2px; transition:transform .12s ease, opacity .15s;}
@@ -71,12 +66,6 @@ input,select,textarea{font-family:inherit;}
 .btn-block{width:100%;}
 .btn-sm{padding:7px 14px; font-size:13px;}
 .avatar-btn{width:36px; height:36px; border-radius:50%; background:var(--curtain); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; border:1px solid var(--line);}
-.hamburger{display:none; background:none; border:none; color:var(--ink);}
-@media (max-width:900px){.hamburger{display:block;}}
-.mobile-drawer{position:fixed; inset:0; background:rgba(9,6,7,.94); z-index:90; display:none; flex-direction:column; padding:24px; gap:6px;}
-.mobile-drawer.open{display:flex;}
-.mobile-drawer a, .mobile-drawer button{padding:14px 6px; font-size:18px; color:var(--ink); border:none; background:none; text-align:left; border-bottom:1px solid var(--line); font-family:var(--font-display);}
-.mobile-drawer .close-drawer{align-self:flex-end; font-size:28px; background:none; border:none; color:var(--ink); margin-bottom:12px;}
 
 .hero{position:relative; height:74vh; min-height:460px; max-height:720px; overflow:hidden;}
 .hero-slide{position:absolute; inset:0; opacity:0; transition:opacity .9s ease; background-size:cover; background-position:center 20%;}
@@ -117,7 +106,7 @@ input,select,textarea{font-family:inherit;}
 .chip{flex:0 0 auto; padding:8px 16px; border-radius:20px; border:1px solid var(--line); font-size:13px; color:var(--ink-muted); white-space:nowrap; background:none;}
 .chip.active{background:var(--ink); color:var(--bg); border-color:var(--ink);}
 
-.site-footer{border-top:1px solid var(--line); margin-top:80px; padding:44px 28px 90px; color:var(--ink-faint); font-size:13px;}
+.site-footer{border-top:1px solid var(--line); margin-top:80px; padding:44px 28px 130px; color:var(--ink-faint); font-size:13px;}
 .footer-grid{display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:28px; max-width:1240px; margin:0 auto 28px;}
 @media (max-width:760px){.footer-grid{grid-template-columns:1fr 1fr;}}
 .footer-grid h4{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-muted); margin:0 0 12px; font-weight:600;}
@@ -125,18 +114,46 @@ input,select,textarea{font-family:inherit;}
 .footer-grid a:hover{color:var(--ink);}
 .footer-bottom{max-width:1240px; margin:0 auto; border-top:1px solid var(--line); padding-top:20px;}
 
-.auth-wrap{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:40px 20px; position:relative;}
-.auth-wrap::before{content:""; position:absolute; inset:0; background:radial-gradient(ellipse at top, rgba(122,31,46,.28), transparent 60%); pointer-events:none;}
-.auth-card{position:relative; z-index:1; width:100%; max-width:400px; background:var(--bg-elev); border:1px solid var(--line); border-radius:var(--radius-lg); padding:38px 32px;}
-.auth-brand{text-align:center; font-family:var(--font-display); font-size:26px; font-weight:700; margin-bottom:6px;}
-.auth-sub{text-align:center; color:var(--ink-muted); font-size:13.5px; margin-bottom:28px;}
+.auth-wrap{min-height:100vh; min-height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:calc(40px + env(safe-area-inset-top,0px)) 20px calc(40px + env(safe-area-inset-bottom,0px)); position:relative; overflow:hidden; background:#121212;}
+.auth-wrap::before{content:""; position:absolute; inset:0; background:radial-gradient(ellipse at top, rgba(122,31,46,.22), transparent 62%); pointer-events:none;}
+.auth-card{position:relative; z-index:1; width:100%; max-width:24rem; display:flex; flex-direction:column; align-items:center; padding:2rem; border-radius:1.5rem; background:linear-gradient(to right, rgba(255,255,255,.063), #121212); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px); box-shadow:0 25px 50px -12px rgba(0,0,0,.55);}
+.auth-card form{width:100%; display:flex; flex-direction:column; gap:.75rem;}
+.auth-logo{display:flex; align-items:center; justify-content:center; width:3rem; height:3rem; border-radius:50%; background:rgba(255,255,255,.2); margin-bottom:1.5rem; box-shadow:0 10px 15px -3px rgba(0,0,0,.35); overflow:hidden;}
+.auth-logo img{width:100%; height:100%; object-fit:cover; display:block;}
+.auth-brand{text-align:center; font-family:var(--font-display); font-size:1.5rem; font-weight:600; color:#fff; margin:0 0 .5rem;}
+.auth-sub{text-align:center; color:#9ca3af; font-size:.875rem; line-height:1.55; margin:0 0 1.5rem;}
+.auth-input{width:100%; padding:.75rem 1.25rem; border:none; border-radius:.75rem; background:rgba(255,255,255,.1); color:#fff; font:inherit; font-size:.875rem; outline:none;}
+.auth-input::placeholder{color:#d1d5db;}
+.auth-input:focus{box-shadow:0 0 0 2px #9ca3af;}
+.auth-hr{width:100%; border:none; border-top:1px solid rgba(255,255,255,.1); margin:.25rem 0;}
+.auth-actions{width:100%; display:flex; flex-direction:column; gap:.75rem;}
+.auth-btn{display:flex; align-items:center; justify-content:center; width:100%; padding:.75rem 1.25rem; border:none; border-radius:999px; font:inherit; font-size:.875rem; font-weight:500; color:#fff; box-shadow:0 1px 3px rgba(0,0,0,.4); transition:background .15s, filter .15s; cursor:pointer;}
+.auth-btn-primary{background:rgba(255,255,255,.1);}
+.auth-btn-primary:hover{background:rgba(255,255,255,.2);}
+.auth-btn-secondary{background:linear-gradient(to bottom, #232526, #2d2e30);}
+.auth-btn-secondary:hover{filter:brightness(1.1);}
+.auth-btn:disabled{opacity:.6; cursor:default;}
+.auth-btn:focus-visible, .auth-input:focus-visible, .auth-foot a:focus-visible{outline:2px solid #d1d5db; outline-offset:2px;}
+.auth-foot{text-align:center; margin:.25rem 0 0; font-size:.75rem; color:#9ca3af; width:100%;}
+.auth-foot a{color:rgba(255,255,255,.8); text-decoration:underline;}
+.auth-foot a:hover{color:#fff;}
+.auth-card .form-msg.error{background:none; border:none; padding:0; margin:0; color:#f87171; font-size:.875rem; text-align:left; width:100%;}
+.auth-card .form-msg.ok{width:100%; margin:0 0 .75rem;}
+.auth-card .field{margin:0; text-align:left; width:100%;}
+.auth-card .field label{color:#9ca3af; font-weight:500; font-size:.75rem; margin:0 0 .35rem .25rem;}
+.auth-card .field input{padding:.75rem 1.25rem; border:none; border-radius:.75rem; background:rgba(255,255,255,.1); color:#fff; font-size:.875rem;}
+.auth-card .field input:focus{box-shadow:0 0 0 2px #9ca3af;}
+.auth-proof{position:relative; z-index:1; margin-top:3rem; display:flex; flex-direction:column; align-items:center; text-align:center;}
+.auth-proof p{color:#9ca3af; font-size:.875rem; margin:0 0 .5rem;}
+.auth-proof p b{color:#fff; font-weight:500;}
+.auth-covers{display:flex;}
+.auth-covers img{width:2rem; height:2rem; border-radius:50%; border:2px solid #181824; object-fit:cover; background:var(--bg-elev-2);}
+@media (max-width:640px){ .auth-input, .auth-card .field input{font-size:16px;} }   /* 16px evita o zoom automático do iPhone ao tocar no campo */
 .field{margin-bottom:16px;}
 .field label{display:block; font-size:12.5px; font-weight:600; color:var(--ink-muted); margin-bottom:6px;}
 .field input, .field select, .field textarea{width:100%; background:var(--bg-elev-2); border:1px solid var(--line); color:var(--ink); padding:11px 13px; border-radius:var(--radius); font-size:14px; outline:none;}
 .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--gold);}
 .field-hint{color:var(--ink-faint); font-size:11.5px; margin-top:5px;}
-.auth-foot{text-align:center; margin-top:20px; font-size:13.5px; color:var(--ink-muted);}
-.auth-foot a{color:var(--gold-soft); font-weight:600;}
 .form-msg{padding:10px 12px; border-radius:var(--radius); font-size:13px; margin-bottom:16px; display:none;}
 .form-msg:empty{display:none !important;}
 .genre-checks{display:grid; grid-template-columns:repeat(2,1fr); gap:9px 14px; background:var(--bg-elev-2); border:1px solid var(--line); border-radius:var(--radius); padding:12px 14px;}
@@ -240,6 +257,14 @@ body.reel-open{overflow:hidden;}
 .reel-syn{font-size:13.5px; line-height:1.55; color:rgba(244,236,227,.9); margin:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
 .reel-rail{position:absolute; z-index:6; right:12px; bottom:calc(env(safe-area-inset-bottom,0px) + 28px); display:flex; flex-direction:column; gap:12px; transition:opacity .4s;}
 .reel-slide.is-tall .reel-info, .reel-slide.is-tall .reel-rail{bottom:calc(env(safe-area-inset-bottom,0px) + 92px);}
+/* Depois que o vídeo começa, título/sinopse saem de cima da imagem (ficam no botão de detalhes). */
+.reel-stage.is-live ~ .reel-info{opacity:0; visibility:hidden; pointer-events:none;}
+/* Tela cheia por CSS (reserva quando o navegador não oferece a nativa): o palco cobre a tela e o resto some. */
+.reel-slide.is-fs{content-visibility:visible; contain:none; overflow:visible; z-index:300;}
+.reel-slide.is-fs .reel-stage{position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; max-width:none; aspect-ratio:auto; z-index:300; box-shadow:none; background:#000;}
+.reel-slide.is-fs .reel-info, .reel-slide.is-fs .reel-rail, .reel-slide.is-fs::before{display:none;}
+.reel.fs-css .reel-top, .reel.fs-css .reel-nav, .reel.fs-css .reel-hint{display:none;}
+@media (hover:hover) and (pointer:fine){ .reel-btn-fs{display:none;} }
 
 /* Tela larga: o título sobe para o canto e some junto com os controles, para não cobrir a peça. */
 @media (min-aspect-ratio:1/1){
@@ -335,17 +360,17 @@ body.reel-open{overflow:hidden;}
 .search-empty p{margin:6px 0 0; color:var(--ink); font-family:var(--font-display); font-size:19px;}
 .search-empty span{font-size:13.5px; max-width:34ch; line-height:1.6;}
 
-.tabbar{display:none;}
-@media (max-width:900px){
-  .tabbar{display:grid; grid-template-columns:repeat(5,1fr); position:fixed; left:0; right:0; bottom:0; z-index:70; background:rgba(18,13,15,.94); backdrop-filter:blur(12px); border-top:1px solid var(--line); padding:6px 4px calc(env(safe-area-inset-bottom,0px) + 6px);}
-  .tabbar a{display:flex; flex-direction:column; align-items:center; gap:3px; padding:6px 0; font-size:10.5px; font-weight:500; color:var(--ink-faint); transition:color .15s;}
-  .tabbar a svg{width:21px; height:21px;}
-  .tabbar a.active{color:var(--gold-soft);}
-  .tabbar a:focus-visible{outline:2px solid var(--gold); outline-offset:-2px; border-radius:4px;}
-  .site-footer{padding-bottom:120px;}
-  #toast-host{bottom:calc(84px + env(safe-area-inset-bottom,0px));}
-  .install-banner{bottom:calc(84px + env(safe-area-inset-bottom,0px));}
-}
+/* Barra de navegação flutuante (embaixo, em todas as telas): pílula com indicador que desliza até a aba ativa. */
+.fnav{position:fixed; left:50%; bottom:calc(14px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); z-index:70; width:100%; max-width:34rem; padding:0 10px; pointer-events:none;}
+.fnav-bar{pointer-events:auto; position:relative; display:flex; align-items:center; justify-content:space-between; background:rgba(27,20,23,.93); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); border:1px solid var(--line); border-radius:999px; padding:6px 5px; box-shadow:0 16px 44px rgba(0,0,0,.6);}
+.fnav-item{position:relative; z-index:1; flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px; padding:7px 2px; border-radius:999px; color:var(--ink-faint); font-size:10.5px; font-weight:500; white-space:nowrap; transition:color .2s;}
+.fnav-item svg{width:21px; height:21px; flex-shrink:0;}
+.fnav-item:hover{color:var(--ink);}
+.fnav-item.active{color:var(--gold-soft);}
+.fnav-item:focus-visible{outline:2px solid var(--gold); outline-offset:-2px;}
+.fnav-ind{position:absolute; z-index:0; top:4px; bottom:4px; left:0; width:0; border-radius:999px; background:rgba(201,162,75,.15); border:1px solid rgba(201,162,75,.3); transition:transform .4s cubic-bezier(.3,1.35,.5,1), width .4s cubic-bezier(.3,1.35,.5,1), opacity .2s; pointer-events:none;}
+@media (min-width:640px){ .fnav-item{font-size:11.5px; flex-direction:row; justify-content:center; gap:7px; padding:11px 6px;} .fnav-item svg{width:19px; height:19px;} }
+@media (prefers-reduced-motion:reduce){ .fnav-ind{transition:opacity .2s;} }
 
 /* ===== Fase 2: filtros do catálogo e tela Surpresa ===== */
 .catalog-bar{display:flex; align-items:center; gap:10px; margin-bottom:22px;}
@@ -466,7 +491,7 @@ td.strong{color:var(--ink); font-weight:600;}
 .checkbox-row{display:flex; align-items:center; gap:9px; font-size:13.5px; color:var(--ink-muted);}
 .checkbox-row input{width:16px; height:16px;}
 
-#toast-host{position:fixed; bottom:24px; left:50%; transform:translateX(-50%); z-index:300; display:flex; flex-direction:column; gap:8px; align-items:center;}
+#toast-host{position:fixed; bottom:calc(96px + env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%); z-index:300; display:flex; flex-direction:column; gap:8px; align-items:center;}
 .toast{background:var(--bg-elev); border:1px solid var(--gold); color:var(--ink); padding:12px 20px; border-radius:var(--radius); font-size:13.5px; box-shadow:var(--shadow-deep); animation:toast-in .25s ease;}
 @keyframes toast-in{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);}}
 .hidden{display:none !important;}
@@ -490,7 +515,7 @@ td.strong{color:var(--ink); font-weight:600;}
 .avatar-sk{width:36px; height:36px; border-radius:50%;}
 
 /* ---------- instalar app ---------- */
-.install-banner{position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom,0px)); z-index:250; max-width:460px; margin:0 auto; background:var(--bg-elev); border:1px solid var(--gold); border-radius:var(--radius-lg); box-shadow:var(--shadow-deep); padding:14px 16px; display:flex; align-items:center; gap:14px; animation:fade-up .4s ease both;}
+.install-banner{position:fixed; left:12px; right:12px; bottom:calc(98px + env(safe-area-inset-bottom,0px)); z-index:250; max-width:460px; margin:0 auto; background:var(--bg-elev); border:1px solid var(--gold); border-radius:var(--radius-lg); box-shadow:var(--shadow-deep); padding:14px 16px; display:flex; align-items:center; gap:14px; animation:fade-up .4s ease both;}
 .install-banner img{width:46px; height:46px; border-radius:10px; flex-shrink:0;}
 .install-banner .ib-text{flex:1; min-width:0;}
 .install-banner .ib-title{font-weight:700; font-size:14.5px; margin:0 0 2px;}
@@ -556,6 +581,7 @@ const ICO = {
   x: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
   shuffle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>`,
   sliders: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>`,
+  settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
 };
 
 /* --------------------------- ESTADO LOCAL (cache do que veio da API) ------- */
@@ -752,14 +778,6 @@ function PublicShell(innerHtml){
   return `
   <header class="site-header" id="site-header">
     <a href="#/home" class="brand">${SITE_NAME}<span class="dot"></span></a>
-    <nav class="main-nav">
-      <a href="#/home" class="${hash==='#/home'?'active':''}">Início</a>
-      <a href="#/catalogo" class="${hash==='#/catalogo'?'active':''}">Catálogo</a>
-      <a href="#/surpresa" class="${hash==='#/surpresa'?'active':''}">Surpresa</a>
-      <a href="#/planos" class="${hash==='#/planos'?'active':''}">Planos</a>
-      ${user ? `<a href="#/minha-lista" class="${hash==='#/minha-lista'?'active':''}">Minha lista</a>` : ``}
-      ${user && user.role==='admin' ? `<a href="#/admin">Painel admin</a>` : ``}
-    </nav>
     <div class="header-actions">
       <a href="#/buscar" class="icon-btn" title="Buscar" aria-label="Buscar">${ICO.search}</a>
       ${user && !hasPaidPlan(user) ? `<a href="#/planos" class="btn-sub">Assinar</a>` : ``}
@@ -770,22 +788,8 @@ function PublicShell(innerHtml){
         <a href="#/login" class="btn btn-ghost btn-sm">Entrar</a>
         <a href="#/cadastro" class="btn btn-gold btn-sm">Criar conta</a>
       `)}
-      <button class="hamburger" onclick="toggleDrawer(true)">${ICO.menu}</button>
     </div>
   </header>
-  <div class="mobile-drawer" id="mobile-drawer">
-    <button class="close-drawer" onclick="toggleDrawer(false)">&times;</button>
-    <a href="#/home" onclick="toggleDrawer(false)">Início</a>
-    <a href="#/catalogo" onclick="toggleDrawer(false)">Catálogo</a>
-    <a href="#/surpresa" onclick="toggleDrawer(false)">Surpresa</a>
-    <a href="#/buscar" onclick="toggleDrawer(false)">Buscar</a>
-    <a href="#/planos" onclick="toggleDrawer(false)">Planos</a>
-    ${user ? `<a href="#/conta" onclick="toggleDrawer(false)">Minha conta</a>` : ``}
-    ${user && user.role==='admin' ? `<a href="#/admin" onclick="toggleDrawer(false)">Painel admin</a>` : ``}
-    ${user ? `<button onclick="doLogout()">Sair</button>` : `
-      <a href="#/login" onclick="toggleDrawer(false)">Entrar</a>
-      <a href="#/cadastro" onclick="toggleDrawer(false)">Criar conta</a>`}
-  </div>
   <main>${innerHtml}</main>
   <footer class="site-footer">
     <div class="footer-grid">
@@ -799,19 +803,35 @@ function PublicShell(innerHtml){
     </div>
     <div class="footer-bottom">© ${new Date().getFullYear()} ${SITE_NAME} <span style="opacity:.45; font-size:11px; margin-left:8px;">v${APP_VERSION}</span></div>
   </footer>
-  ${TabBar(user, hash)}`;
+  ${FloatingNav(user, hash)}`;
 }
-function TabBar(user, hash){
-  const tab = (href, label, icon, on) => `<a href="${href}" class="${on ? "active" : ""}" ${on ? 'aria-current="page"' : ""}>${icon}<span>${label}</span></a>`;
-  return `<nav class="tabbar" aria-label="Navegação principal">
-    ${tab("#/home", "Início", ICO.home, hash === "#/home" || hash === "#/" || hash === "")}
-    ${tab("#/catalogo", "Catálogo", ICO.grid, hash.startsWith("#/catalogo"))}
-    ${tab("#/surpresa", "Surpresa", ICO.shuffle, hash === "#/surpresa")}
-    ${tab("#/minha-lista", "Minha lista", ICO.heart, hash === "#/minha-lista")}
-    ${user ? tab("#/conta", "Conta", ICO.user, hash === "#/conta") : tab("#/login", "Entrar", ICO.user, false)}
-  </nav>`;
+let fnavLast = null;      // onde o indicador estava na tela anterior: a nova tela começa ali e desliza até a aba atual
+function FloatingNav(user, hash){
+  const items = [
+    { href: "#/home", label: "Início", icon: ICO.home, on: hash === "#/home" || hash === "#/" || hash === "" },
+    { href: "#/catalogo", label: "Catálogo", icon: ICO.grid, on: hash.startsWith("#/catalogo") },
+    { href: "#/surpresa", label: "Surpresa", icon: ICO.shuffle, on: hash === "#/surpresa" },
+    { href: "#/minha-lista", label: "Minha lista", icon: ICO.heart, on: hash === "#/minha-lista" },
+    user ? { href: "#/conta", label: "Conta", icon: ICO.user, on: hash === "#/conta" } : { href: "#/login", label: "Entrar", icon: ICO.user, on: false },
+    ...(user && user.role === "admin" ? [{ href: "#/admin", label: "Admin", icon: ICO.settings, on: false }] : [])
+  ];
+  const ind = fnavLast ? `style="width:${fnavLast.w}px; transform:translateX(${fnavLast.x}px);"` : `style="opacity:0;"`;
+  return `<nav class="fnav" aria-label="Navegação principal"><div class="fnav-bar" id="fnav-bar">
+    ${items.map(it => `<a class="fnav-item ${it.on ? "active" : ""}" href="${it.href}" ${it.on ? 'aria-current="page"' : ""}>${it.icon}<span>${it.label}</span></a>`).join("")}
+    <span class="fnav-ind" id="fnav-ind" ${ind} aria-hidden="true"></span></div></nav>`;
 }
-function toggleDrawer(open){ qs("#mobile-drawer").classList.toggle("open", open); }
+function placeFnavIndicator(){
+  const bar = document.getElementById("fnav-bar"), ind = document.getElementById("fnav-ind"); if(!bar || !ind) return;
+  const act = bar.querySelector(".fnav-item.active");
+  if(!act){ ind.style.opacity = "0"; fnavLast = null; return; }
+  const x = act.offsetLeft, w = act.offsetWidth;
+  if(!fnavLast){ ind.style.transition = "none"; }                    // primeira vez: aparece no lugar, sem deslizar desde a esquerda
+  ind.style.opacity = "1"; ind.style.width = w + "px"; ind.style.transform = `translateX(${x}px)`;
+  if(!fnavLast){ void ind.offsetWidth; ind.style.transition = ""; }
+  fnavLast = { x, w };
+}
+window.addEventListener("resize", () => placeFnavIndicator());
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(() => placeFnavIndicator());
 function doLogout(){
   clearToken(); DB.me = null; DB.mine = null; saveCache();
   toast("Você saiu da sua conta."); go("#/home");
@@ -821,6 +841,8 @@ function afterPublicRender(){
   const h = qs("#site-header");
   if(h){ window.onscroll = ()=>{ h.classList.toggle("solid", window.scrollY>10); }; }
   if(currentUser() && !DB.mine) loadMine().then(syncHearts); else syncHearts();
+  refreshInstallBanner();
+  requestAnimationFrame(placeFnavIndicator);
 }
 
 /* --------------------------- FORMATO APP: minha lista, continuar assistindo, pesquisa ------------------ */
@@ -997,7 +1019,7 @@ function attachSearchEvents(q0){
 }
 
 /* --------------------------- FASE 2: filtros do catálogo + Surpresa ------------------------------------ */
-const APP_VERSION = "2026.10.20-fase2";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
+const APP_VERSION = "2026.10.21-mobile";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
 const SORT_LABELS = { recent: "Mais recentes", title: "Título (A–Z)", year: "Ano (mais novo)", longest: "Mais longas", shortest: "Mais curtas" };
 let catalogFilters = { sort: "recent", year: "", plan: "" };
 let catalogFacets = null;
@@ -1193,7 +1215,7 @@ function PlayRow(title, genreId, plays, total){
 }
 function PlayCard(p){
   const saved = inMyList(p.id);
-  return `<a class="card" href="#/peca/${p.id}">
+  return `<a class="card" href="#/${p.canWatch && p.hasVideo ? "reel" : "peca"}/${p.id}">
     <div class="card-art">
       <img class="card-poster" src="${esc(p.posterUrl)}" alt="${esc(p.title)}" loading="lazy">
       ${planLevel(p.requiresPlan)>0 ? `<span class="card-badge">${planById(p.requiresPlan)?.name || ''}</span>` : ``}
@@ -1236,12 +1258,21 @@ function PaginationControls(meta, gotoFnName){
 }
 
 async function CatalogPage(){
-  const r = await api(`/plays?${catalogQuery()}`);
+  // "Em alta" só no começo do catálogo: primeira página, sem gênero e sem filtros (senão confundiria o que a pessoa escolheu)
+  const showTrending = catalogPage === 1 && catalogGenre === "novos" && activeFilterCount() === 0;
+  const [r, tr] = await Promise.all([
+    api(`/plays?${catalogQuery()}`),
+    showTrending ? api("/plays/trending?limit=12").catch(() => null) : Promise.resolve(null)    // se o ranking falhar, o catálogo abre do mesmo jeito
+  ]);
   catalogMeta = r;
+  const trending = tr && tr.plays && tr.plays.length
+    ? `<div class="section-row" id="trending-row"><div class="section-row-head"><h2 class="section-title">Em alta</h2></div>${RailWrap(tr.plays.map(p => PlayCard(p)).join(""))}</div>
+       <h2 class="section-title" style="margin:6px 0 14px;">Todas as peças</h2>` : "";
   const genres = [{ id:"novos", label:"Novos Na Plataforma" }, ...genreList()];
   const n = activeFilterCount();
   return `<div class="container" style="padding-top:36px;">
     <h1 class="page-title" style="margin-bottom:22px;">Catálogo completo</h1>
+    ${trending}
     <div class="catalog-bar">
       <div class="genre-filters" id="genre-filters">${genres.map(g=>`<button class="chip ${g.id===catalogGenre?'active':''}" data-genre="${esc(g.id)}">${esc(g.label)}</button>`).join("")}</div>
       <button type="button" class="btn btn-ghost btn-filters" id="open-filters" aria-haspopup="dialog">${ICO.sliders} Filtros${n ? `<span class="chip-count" aria-label="${n} filtro${n === 1 ? "" : "s"} ativo${n === 1 ? "" : "s"}">${n}</span>` : ""}</button>
@@ -1340,6 +1371,7 @@ const REEL_ICO = {
   down: REEL_SVG('<path d="M6 9l6 6 6-6"/>'),
   back: REEL_SVG('<path d="M15 18l-6-6 6-6"/>'),
   lock: REEL_SVG('<rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 018 0v3"/>', 30),
+  expand: REEL_SVG('<path d="M8 3H5a2 2 0 00-2 2v3M21 8V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3M16 21h3a2 2 0 002-2v-3"/>'),
   film: REEL_SVG('<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 15h18M8 4v16M16 4v16"/>', 30),
   alert: REEL_SVG('<circle cx="12" cy="12" r="9"/><path d="M12 7v6M12 16.5h.01"/>', 30)
 };
@@ -1397,7 +1429,7 @@ function reelSlideHtml(p, i){
       ${syn.length > 2 ? `<p class="reel-syn">${esc(syn)}</p>` : ""}
     </div>
     <div class="reel-rail">
-      ${watchable ? `<button class="reel-btn" data-act="sound" aria-label="Ativar ou silenciar o som" aria-pressed="false">${REEL_ICO.volume}</button>` : ""}
+      ${watchable ? `<button class="reel-btn" data-act="sound" aria-label="Ativar ou silenciar o som" aria-pressed="false">${REEL_ICO.volume}</button><button class="reel-btn reel-btn-fs" data-act="fs" aria-label="Tela cheia">${REEL_ICO.expand}</button>` : ""}
       <button class="reel-btn" data-act="info" aria-label="Detalhes da peça">${REEL_ICO.info}</button>
       <button class="reel-btn" data-act="share" aria-label="Compartilhar">${REEL_ICO.share}</button>
     </div>
@@ -1480,6 +1512,8 @@ async function createReelPlayer(stage, url, opts){
       iconUrl: "https://cdn.jsdelivr.net/npm/plyr@3.7.8/dist/plyr.svg",
       youtube: { noCookie: true, rel: 0, iv_load_policy: 3, modestbranding: 1 }
     });
+    host.addEventListener("click", (ev) => { if(ev.target.closest('[data-plyr="fullscreen"]')){ ev.stopPropagation(); ev.preventDefault(); reelToggleFullscreen(); } }, true);
+    host.addEventListener("dblclick", (ev) => { if(ev.target.closest(".plyr__controls, .plyr__menu")) return; ev.stopPropagation(); ev.preventDefault(); reelToggleFullscreen(); }, true);
   } else { el.controls = true; el.muted = !!opts.muted; }
 
   const media = () => player || el;
@@ -1495,7 +1529,7 @@ async function createReelPlayer(stage, url, opts){
     toggle(){ return ctl.paused ? ctl.play().catch(() => {}) : ctl.pause(); },
     seekTo(t){ media().currentTime = Math.max(0, t); },
     seekBy(d){ const max = ctl.duration || Infinity; ctl.seekTo(Math.min(max, ctl.time + d)); },
-    fullscreen(){ if(player) player.fullscreen.toggle(); else if(el.requestFullscreen) el.requestFullscreen(); },
+    fullscreen(){ reelToggleFullscreen(); },
     on(evt, fn){ if(player) player.on(evt, fn); else el.addEventListener(evt === "ready" ? "loadedmetadata" : evt, fn); },
     destroy(){
       try{ if(player) player.destroy(); }catch(e){}
@@ -1574,7 +1608,8 @@ function reelUnmount(i){
   }
   const stage = reelStageEl(i), slide = reelSlideEl(i);
   if(stage){ stage.classList.remove("is-live"); const l = stage.querySelector(".reel-loading"); if(l) l.remove(); }
-  if(slide) slide.classList.remove("is-tall");
+  if(slide) slide.classList.remove("is-tall", "is-fs");
+  if(r.fsCss){ r.fsCss = false; r.root.classList.remove("fs-css"); }
 }
 
 function reelSetActive(i){
@@ -1619,6 +1654,42 @@ function reelToggleMute(){
   if(r.ctl) r.ctl.muted = r.muted;
   reelSyncSound();
 }
+/* ---- tela cheia: 1) nativa no palco (Android/PC) 2) <video> nativo (iPhone) 3) CSS ---- */
+const reelNativeFs = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+function reelFsActive(){ return !!(reelNativeFs() || (reel && reel.fsCss)); }
+function reelSetFsCss(on){
+  const r = reel; if(!r) return;
+  r.fsCss = !!on; r.root.classList.toggle("fs-css", !!on);
+  const slide = reelSlideEl(r.ctlIndex); if(slide) slide.classList.toggle("is-fs", !!on);
+}
+function reelLockLandscape(){
+  try{
+    const o = window.screen && screen.orientation, v = reel && reel.ctl && reel.ctl.el;
+    if(o && o.lock && !(v && v.videoHeight > v.videoWidth)) o.lock("landscape").catch(() => {});   // vídeo deitado: gira a tela sozinha
+  }catch(e){}
+}
+function reelUnlock(){ try{ if(window.screen && screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); }catch(e){} }
+async function reelExitFs(){
+  try{
+    if(document.fullscreenElement && document.exitFullscreen) await document.exitFullscreen();
+    else if(document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }catch(e){}
+  reelSetFsCss(false); reelUnlock();
+}
+async function reelToggleFullscreen(){
+  const r = reel; if(!r || !r.ctl) return;
+  if(reelFsActive()){ await reelExitFs(); return; }
+  const stage = reelStageEl(r.ctlIndex), video = r.ctl.el;
+  const req = stage && (stage.requestFullscreen || stage.webkitRequestFullscreen);
+  if(req){
+    try{ await req.call(stage, { navigationUI: "hide" }); reelLockLandscape(); return; }
+    catch(e){ /* o navegador recusou: tenta a próxima opção */ }
+  }
+  if(r.ctl.kind !== "youtube" && video && video.webkitEnterFullscreen){      // iPhone: só o <video> vai para a tela cheia de verdade
+    try{ video.webkitEnterFullscreen(); return; }catch(e){}
+  }
+  reelSetFsCss(true);
+}
 function reelOpenSheet(){
   const r = reel, p = r && r.items[r.active]; if(!p) return;
   const plan = planById(p.requiresPlan);
@@ -1648,6 +1719,7 @@ function reelOnClick(e){
   switch(b.dataset.act){
     case "back": reelBack(); break;
     case "sound": reelToggleMute(); break;
+    case "fs": reelToggleFullscreen(); break;
     case "info": reelOpenSheet(); break;
     case "closesheet": reelCloseSheet(); break;
     case "share": reelShare(); break;
@@ -1663,14 +1735,14 @@ function reelOnKey(e){
   if(t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) return;                       // não atrapalha a barra de progresso nem campos
   if(t && t.closest && t.closest("button, a") && (k === " " || k === "Enter")) return; // botão focado: deixa o clique normal valer
   const sheetOpen = r.sheet.classList.contains("open");
-  if(k === "Escape"){ if(sheetOpen) reelCloseSheet(); else reelBack(); return; }
+  if(k === "Escape"){ if(sheetOpen) reelCloseSheet(); else if(reelFsActive()) reelExitFs(); else reelBack(); return; }
   if(sheetOpen) return;
   const act = {
     ArrowDown: () => reelGo(r.active + 1), PageDown: () => reelGo(r.active + 1),
     ArrowUp: () => reelGo(r.active - 1), PageUp: () => reelGo(r.active - 1),
     " ": () => r.ctl && r.ctl.toggle(),
     ArrowRight: () => r.ctl && r.ctl.seekBy(10), ArrowLeft: () => r.ctl && r.ctl.seekBy(-10),
-    m: reelToggleMute, M: reelToggleMute, f: () => r.ctl && r.ctl.fullscreen(), F: () => r.ctl && r.ctl.fullscreen(),
+    m: reelToggleMute, M: reelToggleMute, f: reelToggleFullscreen, F: reelToggleFullscreen,
     i: reelOpenSheet, I: reelOpenSheet
   }[k];
   if(act){ e.preventDefault(); act(); reelPoke(); }
@@ -1684,6 +1756,9 @@ function reelTeardown(){
   try{ if(r.ctl){ const p = r.items[r.ctlIndex]; if(p) reelSave(r, p.id, r.ctl, true); r.ctl.destroy(); } }catch(e){}
   if(r.io) r.io.disconnect();
   document.removeEventListener("keydown", r.onKey);
+  document.removeEventListener("fullscreenchange", r.onFs); document.removeEventListener("webkitfullscreenchange", r.onFs);
+  try{ if(document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); }catch(e){}
+  reelUnlock();
   document.removeEventListener("visibilitychange", r.onVis);
   window.removeEventListener("pagehide", r.onHide);
 }
@@ -1720,13 +1795,15 @@ async function openReel(startId, seq){
   const r = reel = {
     items, root, scroller: document.getElementById("reel-scroller"), sheet: document.getElementById("reel-sheet"),
     last: items.length > 1 ? items.length : 0, active: -1, token: 0, ctl: null, ctlIndex: -1, muted: false, details: new Map(), lastPos: new Map(), lastSave: 0, idleT: 0, io: null,
-    onKey: reelOnKey,
+    onKey: reelOnKey, fsCss: false,
+    onFs: () => { if(!reelNativeFs()) reelUnlock(); },                    // saiu da tela cheia (botão, gesto ou Esc): devolve a rotação
     onVis: () => { if(document.hidden && r.ctl){ const p = r.items[r.ctlIndex]; if(p) reelSave(r, p.id, r.ctl, true); } },
     onHide: () => { if(r.ctl){ const p = r.items[r.ctlIndex]; if(p) reelSave(r, p.id, r.ctl, true); } }
   };
   root.addEventListener("click", reelOnClick);
   ["mousemove", "pointerdown", "touchstart"].forEach(ev => root.addEventListener(ev, reelPoke, { passive: true }));
   document.addEventListener("keydown", r.onKey);
+  document.addEventListener("fullscreenchange", r.onFs); document.addEventListener("webkitfullscreenchange", r.onFs);
   document.addEventListener("visibilitychange", r.onVis);
   window.addEventListener("pagehide", r.onHide);
   r.io = new IntersectionObserver((entries) => {
@@ -1937,57 +2014,76 @@ async function cancelCheckout(){
 }
 
 /* --------------------------- LOGIN / SIGNUP -------------------------------- */
+// Cabeçalho e rodapé comuns das telas de acesso.
+function AuthHead(sub){
+  return `<div class="auth-logo"><img src="/icons/icon-192.png" alt="" width="48" height="48"></div>
+    <h1 class="auth-brand">${esc(SITE_NAME)}</h1><p class="auth-sub">${sub}</p>`;
+}
+// "Prova social" verdadeira: capas de peças que existem de fato e quantas há para assistir (nada de números inventados).
+function AuthProof(){
+  const plays = (DB.plays || []).filter(p => p.posterUrl), total = DB.playsTotal || plays.length;
+  if(!plays.length || !total) return "";
+  const covers = shuffled(plays).slice(0, 4);
+  return `<div class="auth-proof"><p><b>${total} ${total === 1 ? "peça" : "peças"}</b> de teatro para assistir quando e onde quiser.</p>
+    <div class="auth-covers" aria-hidden="true">${covers.map(c => `<img src="${esc(c.posterUrl)}" alt="" loading="lazy">`).join("")}</div></div>`;
+}
 function LoginPage(){
   return `<div class="auth-wrap"><div class="auth-card reveal">
-    <div class="auth-brand">${SITE_NAME}</div><p class="auth-sub">Entre para continuar assistindo</p>
-    <div class="form-msg error" id="auth-msg"></div>
+    ${AuthHead("Entre para continuar assistindo")}
+    <div class="form-msg error" id="auth-msg" role="alert"></div>
     <form id="login-form">
-      <div class="field"><label>E-mail</label><input type="email" name="email" required placeholder="voce@email.com"></div>
-      <div class="field"><label>Senha</label><input type="password" name="password" required placeholder="••••••••"></div>
-      <button class="btn btn-gold btn-block" type="submit">Entrar</button>
+      <input class="auth-input" type="email" name="email" required placeholder="E-mail" aria-label="E-mail" autocomplete="email">
+      <input class="auth-input" type="password" name="password" required placeholder="Senha" aria-label="Senha" autocomplete="current-password">
+      <hr class="auth-hr">
+      <button class="auth-btn auth-btn-primary" type="submit">Entrar</button>
     </form>
-    <p class="auth-foot" style="margin-top:14px;"><a href="#/esqueci-senha">Esqueci minha senha</a></p>
-    <p class="auth-foot" style="margin-top:8px;">Não tem conta? <a href="#/cadastro">Cadastre-se</a></p>
-  </div></div>`;
+    <div class="auth-actions" style="margin-top:.75rem;">
+      <a class="auth-btn auth-btn-secondary" href="#/cadastro">Criar conta grátis</a>
+      <p class="auth-foot"><a href="#/esqueci-senha">Esqueci minha senha</a></p>
+    </div>
+  </div>${AuthProof()}</div>`;
 }
 function SignupPage(){
   return `<div class="auth-wrap"><div class="auth-card reveal">
-    <div class="auth-brand">${SITE_NAME}</div><p class="auth-sub">Crie sua conta gratuita</p>
-    <div class="form-msg error" id="auth-msg"></div>
+    ${AuthHead("Crie sua conta gratuita")}
+    <div class="form-msg error" id="auth-msg" role="alert"></div>
     <form id="signup-form">
-      <div class="field"><label>Nome completo</label><input type="text" name="name" required placeholder="Seu nome"></div>
-      <div class="field"><label>E-mail</label><input type="email" name="email" required placeholder="voce@email.com"></div>
-      <div class="field"><label>Senha</label><input type="password" name="password" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
-      <button class="btn btn-gold btn-block" type="submit">Criar conta</button>
+      <input class="auth-input" type="text" name="name" required placeholder="Nome completo" aria-label="Nome completo" autocomplete="name">
+      <input class="auth-input" type="email" name="email" required placeholder="E-mail" aria-label="E-mail" autocomplete="email">
+      <input class="auth-input" type="password" name="password" required minlength="6" placeholder="Senha (mínimo 6 caracteres)" aria-label="Senha" autocomplete="new-password">
+      <hr class="auth-hr">
+      <button class="auth-btn auth-btn-primary" type="submit">Criar conta</button>
     </form>
-    <p class="auth-foot">Já tem conta? <a href="#/login">Entrar</a></p>
-  </div></div>`;
+    <div class="auth-actions" style="margin-top:.75rem;">
+      <p class="auth-foot">Já tem conta? <a href="#/login">Entrar</a></p>
+    </div>
+  </div>${AuthProof()}</div>`;
 }
 function ForgotPage(){
   return `<div class="auth-wrap"><div class="auth-card reveal">
-    <div class="auth-brand">${SITE_NAME}</div><p class="auth-sub">Esqueceu a senha? Sem problema. Digite o e-mail da sua conta e enviamos um link para criar uma nova.</p>
-    <div class="form-msg error" id="auth-msg"></div>
+    ${AuthHead("Esqueceu a senha? Sem problema. Digite o e-mail da sua conta e enviamos um link para criar uma nova.")}
+    <div class="form-msg error" id="auth-msg" role="alert"></div>
     <form id="forgot-form">
-      <div class="field"><label>E-mail da conta</label><input type="email" name="email" required placeholder="voce@email.com" autocomplete="email"></div>
-      <button class="btn btn-gold btn-block" type="submit">Enviar link por e-mail</button>
+      <div class="field"><label for="forgot-email">E-mail da conta</label><input id="forgot-email" type="email" name="email" required placeholder="voce@email.com" autocomplete="email"></div>
+      <button class="auth-btn auth-btn-primary" type="submit">Enviar link por e-mail</button>
     </form>
-    <p class="auth-foot"><a href="#/login">Voltar para o login</a></p>
+    <p class="auth-foot" style="margin-top:1rem;"><a href="#/login">Voltar para o login</a></p>
   </div></div>`;
 }
 function ResetPage(hash){
   const token = new URLSearchParams((hash.split("?")[1] || "")).get("token") || "";
-  if(!token) return `<div class="auth-wrap"><div class="auth-card reveal"><div class="auth-brand">${SITE_NAME}</div>
-    <p class="auth-sub">Este link está incompleto. Peça um novo para criar sua senha.</p>
-    <a class="btn btn-gold btn-block" href="#/esqueci-senha">Pedir novo link</a></div></div>`;
+  if(!token) return `<div class="auth-wrap"><div class="auth-card reveal">
+    ${AuthHead("Este link está incompleto. Peça um novo para criar sua senha.")}
+    <a class="auth-btn auth-btn-primary" href="#/esqueci-senha">Pedir novo link</a></div></div>`;
   return `<div class="auth-wrap"><div class="auth-card reveal">
-    <div class="auth-brand">${SITE_NAME}</div><p class="auth-sub">Escolha a sua nova senha.</p>
-    <div class="form-msg error" id="auth-msg"></div>
+    ${AuthHead("Escolha a sua nova senha.")}
+    <div class="form-msg error" id="auth-msg" role="alert"></div>
     <form id="reset-form" data-token="${esc(token)}">
-      <div class="field"><label>Nova senha (mínimo 8 caracteres)</label><input type="password" name="password" required minlength="8" autocomplete="new-password"></div>
-      <div class="field"><label>Repita a nova senha</label><input type="password" name="confirm" required minlength="8" autocomplete="new-password"></div>
-      <button class="btn btn-gold btn-block" type="submit">Salvar nova senha</button>
+      <div class="field"><label for="reset-pass">Nova senha (mínimo 8 caracteres)</label><input id="reset-pass" type="password" name="password" required minlength="8" autocomplete="new-password"></div>
+      <div class="field"><label for="reset-confirm">Repita a nova senha</label><input id="reset-confirm" type="password" name="confirm" required minlength="8" autocomplete="new-password"></div>
+      <button class="auth-btn auth-btn-primary" type="submit">Salvar nova senha</button>
     </form>
-    <p class="auth-foot"><a href="#/login">Voltar para o login</a></p>
+    <p class="auth-foot" style="margin-top:1rem;"><a href="#/login">Voltar para o login</a></p>
   </div></div>`;
 }
 function attachRecoveryEvents(){
@@ -1998,7 +2094,7 @@ function attachRecoveryEvents(){
     e.preventDefault();
     const btn = ff.querySelector("button"); btn.disabled = true; btn.textContent = "Enviando...";
     try{
-      const r = await api("/auth/forgot-password", { method:"POST", body:{ email: ff.email.value } });
+      const r = await api("/auth/forgot-password", { method:"POST", body:{ email: ff.elements.email.value } });
       show(r.message, true);
       ff.style.display = "none";
     }catch(err){ show(err.message, false); btn.disabled = false; btn.textContent = "Enviar link por e-mail"; }
@@ -2006,10 +2102,10 @@ function attachRecoveryEvents(){
   const rf = qs("#reset-form");
   if(rf) rf.addEventListener("submit", async e=>{
     e.preventDefault();
-    if(rf.password.value !== rf.confirm.value){ show("As duas senhas não são iguais.", false); return; }
+    if(rf.elements.password.value !== rf.elements.confirm.value){ show("As duas senhas não são iguais.", false); return; }
     const btn = rf.querySelector("button"); btn.disabled = true; btn.textContent = "Salvando...";
     try{
-      await api("/auth/reset-password", { method:"POST", body:{ token: rf.dataset.token, newPassword: rf.password.value } });
+      await api("/auth/reset-password", { method:"POST", body:{ token: rf.dataset.token, newPassword: rf.elements.password.value } });
       clearToken(); DB.me = null; DB.mine = null; saveCache();      // por segurança, entra de novo com a senha nova
       toast("Senha alterada! Entre com a sua nova senha.");
       go("#/login");
@@ -2022,14 +2118,16 @@ function attachAuthEvents(){
     loginForm.addEventListener("submit", async e=>{
       e.preventDefault();
       const fd = new FormData(loginForm);
-      const msg = qs("#auth-msg");
+      const msg = qs("#auth-msg"), btn = loginForm.querySelector("button[type=submit]");
+      if(btn.disabled) return;
+      btn.disabled = true; btn.textContent = "Entrando...";
       try{
         const r = await api("/auth/login", { method:"POST", body:{ email: fd.get("email"), password: fd.get("password") } });
         setToken(r.token); DB.me = r.user;
         await loadFresh().catch(()=>{});
         toast("Bem-vindo(a) de volta, " + r.user.name.split(" ")[0] + "!");
         go(r.user.role==="admin" ? "#/admin" : "#/home");
-      }catch(err){ msg.textContent = err.message; msg.style.display="block"; }
+      }catch(err){ msg.textContent = err.message; msg.style.display="block"; btn.disabled = false; btn.textContent = "Entrar"; }
     });
   }
   const signupForm = qs("#signup-form");
@@ -2037,14 +2135,16 @@ function attachAuthEvents(){
     signupForm.addEventListener("submit", async e=>{
       e.preventDefault();
       const fd = new FormData(signupForm);
-      const msg = qs("#auth-msg");
+      const msg = qs("#auth-msg"), btn = signupForm.querySelector("button[type=submit]");
+      if(btn.disabled) return;
+      btn.disabled = true; btn.textContent = "Criando conta...";
       try{
         const r = await api("/auth/signup", { method:"POST", body:{ name: fd.get("name"), email: fd.get("email"), password: fd.get("password") } });
         setToken(r.token); DB.me = r.user;
         await loadFresh().catch(()=>{});
         toast("Conta criada! Bem-vindo(a) ao " + SITE_NAME + " 🎭");
         go("#/home");
-      }catch(err){ msg.textContent = err.message; msg.style.display="block"; }
+      }catch(err){ msg.textContent = err.message; msg.style.display="block"; btn.disabled = false; btn.textContent = "Criar conta"; }
     });
   }
 }
@@ -3211,16 +3311,33 @@ function registerServiceWorker(){
   }
 }
 window.addEventListener("hashchange", ()=>{ if(swUpdateReady){ swUpdateReady = false; location.reload(); } });
-let deferredInstall = null;
+let deferredInstall = null, installReady = false, installTimer = null;
+const INSTALL_SNOOZE_MS = 3 * 86400000, INSTALL_DELAY_MS = 4000;
 function isStandalone(){ return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true; }
-function isIos(){ return /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.MSStream; }
-window.addEventListener("beforeinstallprompt", (e)=>{ e.preventDefault(); deferredInstall = e; });
+function isIos(){ const ua = navigator.userAgent; return (/iphone|ipad|ipod/i.test(ua) || (/macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) && !window.MSStream; }
+function isMobileUA(){ return isIos() || /android|mobile/i.test(navigator.userAgent); }
+function isInAppBrowser(){ return /FBAN|FBAV|Instagram|MicroMessenger|Snapchat|TikTok|; wv\)/i.test(navigator.userAgent); }
+window.addEventListener("beforeinstallprompt", (e)=>{ e.preventDefault(); deferredInstall = e; refreshInstallBanner(); });   // pode chegar depois dos primeiros segundos
 window.addEventListener("appinstalled", ()=>{ deferredInstall = null; removeInstallBanner(); toast("App instalado! Procure o Mini Drama na sua tela inicial 🎭"); });
 
 function removeInstallBanner(){ const b = document.getElementById("install-banner"); if(b) b.remove(); }
 function dismissInstallBanner(){ try{ localStorage.setItem("md_install_dismissed", String(Date.now())); }catch(e){} removeInstallBanner(); }
 
-// Instala (Android/Chrome/Edge/desktop) ou ensina o caminho (iPhone/Safari, que não tem botão automático).
+// Qual convite mostrar: "button" (Android/Chrome, com o aviso nativo), "ios" (ensina o Compartilhar) ou
+// "manual" (outros celulares: ensina o menu do navegador). null = não mostrar agora.
+function installBannerMode(st){
+  if(st.standalone || st.inApp) return null;
+  if(st.dismissedAt && st.now - st.dismissedAt < INSTALL_SNOOZE_MS) return null;
+  if(st.hasPrompt) return "button";
+  if(st.ios) return "ios";
+  return st.mobile ? "manual" : null;
+}
+function currentInstallMode(){
+  let dismissedAt = 0; try{ dismissedAt = parseInt(localStorage.getItem("md_install_dismissed"), 10) || 0; }catch(e){}
+  return installBannerMode({ standalone: isStandalone(), inApp: isInAppBrowser(), dismissedAt, now: Date.now(), hasPrompt: !!deferredInstall, ios: isIos(), mobile: isMobileUA() });
+}
+
+// Instala (Android/Chrome/Edge/PC) ou ensina o caminho (iPhone e navegadores sem botão automático).
 async function promptInstall(){
   if(isStandalone()){ toast("O app já está instalado neste aparelho."); return; }
   if(deferredInstall){
@@ -3230,34 +3347,42 @@ async function promptInstall(){
     if(choice && choice.outcome !== "accepted") try{ localStorage.setItem("md_install_dismissed", String(Date.now())); }catch(e){}
     return;
   }
-  if(isIos()){ showInstallBanner(true); return; }
+  if(isInAppBrowser()){ toast("Abra o site no Chrome ou no Safari para instalar o app."); return; }
+  if(isIos()){ showInstallBanner("ios"); return; }
+  if(isMobileUA()){ showInstallBanner("manual"); return; }
   toast("No menu do navegador, escolha “Instalar app” ou “Adicionar à tela inicial”.");
 }
 
-function showInstallBanner(force){
+function showInstallBanner(mode){
   if(document.getElementById("install-banner")) return;
-  const ios = isIos() && !deferredInstall;
+  const text = {
+    button: 'Acesso direto da tela inicial, abre mais rápido e em tela cheia.',
+    ios: 'Toque em <b>Compartilhar</b> <span aria-hidden="true">⬆️</span> e depois em <b>“Adicionar à Tela de Início”</b>.',
+    manual: 'Abra o menu <b>⋮</b> do navegador e toque em <b>“Instalar app”</b> ou <b>“Adicionar à tela inicial”</b>.'
+  }[mode] || "";
   const b = document.createElement("div");
-  b.id = "install-banner"; b.className = "install-banner";
+  b.id = "install-banner"; b.className = "install-banner"; b.dataset.mode = mode;
   b.innerHTML = `<img src="/icons/icon-192.png" alt="">
     <div class="ib-text">
-      <p class="ib-title">Instale o app Mini Drama</p>
-      <p class="ib-sub">${ios ? 'Toque em <b>Compartilhar</b> <span aria-hidden="true">⬆️</span> e depois em <b>“Adicionar à Tela de Início”</b>.' : 'Acesso direto da tela inicial, abre mais rápido e em tela cheia.'}</p>
-      ${ios ? '' : '<button class="btn btn-gold btn-sm" style="margin-top:8px;" onclick="promptInstall()">Instalar app</button>'}
+      <p class="ib-title">Instale o app ${esc(SITE_NAME)}</p>
+      <p class="ib-sub">${text}</p>
+      ${mode === "button" ? '<button class="btn btn-gold btn-sm" style="margin-top:8px;" onclick="promptInstall()">Instalar app</button>' : ''}
     </div>
     <button class="ib-close" aria-label="Fechar" onclick="dismissInstallBanner()">&times;</button>`;
   document.body.appendChild(b);
 }
-
-// Mostra o convite alguns segundos depois de abrir (sem atrapalhar), no máximo 1x a cada 7 dias.
+// Reavalia o convite sempre que algo muda (passou o tempo, o navegador liberou a instalação, trocou de tela).
+function refreshInstallBanner(){
+  if(!installReady || reel) return;                                    // nunca por cima do StoryReel
+  const mode = currentInstallMode(), cur = document.getElementById("install-banner");
+  if(!mode || (cur && cur.dataset.mode === mode)) return;
+  if(cur) cur.remove();
+  showInstallBanner(mode);
+}
+// O convite aparece alguns segundos depois de abrir (sem atrapalhar) e volta no máximo a cada 3 dias.
 function scheduleInstallBanner(){
-  if(isStandalone()) return;
-  let last = 0; try{ last = parseInt(localStorage.getItem("md_install_dismissed"), 10) || 0; }catch(e){}
-  if(Date.now() - last < 7*86400000) return;
-  setTimeout(()=>{
-    if(isStandalone() || document.getElementById("install-banner")) return;
-    if(deferredInstall || (isIos() && /safari/i.test(navigator.userAgent) && !/crios|fxios/i.test(navigator.userAgent))) showInstallBanner();
-  }, 6000);
+  if(installTimer || isStandalone()) return;
+  installTimer = setTimeout(()=>{ installReady = true; refreshInstallBanner(); }, INSTALL_DELAY_MS);
 }
 </script>
 </body>

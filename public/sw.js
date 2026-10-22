@@ -1,6 +1,6 @@
 /* Service worker do Mini Drama: abre o site instantaneamente nas visitas seguintes e guarda
    imagens. NUNCA mexe em: API (/api/*, exceto imagens das peças), vídeo, pagamentos. */
-const VERSION = "md-v7";
+const VERSION = "md-v8";
 const SHELL = "shell-" + VERSION, IMG = "img-" + VERSION, FONT = "font-" + VERSION;
 const MAX_IMG = 160;
 

@@ -25,6 +25,10 @@ async function makeEnv(o = {}) {
       w.matchMedia = () => ({ matches: false }); w.scrollTo = () => {};
       w.Element.prototype.scrollBy = function (a) { w.__scrollBy = a; };
       Object.defineProperty(w.HTMLElement.prototype, "clientWidth", { get() { return 1000; } });   // jsdom não calcula layout
+      // posições da barra flutuante: cada aba tem 64px de largura e começa em 10 + 70*índice
+      const navIdx = (el) => [...(el.parentElement ? el.parentElement.children : [])].filter(c => c.classList && c.classList.contains("fnav-item")).indexOf(el);
+      Object.defineProperty(w.HTMLElement.prototype, "offsetLeft", { get() { const i = navIdx(this); return i >= 0 ? 10 + 70 * i : 0; } });
+      Object.defineProperty(w.HTMLElement.prototype, "offsetWidth", { get() { return navIdx(this) >= 0 ? 64 : 0; } });
       w.fetch = async (url, init = {}) => {
         const method = init.method || "GET", pth = String(url).replace(/^\/api/, "");
         calls.push({ method, path: pth });
@@ -43,6 +47,9 @@ async function makeEnv(o = {}) {
         const one = pth.match(/^\/plays\/(\w+)$/);
         if (one) return res({ play: { ...(CATALOG.find(p => p.id === one[1]) || CATALOG[0]), videoUrl: "http://x/v.mp4", director: "D", cast: "C" }, canWatch: true, resume: null });
         if (pth.startsWith("/me/progress/")) return res({ ok: true });
+        if (pth === "/plays/facets") return res({ years: [], plans: [] });
+        if (pth.startsWith("/plays/trending")) return o.trendingFail ? res({ error: "ranking fora do ar" }, 500) : res({ plays: o.trendingEmpty ? [] : CATALOG.slice(0, 2), ranked: 2 });
+        if (pth.startsWith("/plays?") && !pth.includes("search=")) return res({ plays: CATALOG, total: CATALOG.length, totalPages: 1, page: 1 });   // catálogo
         const m = pth.match(/^\/plays\?page=(\d+)&pageSize=\d+&search=(.*)$/);
         if (m) { const q = decodeURIComponent(m[2]); const r = o.search ? await o.search(q, Number(m[1])) : { plays: [], total: 0, totalPages: 1 }; return res({ page: Number(m[1]), ...r }); }
         return res({});
@@ -69,7 +76,11 @@ const type = async (e, v, wait = 360) => { const i = $(e, "#search-input"); i.va
   ok("mostra a barra de progresso (74%) e '23min restantes'", () => { const c = $$(e, ".cw-card")[0]; assert.equal(c.querySelector(".cw-bar i").style.width, "74%"); assert.match(c.querySelector(".cw-left").textContent, /^23min restantes$/); });
   ok("retomar abre o reel; peça sem acesso abre a página (com o aviso de plano)", () => { const hs = $$(e, ".cw-link").map(a => a.getAttribute("href")); assert.deepEqual(hs, ["#/reel/p2", "#/peca/p3"]); });
   ok("corações vêm marcados conforme a lista do servidor", () => { const on = $$(e, ".card [data-heart]").filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.heart); assert.ok(on.includes("p1")); assert.ok(!on.includes("p2")); });
-  ok("barra inferior tem 5 abas e 'Início' ativa; logada vê 'Conta'", () => { const tabs = $$(e, ".tabbar a"); assert.equal(tabs.length, 5); assert.equal($(e, ".tabbar a.active").textContent.trim(), "Início"); assert.equal(tabs[4].textContent.trim(), "Conta"); });
+  ok("barra flutuante tem 5 abas e 'Início' ativa; logada vê 'Conta'", () => { const tabs = $$(e, ".fnav-item"); assert.equal(tabs.length, 5); assert.equal($(e, ".fnav-item.active").textContent.trim(), "Início"); assert.equal(tabs[4].textContent.trim(), "Conta"); assert.equal($(e, ".fnav-item.active").getAttribute("aria-current"), "page"); });
+  ok("card de peça liberada abre DIRETO no player; peça bloqueada abre a página da peça", () => {
+    const hrefs = Object.fromEntries($$(e, ".section-row .card").map(a => [a.querySelector("[data-heart]").dataset.heart, a.getAttribute("href")]));
+    assert.equal(hrefs.p1, "#/reel/p1"); assert.equal(hrefs.p2, "#/reel/p2"); assert.equal(hrefs.p3, "#/peca/p3");
+  });
   ok("plano gratuito vê o botão 'Assinar' no topo", () => assert.ok($(e, ".header-actions a.btn-sub")));
   ok("fileiras têm setas para o computador", () => assert.ok($$(e, ".rail-wrap .rail-arrow").length >= 2));
   $(e, ".rail-arrow.right").click();
@@ -103,7 +114,7 @@ const type = async (e, v, wait = 360) => { const i = $(e, "#search-input"); i.va
   const R = (...pl) => ({ plays: pl, total: pl.length, totalPages: 1 });
   e = await makeEnv({ listIds: [], search: async (q, page) => { if (q === "sil") { await tick(450); return R(P("old", "RESULTADO VELHO")); } if (q === "silencio") return R(CATALOG[0]); if (q === "nada") return R(); if (q === "muitas") return page === 1 ? { plays: [P("m1", "M1")], total: 2, totalPages: 2 } : { plays: [P("m2", "M2")], total: 2, totalPages: 2 }; return R(); } });
   await go(e, "#/buscar", 100);
-  ok("página de busca abre com o campo em foco; a lupa do topo continua e nenhuma aba fica marcada", () => { assert.ok($(e, "#search-input")); assert.equal(e.w.document.activeElement.id, "search-input"); assert.ok($(e, '.header-actions a[href="#/buscar"]')); assert.equal($(e, ".tabbar a.active"), null); });
+  ok("página de busca abre com o campo em foco; a lupa do topo continua e nenhuma aba fica marcada", () => { assert.ok($(e, "#search-input")); assert.equal(e.w.document.activeElement.id, "search-input"); assert.ok($(e, '.header-actions a[href="#/buscar"]')); assert.ok($(e, ".fnav-item")); assert.equal($(e, ".fnav-item.active"), null); });
   await type(e, "sil", 330); await type(e, "silencio", 330); await tick(250);
   ok("resposta atrasada de uma digitação antiga NÃO sobrescreve a atual", () => { const t = $$(e, "#search-grid .card-title").map(x => x.textContent); assert.deepEqual(t, ["O Silêncio das Cortinas"]); assert.ok(!$(e, "#search-out").textContent.includes("VELHO")); });
   ok("mostra a contagem e a URL acompanha a busca", () => { assert.match($(e, ".search-count").textContent, /1 resultado para “silencio”/); assert.equal(e.w.location.hash, "#/buscar/silencio"); });
@@ -135,7 +146,7 @@ const type = async (e, v, wait = 360) => { const i = $(e, "#search-input"); i.va
   e.w.close();
   e = await makeEnv({ listPlays: [CATALOG[0], CATALOG[1]], listIds: ["p1", "p2"] });
   await go(e, "#/minha-lista", 150);
-  ok("lista mostra as peças salvas, a contagem e a aba ativa", () => { assert.equal($$(e, "#list-grid .card").length, 2); assert.equal($(e, "#list-count").textContent, "2 peças salvas"); assert.equal($(e, ".tabbar a.active").textContent.trim(), "Minha lista"); });
+  ok("lista mostra as peças salvas, a contagem e a aba ativa", () => { assert.equal($$(e, "#list-grid .card").length, 2); assert.equal($(e, "#list-count").textContent, "2 peças salvas"); assert.equal($(e, ".fnav-item.active").textContent.trim(), "Minha lista"); });
   ok("todos os corações da lista aparecem marcados", () => assert.ok($$(e, "#list-grid [data-heart]").every(b => b.getAttribute("aria-pressed") === "true")));
   $$(e, "#list-grid [data-heart]")[0].click(); await tick(60);
   ok("desfavoritar na lista tira o card na hora e atualiza a contagem", () => { assert.equal($$(e, "#list-grid .card").length, 1); assert.equal($(e, "#list-count").textContent, "1 peça salva"); });
@@ -147,6 +158,64 @@ const type = async (e, v, wait = 360) => { const i = $(e, "#search-input"); i.va
   e = await makeEnv({ listIds: ["p1"] });
   await go(e, "#/peca/p1", 200);
   ok("botão 'Minha lista' na página da peça reflete se já está salva", () => { const b = $(e, ".detail-actions [data-heart]"); assert.ok(b); assert.equal(b.getAttribute("aria-pressed"), "true"); });
+  e.w.close();
+
+
+  console.log("\nG2) Barra de navegação flutuante (embaixo)");
+  e = await makeEnv({});
+  await go(e, "#/home", 200);
+  ok("a navegação saiu do topo: sem menu, hambúrguer nem gaveta; o cabeçalho só tem marca, busca e conta", () => { assert.equal($(e, ".main-nav"), null); assert.equal($(e, ".hamburger"), null); assert.equal($(e, ".mobile-drawer"), null); assert.ok($(e, ".site-header .brand")); assert.ok($(e, ".fnav .fnav-bar")); });
+  ok("a barra fica dentro da tela inferior (fixa, centralizada e com margem da área segura do iPhone)", () => assert.match(html, /\.fnav\{position:fixed; left:50%; bottom:calc\(14px \+ env\(safe-area-inset-bottom,0px\)\)/));
+  await tick(60);
+  ok("indicador fica sob a aba ativa (Início = 1ª aba: x=10, largura 64)", () => { const i = $(e, "#fnav-ind"); assert.equal(i.style.width, "64px"); assert.equal(i.style.transform, "translateX(10px)"); assert.equal(i.style.opacity, "1"); });
+  ok("a nova tela já nasce com o indicador na posição ANTIGA (é isso que faz ele deslizar entre telas)", () => assert.match(e.w.eval('FloatingNav(currentUser(), "#/catalogo")'), /id="fnav-ind" style="width:64px; transform:translateX\(10px\);"/));
+  await go(e, "#/catalogo", 250);
+  ok("ao ir para o Catálogo o indicador vai para a 2ª aba (x=80) e a aba fica ativa", () => { assert.equal($(e, ".fnav-item.active").textContent.trim(), "Catálogo"); assert.equal($(e, "#fnav-ind").style.transform, "translateX(80px)"); });
+  ok("o indicador anima por transição de CSS e respeita 'reduzir movimento'", () => { assert.match(html, /\.fnav-ind\{[^}]*transition:transform \.4s/); assert.match(html, /prefers-reduced-motion:reduce\)\{ \.fnav-ind\{transition:opacity \.2s;\} \}/); });
+  await go(e, "#/peca/p1", 250);
+  ok("numa tela sem aba (ex.: página da peça) o indicador some em vez de ficar parado na aba errada", () => { assert.equal($(e, ".fnav-item.active"), null); assert.equal($(e, "#fnav-ind").style.opacity, "0"); });
+  ok("aviso (toast) e balão de instalar ficam ACIMA da barra, não por baixo dela", () => { assert.match(html, /#toast-host\{position:fixed; bottom:calc\(96px/); assert.match(html, /\.install-banner\{position:fixed; left:12px; right:12px; bottom:calc\(98px/); });
+  e.w.close();
+  e = await makeEnv({ visitor: true });
+  await go(e, "#/home", 200);
+  ok("visitante vê: Início, Catálogo, Surpresa, Minha lista e Entrar (sem Admin)", () => assert.deepEqual($$(e, ".fnav-item").map(a => a.textContent.trim()), ["Início", "Catálogo", "Surpresa", "Minha lista", "Entrar"]));
+  await go(e, "#/login", 150);
+  ok("tela de login não mostra a barra de navegação", () => assert.equal($(e, ".fnav"), null));
+  e.w.close();
+  e = await makeEnv({});
+  e.w.eval('DB.me.role = "admin"');
+  await go(e, "#/home", 200);
+  ok("administrador ganha a aba 'Admin' (6 abas)", () => { const t = $$(e, ".fnav-item").map(a => a.textContent.trim()); assert.equal(t.length, 6); assert.equal(t[5], "Admin"); assert.equal($$(e, ".fnav-item")[5].getAttribute("href"), "#/admin"); });
+  e.w.close();
+
+
+  console.log("\nG3) Em alta no começo do catálogo");
+  e = await makeEnv({});
+  await go(e, "#/catalogo", 250);
+  ok("catálogo abre com a seção 'Em alta' ANTES das peças e do filtro", () => {
+    const row = $(e, "#trending-row"); assert.ok(row); assert.equal(row.querySelector(".section-title").textContent, "Em alta");
+    assert.equal($$(e, "#trending-row .card").length, 2);
+    assert.ok(row.compareDocumentPosition($(e, ".catalog-bar")) & e.w.Node.DOCUMENT_POSITION_FOLLOWING, "Em alta deve vir antes da barra de filtros");
+    assert.equal($$(e, ".section-title")[1].textContent, "Todas as peças");
+  });
+  ok("pede ao servidor 12 peças em alta, uma única vez", () => assert.equal(e.calls.filter(c => c.path === "/plays/trending?limit=12").length, 1));
+  ok("peças em alta também abrem direto no player", () => assert.ok($$(e, "#trending-row .card").every(a => /^#\/reel\//.test(a.getAttribute("href")))));
+  $$(e, "#genre-filters .chip")[1].click(); await tick(150);
+  ok("escolher um gênero esconde 'Em alta' (a pessoa pediu algo específico)", () => assert.equal($(e, "#trending-row"), null));
+  e.w.close();
+  e = await makeEnv({});
+  await go(e, "#/catalogo", 250);
+  const before = e.calls.filter(c => c.path.startsWith("/plays/trending")).length;
+  e.w.eval("catalogFilters.year = '2025'"); await e.w.eval("reloadCatalog()");
+  ok("com filtros aplicados, 'Em alta' some e o servidor nem é consultado", () => { assert.equal($(e, "#trending-row"), null); assert.equal(e.calls.filter(c => c.path.startsWith("/plays/trending")).length, before); });
+  e.w.close();
+  e = await makeEnv({ trendingFail: true });
+  await go(e, "#/catalogo", 250);
+  ok("se o ranking falhar, o catálogo abre normalmente sem a seção", () => { assert.equal($(e, "#trending-row"), null); assert.equal($$(e, ".card").length, 3); assert.ok($(e, ".catalog-bar")); });
+  e.w.close();
+  e = await makeEnv({ trendingEmpty: true });
+  await go(e, "#/catalogo", 250);
+  ok("sem peças em alta não mostra título solto nem 'Todas as peças' sobrando", () => { assert.equal($(e, "#trending-row"), null); assert.ok(!$$(e, ".section-title").some(h => h.textContent === "Todas as peças")); });
   e.w.close();
 
   console.log(`\n${passed} verificações passaram${process.exitCode ? " — COM FALHAS" : ""}`);

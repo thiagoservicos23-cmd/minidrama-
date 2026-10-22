@@ -102,6 +102,37 @@ router.get("/facets", safe(async (req, res) => {
   });
 }));
 
+// "Em alta": as peças com mais movimento nos últimos 30 dias. Não existe contador de visualizações no banco, então o
+// ranking usa o que as pessoas fizeram: quem começou a assistir (peso 2) e quem salvou na lista (peso 1). Se houver pouca
+// atividade, completa com os destaques e depois com as mais novas, para a seção nunca ficar vazia (campo "ranked" diz
+// quantas vieram de atividade real).
+router.get("/trending", attachUserIfPresent, safe(async (req, res) => {
+  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 12, 1), 24);
+  const since = new Date(Date.now() - 30 * 86400000);
+  const [watching, saved] = await Promise.all([
+    prisma.watchProgress.groupBy({ by: ["playId"], where: { updatedAt: { gte: since } }, _count: { _all: true } }),
+    prisma.myListItem.groupBy({ by: ["playId"], where: { createdAt: { gte: since } }, _count: { _all: true } })
+  ]);
+  const score = new Map();
+  watching.forEach((r) => score.set(r.playId, (score.get(r.playId) || 0) + r._count._all * 2));
+  saved.forEach((r) => score.set(r.playId, (score.get(r.playId) || 0) + r._count._all));
+  const rankedIds = [...score.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([id]) => id);
+  const found = rankedIds.length ? await prisma.play.findMany({ where: { id: { in: rankedIds } }, select: PLAY_LIST_SELECT }) : [];
+  const byId = new Map(found.map((p) => [p.id, p]));
+  let plays = rankedIds.map((id) => byId.get(id)).filter(Boolean);     // peça apagada some do ranking sozinha
+  const ranked = plays.length;
+  if (plays.length < limit) {
+    const filler = await prisma.play.findMany({
+      where: { id: { notIn: plays.map((p) => p.id) } },
+      orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+      take: limit - plays.length,
+      select: PLAY_LIST_SELECT
+    });
+    plays = plays.concat(filler);
+  }
+  res.json({ plays: await Promise.all(plays.map((p) => withAccess(req.user, p))), ranked });
+}));
+
 router.get("/feed/home", attachUserIfPresent, async (req, res) => {
   try {
     const [featured, novos, counts] = await Promise.all([

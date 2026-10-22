@@ -105,8 +105,8 @@ const key = (e, k, opts = {}) => e.w.document.dispatchEvent(new e.w.KeyboardEven
   ok("tela abre com baralho de 5 cartas e botão ainda desabilitado enquanto carrega", () => { assert.equal($$(e, "#deck .deck-card").length, 5); assert.equal($(e, "#surprise-go").disabled, true); assert.match($(e, "#surprise-go").textContent, /Preparando/); });
   await tick(400);
   ok("depois de carregar: botão habilitado 'Sortear peça'", () => { assert.equal($(e, "#surprise-go").disabled, false); assert.match($(e, "#surprise-go").textContent, /Sortear peça/); });
-  ok("barra inferior: Surpresa ativa, 5 abas, sem 'Buscar'", () => { const t = $$(e, ".tabbar a").map(a => a.textContent.trim()); assert.equal(t.length, 5); assert.ok(t.includes("Surpresa")); assert.ok(!t.includes("Buscar")); assert.equal($(e, ".tabbar a.active").textContent.trim(), "Surpresa"); });
-  ok("o rodapé mostra a versão (para conferir se o deploy novo está no ar)", () => assert.match($(e, ".footer-bottom").textContent, /v2026\.10\.20-fase2/));
+  ok("barra flutuante: Surpresa ativa, 5 abas, sem 'Buscar' (a lupa fica no topo)", () => { const t = $$(e, ".fnav-item").map(a => a.textContent.trim()); assert.equal(t.length, 5); assert.ok(t.includes("Surpresa")); assert.ok(!t.includes("Buscar")); assert.equal($(e, ".fnav-item.active").textContent.trim(), "Surpresa"); });
+  ok("o rodapé mostra a versão (para conferir se o deploy novo está no ar)", () => assert.match($(e, ".footer-bottom").textContent, /v2026\.10\.21-mobile/));
   $(e, "#surprise-go").click();
   ok("ao sortear, o baralho embaralha e o botão trava (sem sorteio duplo)", () => { assert.ok($(e, "#deck").classList.contains("shuffling")); assert.equal($(e, "#surprise-go").disabled, true); });
   await tick(1000);

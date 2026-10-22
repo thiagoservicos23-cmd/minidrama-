@@ -130,6 +130,16 @@ Em **Peças → Mover séries de plano** você escolhe o plano de origem e o de 
 e **todas** as séries do plano de origem passam a exigir o de destino — por exemplo, de Plateia para Balcão.
 O botão mostra a quantidade (“Mover 4 séries”), pede uma confirmação e avisa quando o plano gratuito ficaria sem nenhuma série.
 Não há “desfazer” automático (depois de juntar, o site não sabe quais eram de cada plano).
+### Correções de celular, "Em alta", novo login e barra flutuante (2026-10-21)
+- **Clicou, assistiu:** os cards (home, catálogo, busca, lista) abrem **direto no player**. Peça bloqueada pelo plano ou sem vídeo continua abrindo a página da peça. A ficha da peça fica no botão ⓘ do player.
+- **Player no celular:** o título e a sinopse **saem de cima do vídeo** quando ele toca (continuam no botão ⓘ). A **tela cheia** tenta, nesta ordem: tela cheia nativa do palco (e gira a tela se o vídeo for deitado), player nativo do vídeo (iPhone) e, por último, tela cheia por CSS. O manifesto passou a permitir rotação (`orientation: any`), senão o app instalado não podia ficar deitado.
+- **Balão de instalar o app:** é reavaliado quando o navegador libera a instalação (antes só decidia uma vez, aos 6 s). Funciona no Android (botão), no iPhone com Safari **ou Chrome** (passo a passo do Compartilhar) e em celulares sem aviso nativo (passo a passo do menu). Some por 3 dias ao fechar, nunca aparece em app já instalado nem por cima do player, e o link "Instalar o app" do rodapé sempre funciona.
+- **"Em alta"** no topo do catálogo (`GET /api/plays/trending`): ranking dos últimos 30 dias por atividade (quem começou a assistir vale 2, quem salvou na lista vale 1). Com pouca atividade completa com os destaques e as peças mais novas. Some quando há gênero ou filtro escolhido.
+- **Login, cadastro e recuperação de senha** no novo visual (cartão de vidro, campos arredondados, botões em pílula, capas reais das peças embaixo) e com proteção contra clique duplo. O desenho veio de um componente React/Tailwind; como o site é HTML/JS puro, ele foi **portado** para o CSS do projeto.
+- **Barra de navegação flutuante** embaixo, em todas as telas públicas, com indicador que desliza até a aba ativa (Início, Catálogo, Surpresa, Minha lista, Conta e, para o administrador, Admin). O menu do topo, o hambúrguer e a gaveta foram removidos.
+- **`memory.md`** guarda o contexto do projeto para retomar o trabalho e o **`CLAUDE.md`** manda o Claude Code lê-lo primeiro e atualizá-lo ao final.
+- Testes de fumaça novos: `tests/smoke/mobile.smoke.js` (login e balão de instalar); ampliados `storyreel`, `app` e `phase2`.
+
 ### Filtros do catálogo e tela Surpresa
 - **Filtros** (botão ao lado dos chips de gênero, em `#/catalogo`): abre uma gaveta com **Ordenar por** (mais recentes, título A–Z, ano, mais longas,
   mais curtas), **Gênero**, **Ano** e **Plano**. Os anos e planos listados são só os que têm peças (com a contagem). O botão mostra quantos filtros
