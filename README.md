@@ -1,12 +1,12 @@
 # Mini Drama — guia de colocar no ar
 
-Plataforma de streaming de peças de teatro (projeto Teatro + Tecnologia).
+Plataforma de streaming de novelinhas sem limite.
 Front-end + back-end (Node/Express) + banco de dados real (via Prisma).
 
 Este guia tem 3 partes:
 1. Rodar no seu computador (para testar antes de publicar)
 2. Colocar o site no ar com link público e banco de dados real, de graça
-3. Usar o painel admin para cadastrar peças, sinopses, vídeo e planos
+3. Usar o painel admin para cadastrar novelinhas, sinopses, vídeo e planos
 
 ---
 
@@ -92,7 +92,7 @@ O Shell do Render é pago, então rode o seed **do seu computador**, apontando p
 # Windows (cmd):
 set ADMIN_PASSWORD=UmaSenhaForte123! && npm run seed
 ```
-O seed só **cria** (admin, planos e peças de exemplo se o catálogo estiver vazio). Ele nunca
+O seed só **cria** (admin, planos e novelinhas de exemplo se o catálogo estiver vazio). Ele nunca
 sobrescreve planos/preços já existentes, então é seguro rodar de novo.
 
 ### Passo E — Testar
@@ -108,7 +108,7 @@ navegador, computador ou celular, para qualquer pessoa, sem precisar instalar na
 
 ---
 
-## 3. Usando o painel admin (cadastrar peças, sinopses, vídeo, planos)
+## 3. Usando o painel admin (cadastrar novelinhas, sinopses, vídeo, planos)
 
 Depois de logado com a conta admin, acesse **Painel admin** no menu.
 
@@ -116,8 +116,8 @@ Depois de logado com a conta admin, acesse **Painel admin** no menu.
 Além de escolher um arquivo do computador, dá pra colar um link (Google Drive,
 por exemplo) e o **Bunny.net busca o vídeo sozinho**, servidor a servidor — muito
 mais rápido que subir pela internet de casa.
-- Peça única: no formulário "Nova peça", use o campo "Ou importe direto de um link".
-- Várias de uma vez: em Peças → "Cadastrar várias peças", cole uma lista no
+- Novelinha única: no formulário "Nova novelinha", use o campo "Ou importe direto de um link".
+- Várias de uma vez: em Novelinhas → "Cadastrar várias novelinhas", cole uma lista no
   formato `Título | link do Drive`, uma por linha.
 - Para o Google Drive, o link precisa estar compartilhado como **"qualquer
   pessoa com o link"**. Arquivos grandes às vezes mostram uma tela de aviso do
@@ -126,27 +126,45 @@ mais rápido que subir pela internet de casa.
   Drive e suba como arquivo mesmo (a outra opção do mesmo formulário).
 
 ### Mover séries de plano em massa
-Em **Peças → Mover séries de plano** você escolhe o plano de origem e o de destino (cada um mostra quantas séries tem)
+Em **Novelinhas → Mover séries de plano** você escolhe o plano de origem e o de destino (cada um mostra quantas séries tem)
 e **todas** as séries do plano de origem passam a exigir o de destino — por exemplo, de Plateia para Balcão.
 O botão mostra a quantidade (“Mover 4 séries”), pede uma confirmação e avisa quando o plano gratuito ficaria sem nenhuma série.
 Não há “desfazer” automático (depois de juntar, o site não sabe quais eram de cada plano).
+### Novelinhas: novo nicho, vitrine do dia e pop-up de assinatura (2026-10-23)
+- **Rebranding:** todo texto de interface, e-mails, metadados e documentação trocaram "teatro/peça" por **novelinha(s)**. O rodapé e a tag `meta description` dizem exatamente
+  **“novelinhas sem limite”** (o manifesto do app também). A rota `#/peca/ID` virou `#/novelinha/ID` e `#/admin/pecas` virou `#/admin/novelinhas`; os links antigos
+  (e-mails já enviados, favoritos, app instalado) continuam abrindo. **Não** foram renomeados: o modelo `Play` do banco, os caminhos `/api/plays` e os nomes de variáveis no código
+  (renomear exigiria migração de banco e não muda nada para o usuário), nem os nomes dos planos (Plateia, Balcão, Camarote), que são dados do banco.
+- **Vitrine do dia:** as fileiras da home e o catálogo de cada gênero são **embaralhados todo dia à 00:00** (fuso `SHUFFLE_TZ`, padrão `America/Sao_Paulo`) e **só dentro do próprio gênero**:
+  os gêneros nunca se misturam. Não há cron nem coluna nova: a ordem é calculada a partir de `data + gênero` (`src/utils/dailyOrder.js`), então vira sozinha na meia-noite, é a mesma em
+  qualquer instância do servidor e funciona mesmo com a hospedagem "dormindo". O sorteio vale para o gênero inteiro (não só as 20 mais novas), então a vitrine realmente parece nova.
+  "Novos Na Plataforma" continua por data de postagem (é o que o nome promete), assim como o catálogo sem gênero e qualquer ordenação escolhida no filtro ("Padrão" = ordem do dia).
+  O navegador não mostra a vitrine de ontem: a resposta traz `shuffleDay`/`shuffleTz` e o site atualiza ao abrir ou voltar à aba depois da virada do dia.
+- **Pop-up de assinatura:** aparece **30 s** depois do site abrir, para **visitantes e contas sem plano pago ativo** (gratuito ou vencido), a cada acesso (nada é gravado no navegador).
+  Mostra o baralho de capas (o **mesmo** da tela Surpresa, com capas sorteadas entre todas as novelinhas), o preço real do plano pago mais barato e o botão **Ver planos**.
+  Ao fechar (×, "Agora não", Esc ou clique fora) ele **encolhe e vira um mini pop-up fixo no canto**, com miniaturas das capas e animação de "pulinho"
+  (desligada para quem pede menos movimento); o × do mini dispensa a oferta até o próximo acesso. Não interrompe quem está assistindo (player), em Planos ou nas telas de
+  login/cadastro: espera uma tela livre. Sem urgência falsa (nada de contagem regressiva, desconto ou "últimas vagas" inventados).
+- Testes novos: `daily-order`, `random` (servidor) e `tests/smoke/conversion.smoke.js` (pop-up). Os testes não dependem mais do dia em que rodam.
+
 ### Correções de celular, "Em alta", novo login e barra flutuante (2026-10-21)
-- **Clicou, assistiu:** os cards (home, catálogo, busca, lista) abrem **direto no player**. Peça bloqueada pelo plano ou sem vídeo continua abrindo a página da peça. A ficha da peça fica no botão ⓘ do player.
+- **Clicou, assistiu:** os cards (home, catálogo, busca, lista) abrem **direto no player**. Novelinha bloqueada pelo plano ou sem vídeo continua abrindo a página da novelinha. A ficha da novelinha fica no botão ⓘ do player.
 - **Player no celular:** o título e a sinopse **saem de cima do vídeo** quando ele toca (continuam no botão ⓘ). A **tela cheia** tenta, nesta ordem: tela cheia nativa do palco (e gira a tela se o vídeo for deitado), player nativo do vídeo (iPhone) e, por último, tela cheia por CSS. O manifesto passou a permitir rotação (`orientation: any`), senão o app instalado não podia ficar deitado.
 - **Balão de instalar o app:** é reavaliado quando o navegador libera a instalação (antes só decidia uma vez, aos 6 s). Funciona no Android (botão), no iPhone com Safari **ou Chrome** (passo a passo do Compartilhar) e em celulares sem aviso nativo (passo a passo do menu). Some por 3 dias ao fechar, nunca aparece em app já instalado nem por cima do player, e o link "Instalar o app" do rodapé sempre funciona.
-- **"Em alta"** no topo do catálogo (`GET /api/plays/trending`): ranking dos últimos 30 dias por atividade (quem começou a assistir vale 2, quem salvou na lista vale 1). Com pouca atividade completa com os destaques e as peças mais novas. Some quando há gênero ou filtro escolhido.
-- **Login, cadastro e recuperação de senha** no novo visual (cartão de vidro, campos arredondados, botões em pílula, capas reais das peças embaixo) e com proteção contra clique duplo. O desenho veio de um componente React/Tailwind; como o site é HTML/JS puro, ele foi **portado** para o CSS do projeto.
+- **"Em alta"** no topo do catálogo (`GET /api/plays/trending`): ranking dos últimos 30 dias por atividade (quem começou a assistir vale 2, quem salvou na lista vale 1). Com pouca atividade completa com os destaques e as novelinhas mais novas. Some quando há gênero ou filtro escolhido.
+- **Login, cadastro e recuperação de senha** no novo visual (cartão de vidro, campos arredondados, botões em pílula, capas reais das novelinhas embaixo) e com proteção contra clique duplo. O desenho veio de um componente React/Tailwind; como o site é HTML/JS puro, ele foi **portado** para o CSS do projeto.
 - **Barra de navegação flutuante** embaixo, em todas as telas públicas, com indicador que desliza até a aba ativa (Início, Catálogo, Surpresa, Minha lista, Conta e, para o administrador, Admin). O menu do topo, o hambúrguer e a gaveta foram removidos.
 - **`memory.md`** guarda o contexto do projeto para retomar o trabalho e o **`CLAUDE.md`** manda o Claude Code lê-lo primeiro e atualizá-lo ao final.
 - Testes de fumaça novos: `tests/smoke/mobile.smoke.js` (login e balão de instalar); ampliados `storyreel`, `app` e `phase2`.
 
 ### Filtros do catálogo e tela Surpresa
 - **Filtros** (botão ao lado dos chips de gênero, em `#/catalogo`): abre uma gaveta com **Ordenar por** (mais recentes, título A–Z, ano, mais longas,
-  mais curtas), **Gênero**, **Ano** e **Plano**. Os anos e planos listados são só os que têm peças (com a contagem). O botão mostra quantos filtros
+  mais curtas), **Gênero**, **Ano** e **Plano**. Os anos e planos listados são só os que têm novelinhas (com a contagem). O botão mostra quantos filtros
   estão ativos; **Limpar** zera tudo. Esc ou clique fora fecham sem aplicar. O servidor aceita `?sort=`, `?year=` e `?plan=` em `GET /api/plays`
   (valores inválidos são ignorados) e `GET /api/plays/facets` devolve as opções.
-- **Surpresa** (`#/surpresa`): baralho de capas e o botão **Sortear peça**. Sorteia entre as peças que a pessoa pode assistir agora (se não houver
-  nenhuma liberada, sorteia entre todas e avisa o plano), nunca repete a anterior e oferece **Assistir** (abre o StoryReel) ou **Minha lista**.
+- **Surpresa** (`#/surpresa`): baralho de capas e o botão **Sortear novelinha**. O sorteio é feito no servidor (`GET /api/plays/random`) entre **todas** as
+  novelinhas cadastradas, sem limite de data (antes só valiam as 100 mais recentes). Nunca repete a anterior e oferece **Assistir** (abre o StoryReel),
+  **Ver planos** (quando a sorteada é de um plano que a pessoa não tem) ou **Minha lista**.
 - A barra inferior do celular agora é Início, Catálogo, **Surpresa**, Minha lista e Conta; a lupa de pesquisa fica no topo de todas as telas.
 - O **rodapé mostra a versão** (`vAAAA.MM.DD-fase2`): serve para conferir se a hospedagem já publicou a versão nova.
 
@@ -157,33 +175,33 @@ Não há “desfazer” automático (depois de juntar, o site não sabe quais er
   **ignora acentos e maiúsculas** (o `contains` do Postgres diferenciava os dois) e procura em **título, direção e elenco**, mostrando antes
   o que bate no título.
 - **Continue assistindo:** primeira fileira da home para quem está logado, com barra de progresso e “23min restantes”. Tocar retoma o vídeo
-  no StoryReel de onde parou; o **X** tira a peça da fileira. Usa o progresso que o StoryReel já salva (`/api/me/progress`).
-- **Minha lista** (`#/minha-lista`): o coração nos cards e na página da peça salva/remove (`/api/me/list`). Visitantes são levados ao login.
+  no StoryReel de onde parou; o **X** tira a novelinha da fileira. Usa o progresso que o StoryReel já salva (`/api/me/progress`).
+- **Minha lista** (`#/minha-lista`): o coração nos cards e na página da novelinha salva/remove (`/api/me/list`). Visitantes são levados ao login.
 - **Setas nas fileiras** aparecem no computador ao passar o mouse.
 - Testes: `npm test` (inclui a pesquisa do servidor). Os de fumaça (`tests/smoke/app.smoke.js` e `storyreel.smoke.js`) rodam o site num DOM
   simulado: `npm install --no-save jsdom && node tests/smoke/app.smoke.js`.
 
 ### Player StoryReel (vídeo em tela cheia, estilo Reels/TikTok)
-Ao clicar em **Assistir** (na página da peça) ou em **Assistir agora** (banner da home), o vídeo abre em `#/reel/ID`:
-uma peça por tela, e é só **deslizar para cima/baixo** para a próxima. Feito com **Plyr** (controles) + **hls.js** (`.m3u8`)
+Ao clicar em **Assistir** (na página da novelinha) ou em **Assistir agora** (banner da home), o vídeo abre em `#/reel/ID`:
+uma novelinha por tela, e é só **deslizar para cima/baixo** para a próxima. Feito com **Plyr** (controles) + **hls.js** (`.m3u8`)
 e **`scroll-snap` em CSS puro**, sem framework.
-- **Quem entra no feed:** a peça escolhida primeiro, depois as outras que a pessoa **pode assistir** e que já têm vídeo.
-  Se a peça escolhida estiver bloqueada pelo plano, ela aparece com o aviso e o botão **Ver planos**.
+- **Quem entra no feed:** a novelinha escolhida primeiro, depois as outras que a pessoa **pode assistir** e que já têm vídeo.
+  Se a novelinha escolhida estiver bloqueada pelo plano, ela aparece com o aviso e o botão **Ver planos**.
 - **Só a tela ativa carrega o vídeo.** As demais mostram só a capa; ao trocar de tela o player anterior é destruído.
   O link do vídeo é pedido a `/api/plays/:id` na hora, então quem não tem direito nunca recebe o link.
 - **Formatos de link:** `.m3u8` (HLS), `.mp4`/`.webm` direto e YouTube. Vídeo **horizontal (16:9)** fica numa caixa sobre a capa borrada;
   vídeo **vertical (9:16)** é detectado sozinho e ocupa a tela toda.
-- **Continuar assistindo:** quem está logado tem a posição salva a cada ~15 s (`PUT /api/me/progress/:id`) e a peça retoma de onde parou.
+- **Continuar assistindo:** quem está logado tem a posição salva a cada ~15 s (`PUT /api/me/progress/:id`) e a novelinha retoma de onde parou.
   Ao terminar, o reel avança sozinho para a próxima. Visitantes não salvam progresso.
 - **Som:** o navegador pode bloquear áudio automático (comum no iPhone); nesse caso o vídeo começa mudo e o botão de som ativa.
-- **Teclado (computador):** `↑`/`↓` troca de peça, `Espaço` pausa, `←`/`→` volta/avança 10 s, `M` som, `F` tela cheia, `I` detalhes, `Esc` volta.
+- **Teclado (computador):** `↑`/`↓` troca de novelinha, `Espaço` pausa, `←`/`→` volta/avança 10 s, `M` som, `F` tela cheia, `I` detalhes, `Esc` volta.
 - **Dependência externa:** Plyr vem do jsDelivr (versão fixa 3.7.8), como o hls.js. Se o Plyr não carregar, vídeos `.m3u8`/`.mp4` ainda tocam
   com os controles do navegador e o YouTube volta ao iframe simples.
 - Testes: `npm test` cobre a lógica; o teste de fumaça (`npm install --no-save jsdom && node tests/smoke/storyreel.smoke.js`)
   roda o site num DOM simulado.
 
 ### Excluir todas as séries de um plano
-Em **Peças → Excluir séries de um plano** você escolhe o plano (cada um mostra quantas séries tem) e **todas** as séries
+Em **Novelinhas → Excluir séries de um plano** você escolhe o plano (cada um mostra quantas séries tem) e **todas** as séries
 que exigem esse plano são **excluídas definitivamente** — por exemplo, tudo de Camarote ou tudo de Plateia.
 - O plano em si **não** é apagado, só as séries dele. As séries dos outros planos não são tocadas.
 - Duas travas contra acidente: é preciso **digitar o nome do plano** para o botão liberar (“Excluir 3 séries”),
@@ -193,7 +211,7 @@ que exigem esse plano são **excluídas definitivamente** — por exemplo, tudo 
   Os vídeos hospedados fora (Bunny, Supabase…) **não** são apagados de lá; só deixam de aparecer no site.
 - Para só trocar o plano das séries sem apagar, use **Mover séries de plano**.
 
-Em **Cadastrar várias peças**, o campo **Plano exigido para assistir às séries deste lote** já vem em **Balcão**
+Em **Cadastrar várias novelinhas**, o campo **Plano exigido para assistir às séries deste lote** já vem em **Balcão**
 (dá para trocar antes de enviar).
 
 ### Gêneros do catálogo (várias seções por série)
@@ -203,7 +221,7 @@ Bebês e Gravidezes · Relacionamento Tabu · Homem-lobo🐺 e Vampiro🧛**.
 - **Novos Na Plataforma** não é um gênero que você marca: é uma seção **automática** (a primeira da página
   inicial) com as séries mais recentes, na ordem em que foram adicionadas.
 - Uma série pode ter **vários gêneros** e **aparece em todas as seções** correspondentes. Seções sem séries não aparecem.
-- Em **Nova peça / editar**, marque quantas caixas quiser. No cadastro em lote, o site sugere gêneros pelo título
+- Em **Nova novelinha / editar**, marque quantas caixas quiser. No cadastro em lote, o site sugere gêneros pelo título
   (palavras-chave; é só uma sugestão — não é uma IA lendo a série — e dá para corrigir depois).
 - Séries que já estavam no site ficam, por enquanto, **sem gênero** (aparecem só em “Novos Na Plataforma”) até você
   importar a planilha abaixo.
@@ -219,7 +237,7 @@ um e o nome original. Edite o nome, clique em **Salvar nome** (ou Enter) e pront
 - “Novos Na Plataforma” é uma seção automática e não é renomeável por aqui.
 
 ### Atualizar gêneros por planilha (CSV)
-Em **Peças → Atualizar gêneros (CSV)** você envia uma planilha com o **nome** da série e o(s) **gênero(s)**:
+Em **Novelinhas → Atualizar gêneros (CSV)** você envia uma planilha com o **nome** da série e o(s) **gênero(s)**:
 ```
 nome;genero
 A Farsa do Silêncio;Dublados, Animes
@@ -238,8 +256,8 @@ Ventos de Dona Flor;BL & GL
 - Funciona com CSV do Excel (acentos) e aguenta planilhas grandes (até 50.000 linhas).
 
 ### Capas e vídeos em massa por planilha (CSV)
-Ideal para quando o material **já está hospedado** (capas da turma de Artes, vídeos da turma de Teatro).
-Em **Peças → Cadastrar várias peças**, use o campo **Planilha de capas e vídeos**:
+Ideal para quando o material **já está hospedado** (capas e vídeos que você já tem em algum servidor).
+Em **Novelinhas → Cadastrar várias novelinhas**, use o campo **Planilha de capas e vídeos**:
 
 ```
 nome;url_capa;url_video;duracao
@@ -249,7 +267,7 @@ Ventos de Dona Flor;https://SEU-PROJETO.supabase.co/storage/v1/object/public/cap
 - Colunas: **nome**, **url_capa**, **url_video** (link direto do vídeo) e **duracao** em minutos (opcional).
   Vírgula ou ponto e vírgula; com ou sem cabeçalho (sem cabeçalho, a ordem é a acima); aceita CSV do Excel.
   `url_capa` e `url_video` são opcionais, mas cada linha precisa ter pelo menos uma das duas.
-- **Linha com `url_video`** vira uma peça pronta na lista do lote, **sem enviar arquivo**: a capa e o
+- **Linha com `url_video`** vira uma novelinha pronta na lista do lote, **sem enviar arquivo**: a capa e o
   link do vídeo são gravados direto. Basta clicar em **Iniciar cadastro em lote**.
 - **Links de vídeo que tocam no player**: `.m3u8` (HLS, ex.: Bunny Stream), `.mp4`/`.webm` direto e YouTube.
   Páginas (Google Drive, Dropbox, Vimeo, embed do Bunny) **não tocam**: a tela avisa. Para o Drive, use o
@@ -264,29 +282,29 @@ Ventos de Dona Flor;https://SEU-PROJETO.supabase.co/storage/v1/object/public/cap
   `videoUrl` que não seja assim). Se a miniatura não aparecer, o link da capa está errado ou é privado.
 - Nome repetido na planilha: vale a primeira linha. Links inválidos são ignorados e listados.
 
-### Cadastro em lote (várias peças de uma vez)
-Em Peças → "Cadastrar várias peças": escolha vários arquivos de vídeo do
+### Cadastro em lote (várias novelinhas de uma vez)
+Em Novelinhas → "Cadastrar várias novelinhas": escolha vários arquivos de vídeo do
 computador, ou cole vários links (formato acima), ou combine os dois. Cada
-vídeo vira uma peça com **título (do nome do arquivo), duração (detectada
+vídeo vira uma novelinha com **título (do nome do arquivo), duração (detectada
 automaticamente) e gênero (sugerido por palavras-chave no título)** —
 mas ainda **sem sinopse, elenco nem pôster definitivos**: depois do lote,
-edite cada peça criada para completar esses detalhes.
+edite cada novelinha criada para completar esses detalhes.
 
 ### Sugestão automática de gênero
 Ao digitar o título (ou escolher o arquivo de vídeo), o campo Gênero é
 preenchido sozinho com base em palavras-chave (ex: "amor" → Romance, "riso"
-→ Comédia). É uma regra simples, não uma IA lendo a peça de verdade — então
+→ Comédia). É uma regra simples, não uma IA lendo a novelinha de verdade — então
 erra às vezes, principalmente em títulos que não dão pistas óbvias. Sempre dá
 pra corrigir manualmente antes de salvar.
 
 ### Paginação
-O catálogo público e a lista de peças do painel admin agora carregam por
+O catálogo público e a lista de novelinhas do painel admin agora carregam por
 páginas (não tudo de uma vez), então o site continua rápido mesmo com um
 catálogo grande.
 
 ### Configurar o upload automático de vídeo (Bunny.net Stream)
 Com isso configurado, o admin pode enviar o arquivo de vídeo direto pela tela
-"Nova peça", sem precisar entrar no site do Bunny nem copiar link nenhum.
+"Nova novelinha", sem precisar entrar no site do Bunny nem copiar link nenhum.
 
 1. Crie uma conta em **bunny.net** e, em **Stream**, crie uma "Video Library".
 2. Dentro da biblioteca, vá em **API** e anote: o **Library ID** (um número) e a
@@ -299,18 +317,18 @@ Com isso configurado, o admin pode enviar o arquivo de vídeo direto pela tela
    BUNNY_API_KEY="sua-chave-aqui"
    BUNNY_CDN_HOSTNAME="vz-xxxxxxxx.b-cdn.net"
    ```
-5. Pronto — na tela "Nova peça", o campo "Ou envie o arquivo de vídeo direto para
+5. Pronto — na tela "Nova novelinha", o campo "Ou envie o arquivo de vídeo direto para
    o Bunny.net" já funciona: escolha o arquivo, clique em "Enviar vídeo", acompanhe
    a barra de progresso, e a URL do vídeo é preenchida sozinha quando terminar.
    O vídeo ainda leva alguns minutos pra processar no Bunny antes de ficar
-   disponível pra assistir — pode salvar a peça normalmente enquanto isso.
+   disponível pra assistir — pode salvar a novelinha normalmente enquanto isso.
 
 > O upload vai **direto do navegador para o Bunny** (não passa pelo servidor do
 > Render), então funciona mesmo com vídeos grandes e não é afetado pelos limites
 > do plano gratuito do Render.
 
-### Cadastrar uma peça
-1. Vá em **Peças** → **+ Nova peça**.
+### Cadastrar uma novelinha
+1. Vá em **Novelinhas** → **+ Nova novelinha**.
 2. Preencha: título, gênero, ano, **duração em minutos (mínimo 60 — obrigatório)**,
    sinopse/resumo, diretor(a) e elenco.
 3. Cole o **link do pôster** (imagem vertical) e da **imagem de destaque** (horizontal,
@@ -319,7 +337,7 @@ Com isso configurado, o admin pode enviar o arquivo de vídeo direto pela tela
    um link .m3u8, um .mp4 direto, ou um link do YouTube no campo de URL.
 5. Escolha o **plano mínimo exigido** para assistir (Plateia, Balcão ou Camarote).
 6. Marque "Destacar na página inicial" se quiser que ela apareça no banner rotativo.
-7. Salvar. A peça já aparece no catálogo e (se marcada) no banner da home.
+7. Salvar. A novelinha já aparece no catálogo e (se marcada) no banner da home.
 
 ### Login e senha dos usuários
 Já funciona de verdade: qualquer visitante cria conta pelo botão **Criar conta**
@@ -390,7 +408,7 @@ cancelar, **nada é liberado**.
 | E-mail | Quando é enviado |
 |---|---|
 | Boas-vindas | Ao criar a conta |
-| Resumo de novidades | No máximo 1x/dia, **só se** entraram peças novas desde o último e-mail (conta quantas) |
+| Resumo de novidades | No máximo 1x/dia, **só se** entraram novelinhas novas desde o último e-mail (conta quantas) |
 | Aviso de vencimento | 3, 2 e 1 dia antes (só planos pagos) + um aviso quando vence |
 | Sentimos sua falta | Quando a pessoa fica 7 dias sem entrar (repete a cada 7 dias) |
 | Nova obra em destaque | Quando uma obra entra no banner da home |
@@ -446,7 +464,7 @@ O Render gratuito “dorme” quando ninguém acessa — por isso um agendador *
 mini-drama/
 ├── prisma/
 │   ├── schema.prisma      → modelos do banco (User, Play, Plan)
-│   └── seed.js            → dados iniciais (admin, planos, peças de exemplo)
+│   └── seed.js            → dados iniciais (admin, planos, novelinhas de exemplo)
 ├── public/
 │   └── index.html         → todo o front-end (single-page app)
 ├── src/
@@ -455,7 +473,7 @@ mini-drama/
 │   ├── middleware/auth.js  → login obrigatório / checagem de admin
 │   ├── routes/
 │   │   ├── auth.js         → cadastro, login, /me
-│   │   ├── plays.js        → catálogo, detalhe, CRUD de peças
+│   │   ├── plays.js        → catálogo, detalhe, CRUD de novelinhas
 │   │   ├── plans.js        → CRUD de planos
 │   │   └── users.js        → gestão de usuários (admin)
 │   └── utils/               → regras de nível de plano e JWT
@@ -474,5 +492,5 @@ nas variáveis CSS `:root` no topo do `<style>` (`--curtain`, `--gold`, etc.).
 
 **Posso usar SQLite em produção para simplificar?** Pode, mas em hospedagens
 como o Render o disco do plano free não é permanente — a cada novo deploy os
-dados cadastrados (peças, usuários) somem. Por isso o guia usa PostgreSQL (Neon)
+dados cadastrados (novelinhas, usuários) somem. Por isso o guia usa PostgreSQL (Neon)
 para produção, que é persistente de verdade.

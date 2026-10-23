@@ -20,7 +20,7 @@ router.post("/create-upload", requireAuth, requireAdmin, async (req, res) => {
       });
     }
 
-    const title = (req.body && req.body.title && req.body.title.trim()) || "Peça sem título";
+    const title = (req.body && req.body.title && req.body.title.trim()) || "Novelinha sem título";
 
     // 1. Cria o "objeto" de vídeo dentro da biblioteca do Bunny.
     const createRes = await fetch(`https://video.bunnycdn.com/library/${libraryId}/videos`, {
@@ -47,7 +47,7 @@ router.post("/create-upload", requireAuth, requireAdmin, async (req, res) => {
       libraryId,
       signature,
       expiration,
-      // URL final que já pode ser salva na peça — só vai funcionar de
+      // URL final que já pode ser salva na novelinha — só vai funcionar de
       // verdade depois que o Bunny terminar de processar o vídeo enviado.
       playbackUrl: `https://${cdnHostname}/${videoGuid}/playlist.m3u8`
     });
@@ -82,7 +82,7 @@ router.post("/fetch-from-url", requireAuth, requireAdmin, async (req, res) => {
     }
     const rawUrl = (req.body && req.body.url && req.body.url.trim()) || "";
     if (!rawUrl) return res.status(400).json({ error: "Cole um link de vídeo." });
-    const title = (req.body && req.body.title && req.body.title.trim()) || "Peça sem título";
+    const title = (req.body && req.body.title && req.body.title.trim()) || "Novelinha sem título";
 
     const directUrl = toDirectDownloadUrl(rawUrl);
     const marker = crypto.randomBytes(4).toString("hex");

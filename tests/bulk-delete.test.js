@@ -1,4 +1,4 @@
-// Exclusão em massa de todas as peças de um plano (banco simulado).
+// Exclusão em massa de todas as novelinhas de um plano (banco simulado).
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("path");
@@ -58,7 +58,7 @@ test("só admin consegue excluir (visitante e usuário comum são barrados)", as
   assert.equal(db.plays.length, 8, "nada foi apagado");
 });
 
-test("exclui só as peças do plano escolhido e não mexe nos outros", async () => {
+test("exclui só as novelinhas do plano escolhido e não mexe nos outros", async () => {
   reset();
   const r = await call("POST", "/bulk-delete", { plan: "camarote", confirmName: "Camarote", expectedCount: 3 }, adm());
   assert.equal(r.status, 200);
@@ -100,5 +100,5 @@ test("recusa plano ausente, inexistente ou vazio", async () => {
   db.plays = db.plays.filter((p) => p.requiresPlan !== "camarote");
   const r = await call("POST", "/bulk-delete", { plan: "camarote", confirmName: "Camarote", expectedCount: 0 }, adm());
   assert.equal(r.status, 400);
-  assert.match(r.body.error, /Nenhuma peça/);
+  assert.match(r.body.error, /Nenhuma novelinha/);
 });

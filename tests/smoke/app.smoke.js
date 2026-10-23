@@ -11,7 +11,7 @@ let passed = 0;
 const ok = (name, fn) => { try { fn(); passed++; console.log("  ✔", name); } catch (e) { console.log("  ✘", name, "\n     ", e.message); process.exitCode = 1; } };
 
 const P = (id, title, extra = {}) => ({ id, title, posterUrl: "http://x/p.png", backdropUrl: "http://x/b.png", requiresPlan: "plateia", canWatch: true, hasVideo: true, durationMinutes: 90, releaseYear: 2025, genre: "Drama", synopsis: "s", ...extra });
-const CATALOG = [P("p1", "O Silêncio das Cortinas"), P("p2", "Peça Dois"), P("p3", "Peça Três", { requiresPlan: "camarote", canWatch: false })];
+const CATALOG = [P("p1", "O Silêncio das Cortinas"), P("p2", "Novelinha Dois"), P("p3", "Novelinha Três", { requiresPlan: "camarote", canWatch: false })];
 const FUTURE = new Date(Date.now() + 20 * 864e5).toISOString();
 
 const HOME = { featured: [], novos: CATALOG, genres: [{ id: "drama", label: "Drama", plays: CATALOG, total: 3 }], catalog: [{ id: "drama", label: "Drama" }], total: 3 };
@@ -69,17 +69,17 @@ const type = async (e, v, wait = 360) => { const i = $(e, "#search-input"); i.va
 
 (async () => {
   console.log("\nA) Home logada: continuar assistindo, corações e barra inferior");
-  const CONT = [{ ...P("p2", "Peça Dois"), progress: { position: 4020, duration: 5400 } }, { ...P("p3", "Bloqueada", { canWatch: false }), progress: { position: 100, duration: 3600 } }];
+  const CONT = [{ ...P("p2", "Novelinha Dois"), progress: { position: 4020, duration: 5400 } }, { ...P("p3", "Bloqueada", { canWatch: false }), progress: { position: 100, duration: 3600 } }];
   let e = await makeEnv({ cont: CONT, listIds: ["p1"] });
   await go(e, "#/home", 200);
   ok("a fileira 'Continue assistindo' aparece no topo, antes dos gêneros", () => { const heads = $$(e, ".section-title").map(h => h.textContent); assert.equal(heads[0], "Continue assistindo"); assert.equal($$(e, ".cw-card").length, 2); });
   ok("mostra a barra de progresso (74%) e '23min restantes'", () => { const c = $$(e, ".cw-card")[0]; assert.equal(c.querySelector(".cw-bar i").style.width, "74%"); assert.match(c.querySelector(".cw-left").textContent, /^23min restantes$/); });
-  ok("retomar abre o reel; peça sem acesso abre a página (com o aviso de plano)", () => { const hs = $$(e, ".cw-link").map(a => a.getAttribute("href")); assert.deepEqual(hs, ["#/reel/p2", "#/peca/p3"]); });
+  ok("retomar abre o reel; novelinha sem acesso abre a página (com o aviso de plano)", () => { const hs = $$(e, ".cw-link").map(a => a.getAttribute("href")); assert.deepEqual(hs, ["#/reel/p2", "#/novelinha/p3"]); });
   ok("corações vêm marcados conforme a lista do servidor", () => { const on = $$(e, ".card [data-heart]").filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.heart); assert.ok(on.includes("p1")); assert.ok(!on.includes("p2")); });
   ok("barra flutuante tem 5 abas e 'Início' ativa; logada vê 'Conta'", () => { const tabs = $$(e, ".fnav-item"); assert.equal(tabs.length, 5); assert.equal($(e, ".fnav-item.active").textContent.trim(), "Início"); assert.equal(tabs[4].textContent.trim(), "Conta"); assert.equal($(e, ".fnav-item.active").getAttribute("aria-current"), "page"); });
-  ok("card de peça liberada abre DIRETO no player; peça bloqueada abre a página da peça", () => {
+  ok("card de novelinha liberada abre DIRETO no player; novelinha bloqueada abre a página da novelinha", () => {
     const hrefs = Object.fromEntries($$(e, ".section-row .card").map(a => [a.querySelector("[data-heart]").dataset.heart, a.getAttribute("href")]));
-    assert.equal(hrefs.p1, "#/reel/p1"); assert.equal(hrefs.p2, "#/reel/p2"); assert.equal(hrefs.p3, "#/peca/p3");
+    assert.equal(hrefs.p1, "#/reel/p1"); assert.equal(hrefs.p2, "#/reel/p2"); assert.equal(hrefs.p3, "#/novelinha/p3");
   });
   ok("plano gratuito vê o botão 'Assinar' no topo", () => assert.ok($(e, ".header-actions a.btn-sub")));
   ok("fileiras têm setas para o computador", () => assert.ok($$(e, ".rail-wrap .rail-arrow").length >= 2));
@@ -89,7 +89,7 @@ const type = async (e, v, wait = 360) => { const i = $(e, "#search-input"); i.va
   const heart = () => $$(e, ".section-row ~ * .card [data-heart], .card [data-heart]").find(b => b.dataset.heart === "p2");
   heart().click(); await tick(40);
   ok("tocar no coração salva (PUT /me/list/p2) e marca na hora", () => { assert.ok(e.calls.some(c => c.method === "PUT" && c.path === "/me/list/p2")); assert.equal(heart().getAttribute("aria-pressed"), "true"); });
-  ok("tocar no coração NÃO abre a página da peça", () => assert.equal(e.w.location.hash, "#/home"));
+  ok("tocar no coração NÃO abre a página da novelinha", () => assert.equal(e.w.location.hash, "#/home"));
   heart().click(); await tick(40);
   ok("tocar de novo remove (DELETE)", () => { assert.ok(e.calls.some(c => c.method === "DELETE" && c.path === "/me/list/p2")); assert.equal(heart().getAttribute("aria-pressed"), "false"); });
   $(e, "[data-cw-remove='p2']").click(); await tick(40);
@@ -119,7 +119,7 @@ const type = async (e, v, wait = 360) => { const i = $(e, "#search-input"); i.va
   ok("resposta atrasada de uma digitação antiga NÃO sobrescreve a atual", () => { const t = $$(e, "#search-grid .card-title").map(x => x.textContent); assert.deepEqual(t, ["O Silêncio das Cortinas"]); assert.ok(!$(e, "#search-out").textContent.includes("VELHO")); });
   ok("mostra a contagem e a URL acompanha a busca", () => { assert.match($(e, ".search-count").textContent, /1 resultado para “silencio”/); assert.equal(e.w.location.hash, "#/buscar/silencio"); });
   await type(e, "nada");
-  ok("sem resultados mostra mensagem útil", () => assert.match($(e, ".search-empty").textContent, /Nenhuma peça para “nada”/));
+  ok("sem resultados mostra mensagem útil", () => assert.match($(e, ".search-empty").textContent, /Nenhuma novelinha para “nada”/));
   await type(e, "muitas");
   $(e, "#search-more").click(); await tick(60);
   ok("'Ver mais' acrescenta a página 2 e some quando acaba", () => { assert.deepEqual($$(e, "#search-grid .card-title").map(x => x.textContent), ["M1", "M2"]); assert.equal($(e, "#search-more"), null); });
@@ -146,18 +146,18 @@ const type = async (e, v, wait = 360) => { const i = $(e, "#search-input"); i.va
   e.w.close();
   e = await makeEnv({ listPlays: [CATALOG[0], CATALOG[1]], listIds: ["p1", "p2"] });
   await go(e, "#/minha-lista", 150);
-  ok("lista mostra as peças salvas, a contagem e a aba ativa", () => { assert.equal($$(e, "#list-grid .card").length, 2); assert.equal($(e, "#list-count").textContent, "2 peças salvas"); assert.equal($(e, ".fnav-item.active").textContent.trim(), "Minha lista"); });
+  ok("lista mostra as novelinhas salvas, a contagem e a aba ativa", () => { assert.equal($$(e, "#list-grid .card").length, 2); assert.equal($(e, "#list-count").textContent, "2 novelinhas salvas"); assert.equal($(e, ".fnav-item.active").textContent.trim(), "Minha lista"); });
   ok("todos os corações da lista aparecem marcados", () => assert.ok($$(e, "#list-grid [data-heart]").every(b => b.getAttribute("aria-pressed") === "true")));
   $$(e, "#list-grid [data-heart]")[0].click(); await tick(60);
-  ok("desfavoritar na lista tira o card na hora e atualiza a contagem", () => { assert.equal($$(e, "#list-grid .card").length, 1); assert.equal($(e, "#list-count").textContent, "1 peça salva"); });
+  ok("desfavoritar na lista tira o card na hora e atualiza a contagem", () => { assert.equal($$(e, "#list-grid .card").length, 1); assert.equal($(e, "#list-count").textContent, "1 novelinha salva"); });
   $$(e, "#list-grid [data-heart]")[0].click(); await tick(150);
   ok("ao esvaziar, mostra o estado vazio com convite ao catálogo", () => assert.match($(e, ".search-empty").textContent, /Sua lista está vazia/));
   e.w.close();
 
-  console.log("\nF) Página da peça");
+  console.log("\nF) Página da novelinha");
   e = await makeEnv({ listIds: ["p1"] });
-  await go(e, "#/peca/p1", 200);
-  ok("botão 'Minha lista' na página da peça reflete se já está salva", () => { const b = $(e, ".detail-actions [data-heart]"); assert.ok(b); assert.equal(b.getAttribute("aria-pressed"), "true"); });
+  await go(e, "#/novelinha/p1", 200);
+  ok("botão 'Minha lista' na página da novelinha reflete se já está salva", () => { const b = $(e, ".detail-actions [data-heart]"); assert.ok(b); assert.equal(b.getAttribute("aria-pressed"), "true"); });
   e.w.close();
 
 
@@ -172,8 +172,8 @@ const type = async (e, v, wait = 360) => { const i = $(e, "#search-input"); i.va
   await go(e, "#/catalogo", 250);
   ok("ao ir para o Catálogo o indicador vai para a 2ª aba (x=80) e a aba fica ativa", () => { assert.equal($(e, ".fnav-item.active").textContent.trim(), "Catálogo"); assert.equal($(e, "#fnav-ind").style.transform, "translateX(80px)"); });
   ok("o indicador anima por transição de CSS e respeita 'reduzir movimento'", () => { assert.match(html, /\.fnav-ind\{[^}]*transition:transform \.4s/); assert.match(html, /prefers-reduced-motion:reduce\)\{ \.fnav-ind\{transition:opacity \.2s;\} \}/); });
-  await go(e, "#/peca/p1", 250);
-  ok("numa tela sem aba (ex.: página da peça) o indicador some em vez de ficar parado na aba errada", () => { assert.equal($(e, ".fnav-item.active"), null); assert.equal($(e, "#fnav-ind").style.opacity, "0"); });
+  await go(e, "#/novelinha/p1", 250);
+  ok("numa tela sem aba (ex.: página da novelinha) o indicador some em vez de ficar parado na aba errada", () => { assert.equal($(e, ".fnav-item.active"), null); assert.equal($(e, "#fnav-ind").style.opacity, "0"); });
   ok("aviso (toast) e balão de instalar ficam ACIMA da barra, não por baixo dela", () => { assert.match(html, /#toast-host\{position:fixed; bottom:calc\(96px/); assert.match(html, /\.install-banner\{position:fixed; left:12px; right:12px; bottom:calc\(98px/); });
   e.w.close();
   e = await makeEnv({ visitor: true });
@@ -192,14 +192,14 @@ const type = async (e, v, wait = 360) => { const i = $(e, "#search-input"); i.va
   console.log("\nG3) Em alta no começo do catálogo");
   e = await makeEnv({});
   await go(e, "#/catalogo", 250);
-  ok("catálogo abre com a seção 'Em alta' ANTES das peças e do filtro", () => {
+  ok("catálogo abre com a seção 'Em alta' ANTES das novelinhas e do filtro", () => {
     const row = $(e, "#trending-row"); assert.ok(row); assert.equal(row.querySelector(".section-title").textContent, "Em alta");
     assert.equal($$(e, "#trending-row .card").length, 2);
     assert.ok(row.compareDocumentPosition($(e, ".catalog-bar")) & e.w.Node.DOCUMENT_POSITION_FOLLOWING, "Em alta deve vir antes da barra de filtros");
-    assert.equal($$(e, ".section-title")[1].textContent, "Todas as peças");
+    assert.equal($$(e, ".section-title")[1].textContent, "Todas as novelinhas");
   });
-  ok("pede ao servidor 12 peças em alta, uma única vez", () => assert.equal(e.calls.filter(c => c.path === "/plays/trending?limit=12").length, 1));
-  ok("peças em alta também abrem direto no player", () => assert.ok($$(e, "#trending-row .card").every(a => /^#\/reel\//.test(a.getAttribute("href")))));
+  ok("pede ao servidor 12 novelinhas em alta, uma única vez", () => assert.equal(e.calls.filter(c => c.path === "/plays/trending?limit=12").length, 1));
+  ok("novelinhas em alta também abrem direto no player", () => assert.ok($$(e, "#trending-row .card").every(a => /^#\/reel\//.test(a.getAttribute("href")))));
   $$(e, "#genre-filters .chip")[1].click(); await tick(150);
   ok("escolher um gênero esconde 'Em alta' (a pessoa pediu algo específico)", () => assert.equal($(e, "#trending-row"), null));
   e.w.close();
@@ -215,7 +215,38 @@ const type = async (e, v, wait = 360) => { const i = $(e, "#search-input"); i.va
   e.w.close();
   e = await makeEnv({ trendingEmpty: true });
   await go(e, "#/catalogo", 250);
-  ok("sem peças em alta não mostra título solto nem 'Todas as peças' sobrando", () => { assert.equal($(e, "#trending-row"), null); assert.ok(!$$(e, ".section-title").some(h => h.textContent === "Todas as peças")); });
+  ok("sem novelinhas em alta não mostra título solto nem 'Todas as novelinhas' sobrando", () => { assert.equal($(e, "#trending-row"), null); assert.ok(!$$(e, ".section-title").some(h => h.textContent === "Todas as novelinhas")); });
+  e.w.close();
+
+
+  console.log("\nG4) Rotas renomeadas (peça -> novelinha) e links antigos");
+  e = await makeEnv({});
+  await go(e, "#/peca/p1", 250);
+  ok("link antigo #/peca/ID continua abrindo e vira #/novelinha/ID na barra de endereço", () => { assert.equal(e.w.location.hash, "#/novelinha/p1"); assert.ok($(e, ".detail-actions, .detail-hero, main")); });
+  ok("card de peça bloqueada aponta para #/novelinha/ID (rota nova)", () => { assert.match(e.w.eval('PlayCard({id:"z9",title:"X",canWatch:false,hasVideo:true,posterUrl:"",requiresPlan:"plateia",durationMinutes:60,genre:"A"})'), /href="#\/novelinha\/z9"/); });
+  ok("e-mails novos já usam a rota nova", () => assert.ok(/#\/novelinha\//.test(require("fs").readFileSync(require("path").join(__dirname, "../../src/services/emailTemplates.js"), "utf8")) && !/#\/peca\//.test(require("fs").readFileSync(require("path").join(__dirname, "../../src/services/emailTemplates.js"), "utf8"))));
+  e.w.close();
+
+
+  console.log("\nG5) Vitrine do dia (ordem muda à 00:00)");
+  e = await makeEnv({});
+  ok("home recém-carregada é considerada de hoje; sem a informação do servidor também (não força atualização)", () => { assert.equal(e.w.eval("homeIsFromToday({})"), true); assert.equal(e.w.eval('homeIsFromToday({ shuffleDay: todayIn("America/Sao_Paulo"), shuffleTz: "America/Sao_Paulo" })'), true); });
+  ok("uma home guardada de OUTRO dia não é considerada atual (não mostra a vitrine de ontem)", () => assert.equal(e.w.eval('homeIsFromToday({ shuffleDay: "2000-01-01", shuffleTz: "America/Sao_Paulo" })'), false));
+  ok("o início do app só usa a vitrine guardada se ela for de hoje", () => assert.match(html, /cached\.home\.catalog && homeIsFromToday\(cached\.home\)\)/));
+  await go(e, "#/home", 150);
+  const feed0 = e.calls.filter(c => c.path === "/plays/feed/home").length;
+  e.w.eval('DB.home.shuffleDay = "2000-01-01"; DB.home.shuffleTz = "America/Sao_Paulo"');
+  Object.defineProperty(e.w.document, "visibilityState", { value: "visible", configurable: true });
+  e.w.document.dispatchEvent(new e.w.Event("visibilitychange")); await tick(120);
+  ok("aba que ficou aberta durante a virada do dia busca a vitrine nova ao voltar a ficar visível", () => assert.equal(e.calls.filter(c => c.path === "/plays/feed/home").length, feed0 + 1));
+  e.w.close();
+  e = await makeEnv({});
+  e.w.eval('DB.home.shuffleDay = "2000-01-01"; DB.home.shuffleTz = "America/Sao_Paulo"');
+  const f1 = e.calls.filter(c => c.path === "/plays/feed/home").length;
+  await go(e, "#/home", 200);
+  ok("abrir a home com vitrine velha dispara a atualização", () => assert.ok(e.calls.filter(c => c.path === "/plays/feed/home").length > f1));
+  const f2 = e.calls.filter(c => c.path === "/plays/feed/home").length; await tick(300);
+  ok("depois de atualizada, não fica atualizando em laço", () => assert.equal(e.calls.filter(c => c.path === "/plays/feed/home").length, f2));
   e.w.close();
 
   console.log(`\n${passed} verificações passaram${process.exitCode ? " — COM FALHAS" : ""}`);

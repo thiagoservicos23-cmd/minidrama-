@@ -5,6 +5,8 @@ const { userCanWatch } = require("../utils/planRules");
 const { withAccess } = require("../utils/playAccess");
 const { PLAY_LIST_SELECT, imageFieldUpdate, publicPlay } = require("../utils/images");
 const { GENRES, GENRE_IDS, resolveGenre, normTitle, cleanGenreIds, loadLabels, labelOf, currentGenres } = require("../utils/genres");
+const { dailyShuffle, dayKey, TZ } = require("../utils/dailyOrder");
+const { sampleIds } = require("../utils/randomPick");
 
 const router = express.Router();
 
@@ -22,7 +24,7 @@ router.use(async (req, res, next) => { await loadLabels(); next(); });
 
 // Lista pública do catálogo. Nunca inclui o link do vídeo nem imagens pesadas.
 // Aceita paginação (?page=&pageSize=) e filtros (?genre=&search=). Sem "page"
-// devolve até 120 peças (usado pela Home para montar as seções).
+// devolve até 120 novelinhas (usado pela Home para montar as seções).
 // Ordenações aceitas pelo catálogo (?sort=). Qualquer outro valor cai em "recent".
 const LIST_SORTS = {
   recent: { createdAt: "desc" },
@@ -39,7 +41,9 @@ router.get("/", attachUserIfPresent, async (req, res) => {
     if (genre && !["Todos", "novos"].includes(String(genre))) where.genres = { some: { genre: String(genre) } };
     if (year !== undefined && /^\d{4}$/.test(String(year))) where.releaseYear = parseInt(year, 10);   // filtro do catálogo: ano
     if (plan) where.requiresPlan = String(plan);                                                       // filtro do catálogo: plano exigido
-    const orderBy = Object.prototype.hasOwnProperty.call(LIST_SORTS, String(sort)) ? LIST_SORTS[String(sort)] : LIST_SORTS.recent;   // só chaves próprias: "constructor"/"__proto__" não valem
+    const sortGiven = Object.prototype.hasOwnProperty.call(LIST_SORTS, String(sort));          // só chaves próprias: "constructor"/"__proto__" não valem
+    const orderBy = sortGiven ? LIST_SORTS[String(sort)] : LIST_SORTS.recent;
+    const genreId = genre && !["Todos", "novos"].includes(String(genre)) ? String(genre) : null;
 
     const usePagination = !!page;
     const take = usePagination ? Math.min(parseInt(pageSize, 10) || 24, 100) : 120;
@@ -67,6 +71,19 @@ router.get("/", attachUserIfPresent, async (req, res) => {
         const byId = new Map(found.map((p) => [p.id, p]));
         plays = pageIds.map((id) => byId.get(id)).filter(Boolean);
       }
+    } else if (genreId && !sortGiven) {
+      // Gênero escolhido e nenhuma ordenação pedida: usa a ordem do dia do gênero (a mesma da fileira da home).
+      // Com filtro de ano/plano, mantém a ordem relativa do gênero inteiro (as novelinhas não "pulam" de lugar).
+      const hasExtra = where.releaseYear !== undefined || where.requiresPlan !== undefined;
+      const allRows = await prisma.play.findMany({ where: { genres: { some: { genre: genreId } } }, select: { id: true }, take: 5000 });
+      const rank = new Map(dailyShuffle(allRows, "genre:" + genreId).map((p, i) => [p.id, i]));
+      const rows = hasExtra ? await prisma.play.findMany({ where, select: { id: true }, take: 5000 }) : allRows;
+      const ordered = rows.map((r) => r.id).sort((a, b) => rank.get(a) - rank.get(b));
+      total = ordered.length;
+      const pageIds = ordered.slice(skip, skip + take);
+      const found = pageIds.length ? await prisma.play.findMany({ where: { id: { in: pageIds } }, select: PLAY_LIST_SELECT }) : [];
+      const byId = new Map(found.map((p) => [p.id, p]));
+      plays = pageIds.map((id) => byId.get(id)).filter(Boolean);
     } else {
       [plays, total] = await Promise.all([
         prisma.play.findMany({ where, orderBy, skip, take, select: PLAY_LIST_SELECT }),
@@ -90,7 +107,7 @@ router.get("/", attachUserIfPresent, async (req, res) => {
 
 // Dados da página inicial: séries em destaque (banner), "Novos Na Plataforma" (as mais recentes, em ordem de chegada)
 // e uma seção por gênero. Uma série com vários gêneros aparece em todas as seções dela.
-// Opções reais para a gaveta de filtros: só aparecem anos e planos que têm peças.
+// Opções reais para a gaveta de filtros: só aparecem anos e planos que têm novelinhas.
 router.get("/facets", safe(async (req, res) => {
   const [years, plans] = await Promise.all([
     prisma.play.groupBy({ by: ["releaseYear"], _count: { _all: true }, orderBy: { releaseYear: "desc" } }),
@@ -102,7 +119,21 @@ router.get("/facets", safe(async (req, res) => {
   });
 }));
 
-// "Em alta": as peças com mais movimento nos últimos 30 dias. Não existe contador de visualizações no banco, então o
+// Sorteio ("Sortear novelinha"): escolhe ao acaso entre TODAS as novelinhas cadastradas, sem limite de data.
+// Antes o site sorteava só entre as 100 mais recentes da listagem. Aqui lemos apenas os ids (leve) e sorteamos entre todos.
+// ?count=N (1 a 12) e ?exclude=ID (para não repetir a anterior).
+router.get("/random", attachUserIfPresent, safe(async (req, res) => {
+  const count = Math.min(Math.max(parseInt(req.query.count, 10) || 1, 1), 12);
+  const exclude = req.query.exclude ? String(req.query.exclude) : "";
+  const rows = await prisma.play.findMany({ select: { id: true } });          // sem take, sem orderBy, sem filtro de data
+  const picked = sampleIds(rows.map((r) => r.id), count, exclude);
+  const found = picked.length ? await prisma.play.findMany({ where: { id: { in: picked } }, select: PLAY_LIST_SELECT }) : [];
+  const byId = new Map(found.map((p) => [p.id, p]));
+  const plays = await Promise.all(picked.map((id) => byId.get(id)).filter(Boolean).map((p) => withAccess(req.user, p)));
+  res.json({ plays, total: rows.length });
+}));
+
+// "Em alta": as novelinhas com mais movimento nos últimos 30 dias. Não existe contador de visualizações no banco, então o
 // ranking usa o que as pessoas fizeram: quem começou a assistir (peso 2) e quem salvou na lista (peso 1). Se houver pouca
 // atividade, completa com os destaques e depois com as mais novas, para a seção nunca ficar vazia (campo "ranked" diz
 // quantas vieram de atividade real).
@@ -119,7 +150,7 @@ router.get("/trending", attachUserIfPresent, safe(async (req, res) => {
   const rankedIds = [...score.entries()].sort((a, b) => b[1] - a[1]).slice(0, limit).map(([id]) => id);
   const found = rankedIds.length ? await prisma.play.findMany({ where: { id: { in: rankedIds } }, select: PLAY_LIST_SELECT }) : [];
   const byId = new Map(found.map((p) => [p.id, p]));
-  let plays = rankedIds.map((id) => byId.get(id)).filter(Boolean);     // peça apagada some do ranking sozinha
+  let plays = rankedIds.map((id) => byId.get(id)).filter(Boolean);     // novelinha apagada some do ranking sozinha
   const ranked = plays.length;
   if (plays.length < limit) {
     const filler = await prisma.play.findMany({
@@ -135,25 +166,37 @@ router.get("/trending", attachUserIfPresent, safe(async (req, res) => {
 
 router.get("/feed/home", attachUserIfPresent, async (req, res) => {
   try {
-    const [featured, novos, counts] = await Promise.all([
+    const [featured, novos, pairs, total] = await Promise.all([
       prisma.play.findMany({ where: { featured: true }, orderBy: { createdAt: "desc" }, take: 10, select: PLAY_LIST_SELECT }),
       prisma.play.findMany({ orderBy: { createdAt: "desc" }, take: 20, select: PLAY_LIST_SELECT }),
-      prisma.playGenre.groupBy({ by: ["genre"], _count: { _all: true } })
+      prisma.playGenre.findMany({ select: { genre: true, playId: true } }),
+      prisma.play.count()
     ]);
-    const total = await prisma.play.count();
-    const countOf = Object.fromEntries(counts.map((c) => [c.genre, c._count._all]));
-    const rows = await Promise.all(GENRES.filter((g) => countOf[g.id] > 0).map(async (g) => ({
-      id: g.id,
-      label: labelOf(g.id),
-      total: countOf[g.id],
-      plays: await Promise.all((await prisma.play.findMany({ where: { genres: { some: { genre: g.id } } }, orderBy: { createdAt: "desc" }, take: 20, select: PLAY_LIST_SELECT })).map((p) => withAccess(req.user, p)))
+    // Cada gênero é embaralhado SÓ entre as suas próprias novelinhas (ordem do dia: muda à 00:00 e não mistura gêneros).
+    // O sorteio vale para o gênero inteiro e só depois se pegam as 20 da fileira, senão só as mais novas girariam.
+    const byGenre = new Map();
+    pairs.forEach((x) => { if (!byGenre.has(x.genre)) byGenre.set(x.genre, []); byGenre.get(x.genre).push({ id: x.playId }); });
+    const rowsMeta = GENRES.filter((g) => (byGenre.get(g.id) || []).length > 0).map((g) => {
+      const all = byGenre.get(g.id);
+      return { id: g.id, total: all.length, ids: dailyShuffle(all, "genre:" + g.id).slice(0, 20).map((p) => p.id) };
+    });
+    const wanted = [...new Set(rowsMeta.flatMap((r) => r.ids))];
+    const found = wanted.length ? await prisma.play.findMany({ where: { id: { in: wanted } }, select: PLAY_LIST_SELECT }) : [];
+    const byId = new Map(found.map((p) => [p.id, p]));
+    const rows = await Promise.all(rowsMeta.map(async (r) => ({
+      id: r.id,
+      label: labelOf(r.id),
+      total: r.total,
+      plays: await Promise.all(r.ids.map((id) => byId.get(id)).filter(Boolean).map((p) => withAccess(req.user, p)))
     })));
     res.json({
       featured: await Promise.all(featured.map((p) => withAccess(req.user, p))),
-      novos: await Promise.all(novos.map((p) => withAccess(req.user, p))),
+      novos: await Promise.all(novos.map((p) => withAccess(req.user, p))),   // "Novos" continua por data de postagem (é o que o nome promete)
       genres: rows,
       catalog: currentGenres(),
-      total
+      total,
+      shuffleDay: dayKey(),
+      shuffleTz: TZ
     });
   } catch (e) {
     console.error("[home]", e);
@@ -274,8 +317,8 @@ router.post("/genres-import", requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
-// Imagem da peça (poster ou backdrop) enviada por arquivo. Cache longo no navegador:
-// o "?v=" muda sempre que a peça é editada, então nunca fica desatualizada.
+// Imagem da novelinha (poster ou backdrop) enviada por arquivo. Cache longo no navegador:
+// o "?v=" muda sempre que a novelinha é editada, então nunca fica desatualizada.
 router.get("/:id/image/:kind", safe(async (req, res) => {
   const kind = req.params.kind === "backdrop" ? "backdrop" : "poster";
   const field = kind === "poster" ? "posterData" : "backdropData";
@@ -288,7 +331,7 @@ router.get("/:id/image/:kind", safe(async (req, res) => {
   res.send(Buffer.from(m[2], "base64"));
 }));
 
-// Admin: quantas peças existem em cada plano (para o aviso antes de mover em massa).
+// Admin: quantas novelinhas existem em cada plano (para o aviso antes de mover em massa).
 router.get("/admin/plan-counts", requireAuth, requireAdmin, safe(async (req, res) => {
   const rows = await prisma.play.groupBy({ by: ["requiresPlan"], _count: { _all: true } });
   const counts = {};
@@ -296,7 +339,7 @@ router.get("/admin/plan-counts", requireAuth, requireAdmin, safe(async (req, res
   res.json({ counts, total: Object.values(counts).reduce((a, b) => a + b, 0) });
 }));
 
-// Admin: move TODAS as peças de um plano para outro (ex.: de Plateia para Balcão).
+// Admin: move TODAS as novelinhas de um plano para outro (ex.: de Plateia para Balcão).
 router.post("/bulk-plan", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { from, to } = req.body || {};
@@ -311,14 +354,14 @@ router.post("/bulk-plan", requireAuth, requireAdmin, async (req, res) => {
     res.json({ ok: true, moved: r.count, from: a.name, to: b.name });
   } catch (e) {
     console.error("[bulk-plan]", e.message);
-    res.status(500).json({ error: "Não foi possível mover as peças." });
+    res.status(500).json({ error: "Não foi possível mover as novelinhas." });
   }
 });
 
-// Admin: EXCLUI todas as peças de um plano (ex.: tudo de Camarote). Não tem volta.
+// Admin: EXCLUI todas as novelinhas de um plano (ex.: tudo de Camarote). Não tem volta.
 // Duas travas: (1) é preciso digitar o nome do plano; (2) a quantidade vista na tela precisa ser a de agora
 // (se outra pessoa mexeu enquanto o modal estava aberto, recusa e pede para conferir de novo).
-// Gêneros, progresso de quem assistia e "Minha lista" dessas peças saem junto (onDelete: Cascade).
+// Gêneros, progresso de quem assistia e "Minha lista" dessas novelinhas saem junto (onDelete: Cascade).
 router.post("/bulk-delete", requireAuth, requireAdmin, async (req, res) => {
   try {
     const { plan, confirmName, expectedCount } = req.body || {};
@@ -329,23 +372,23 @@ router.post("/bulk-delete", requireAuth, requireAdmin, async (req, res) => {
       return res.status(400).json({ error: `Para confirmar, digite o nome do plano: ${p.name}.` });
     }
     const n = await prisma.play.count({ where: { requiresPlan: p.id } });
-    if (n === 0) return res.status(400).json({ error: `Nenhuma peça está no plano ${p.name}.` });
+    if (n === 0) return res.status(400).json({ error: `Nenhuma novelinha está no plano ${p.name}.` });
     if (!Number.isInteger(expectedCount) || expectedCount !== n) {
-      return res.status(409).json({ error: `A quantidade mudou (agora são ${n} peça${n === 1 ? "" : "s"} em ${p.name}). Feche e abra de novo para conferir.` });
+      return res.status(409).json({ error: `A quantidade mudou (agora são ${n} novelinha${n === 1 ? "" : "s"} em ${p.name}). Feche e abra de novo para conferir.` });
     }
     const r = await prisma.play.deleteMany({ where: { requiresPlan: p.id } });
-    console.log(`[bulk-delete] ${r.count} peça(s) do plano ${p.id} excluída(s) por ${req.user && req.user.id}`);
+    console.log(`[bulk-delete] ${r.count} novelinha(s) do plano ${p.id} excluída(s) por ${req.user && req.user.id}`);
     res.json({ ok: true, deleted: r.count, plan: p.name });
   } catch (e) {
     console.error("[bulk-delete]", e.message);
-    res.status(500).json({ error: "Não foi possível excluir as peças." });
+    res.status(500).json({ error: "Não foi possível excluir as novelinhas." });
   }
 });
 
-// Detalhe de uma peça. Só devolve a URL real do vídeo se o visitante tiver direito.
+// Detalhe de uma novelinha. Só devolve a URL real do vídeo se o visitante tiver direito.
 router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
   const play = await prisma.play.findUnique({ where: { id: req.params.id }, select: PLAY_LIST_SELECT });
-  if (!play) return res.status(404).json({ error: "Peça não encontrada." });
+  if (!play) return res.status(404).json({ error: "Novelinha não encontrada." });
   const canWatch = await userCanWatch(req.user, play);
   const payload = publicPlay(play);
   if (!canWatch) payload.videoUrl = "";
@@ -360,7 +403,7 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
   res.json({ play: payload, canWatch, resume });
 }));
 
-// O link do vídeo (HLS, mp4, YouTube...) precisa ser http(s). Vazio é permitido (peça sem vídeo ainda).
+// O link do vídeo (HLS, mp4, YouTube...) precisa ser http(s). Vazio é permitido (novelinha sem vídeo ainda).
 function invalidVideoUrl(v) {
   if (v === undefined || v === null || v === "") return false;
   if (typeof v !== "string") return true;
@@ -372,8 +415,8 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
   try {
     const b = req.body || {};
     const duration = parseInt(b.durationMinutes, 10);
-    if (!b.title || !b.title.trim()) return res.status(400).json({ error: "Informe o título da peça." });
-    if (!duration || duration < 60) return res.status(400).json({ error: "A peça precisa ter no mínimo 60 minutos de duração." });
+    if (!b.title || !b.title.trim()) return res.status(400).json({ error: "Informe o título da novelinha." });
+    if (!duration || duration < 60) return res.status(400).json({ error: "A novelinha precisa ter no mínimo 60 minutos de duração." });
     if (invalidVideoUrl(b.videoUrl)) return res.status(400).json({ error: VIDEO_URL_ERROR });
 
     const poster = imageFieldUpdate("poster", b.posterUrl || "");
@@ -402,7 +445,7 @@ router.post("/", requireAuth, requireAdmin, async (req, res) => {
     if (play.featured) triggerFeaturedAnnouncements();
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Não foi possível salvar a peça." });
+    res.status(500).json({ error: "Não foi possível salvar a novelinha." });
   }
 });
 
@@ -410,7 +453,7 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
   try {
     const b = req.body || {};
     const duration = parseInt(b.durationMinutes, 10);
-    if (duration && duration < 60) return res.status(400).json({ error: "A peça precisa ter no mínimo 60 minutos de duração." });
+    if (duration && duration < 60) return res.status(400).json({ error: "A novelinha precisa ter no mínimo 60 minutos de duração." });
     if (invalidVideoUrl(b.videoUrl)) return res.status(400).json({ error: VIDEO_URL_ERROR });
 
     const poster = imageFieldUpdate("poster", b.posterUrl);
@@ -439,7 +482,7 @@ router.put("/:id", requireAuth, requireAdmin, async (req, res) => {
     if (play.featured) triggerFeaturedAnnouncements();
   } catch (e) {
     console.error(e);
-    res.status(404).json({ error: "Peça não encontrada." });
+    res.status(404).json({ error: "Novelinha não encontrada." });
   }
 });
 
@@ -448,7 +491,7 @@ router.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
     await prisma.play.delete({ where: { id: req.params.id } });
     res.json({ ok: true });
   } catch (e) {
-    res.status(404).json({ error: "Peça não encontrada." });
+    res.status(404).json({ error: "Novelinha não encontrada." });
   }
 });
 

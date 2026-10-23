@@ -13,7 +13,7 @@ const fake = {
   play: {
     findMany: async (a = {}) => {
       const { where = {}, orderBy, take, skip = 0, select } = a;
-      let r = db.plays.filter((p) => Object.entries(where).every(([k, v]) => (k === "genres" ? db.pg.some((x) => x.playId === p.id && x.genre === v.some.genre) : p[k] === v)));
+      let r = db.plays.filter((p) => Object.entries(where).every(([k, v]) => (k === "genres" ? db.pg.some((x) => x.playId === p.id && x.genre === v.some.genre) : (k === "id" && v && typeof v === "object") ? v.in.includes(p.id) : p[k] === v)));
       if (orderBy && orderBy.createdAt === "desc") r = r.slice().sort((a, b) => b.createdAt - a.createdAt);
       if (!select) return r.map((p) => ({ id: p.id, title: p.title }));
       return r.slice(skip, take ? skip + take : undefined).map((p) => withGenres(p, select));
@@ -25,7 +25,7 @@ const fake = {
     groupBy: async () => { const m = {}; db.pg.forEach((x) => (m[x.genre] = (m[x.genre] || 0) + 1)); return Object.entries(m).map(([genre, n]) => ({ genre, _count: { _all: n } })); },
     deleteMany: async ({ where }) => { const ids = where.playId.in; db.pg = db.pg.filter((x) => !ids.includes(x.playId)); return { count: 0 }; },
     createMany: async ({ data }) => { data.forEach((d) => db.pg.push({ ...d })); return { count: data.length }; },
-    findMany: async ({ where }) => db.pg.filter((x) => where.playId.in.includes(x.playId)),
+    findMany: async ({ where } = {}) => (where && where.playId ? db.pg.filter((x) => where.playId.in.includes(x.playId)) : db.pg.map((x) => ({ genre: x.genre, playId: x.playId }))),   // sem where: todos os pares (a home usa isso)
   },
   genreLabel: {
     findMany: async () => db.labels.map((l) => ({ ...l })),

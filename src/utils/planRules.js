@@ -17,7 +17,7 @@ function isPlanActive(user) {
   return new Date(user.planExpiry) > new Date();
 }
 
-// Decide se um usuário (ou visitante anônimo) pode assistir a uma peça.
+// Decide se um usuário (ou visitante anônimo) pode assistir a uma novelinha.
 async function userCanWatch(user, play) {
   if (!user) {
     const level = await getPlanLevel(play.requiresPlan);

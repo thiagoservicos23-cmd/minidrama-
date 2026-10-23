@@ -1,7 +1,7 @@
 const prisma = require("../prismaClient");
 const { ORDER, labelOf } = require("./genres");
 
-// Campos da peça que podem ir em listagens (SEM as imagens pesadas em base64
+// Campos da novelinha que podem ir em listagens (SEM as imagens pesadas em base64
 // e SEM o link do vídeo, que só a página de detalhe entrega a quem tem direito).
 const PLAY_LIST_SELECT = {
   id: true, title: true, durationMinutes: true, releaseYear: true,
@@ -45,7 +45,7 @@ function imageFieldUpdate(kind, incoming) {
   return { [url]: clean, [data]: null, [has]: false };
 }
 
-// Transforma uma peça do banco no formato público da API.
+// Transforma uma novelinha do banco no formato público da API.
 function publicPlay(p) {
   const v = p.updatedAt ? new Date(p.updatedAt).getTime() : 0;
   const { posterData, backdropData, genres: rawGenres, genre: legacyGenre, ...rest } = p;
@@ -75,7 +75,7 @@ async function migrateInlineImages() {
       if (isDataUri(r.backdropUrl)) Object.assign(data, { backdropData: r.backdropUrl, backdropUrl: "", hasBackdropData: true });
       await prisma.play.update({ where: { id: r.id }, data });
     }
-    if (rows.length) console.log(`[imagens] ${rows.length} peça(s) migrada(s) para o novo armazenamento de imagens.`);
+    if (rows.length) console.log(`[imagens] ${rows.length} novelinha(s) migrada(s) para o novo armazenamento de imagens.`);
   } catch (e) {
     console.error("[imagens] migração não concluída:", e.message);
   }

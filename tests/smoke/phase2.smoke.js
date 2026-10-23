@@ -11,13 +11,13 @@ let passed = 0;
 const ok = (name, fn) => { try { fn(); passed++; console.log("  ✔", name); } catch (e) { console.log("  ✘", name, "\n     ", e.message); process.exitCode = 1; } };
 
 const P = (id, title, extra = {}) => ({ id, title, posterUrl: "http://x/" + id + ".png", backdropUrl: "http://x/b.png", requiresPlan: "plateia", canWatch: true, hasVideo: true, durationMinutes: 90, releaseYear: 2025, genre: "Drama", synopsis: "Uma sinopse longa.", ...extra });
-const CATALOG = [P("p1", "Peça Um"), P("p2", "Peça Dois"), P("p3", "Peça Três", { requiresPlan: "camarote", canWatch: false })];
+const CATALOG = [P("p1", "Novelinha Um"), P("p2", "Novelinha Dois"), P("p3", "Novelinha Três", { requiresPlan: "camarote", canWatch: false })];
 const HOME = { featured: [], novos: CATALOG, genres: [{ id: "drama", label: "Drama", plays: CATALOG, total: 3 }], catalog: [{ id: "drama", label: "Drama" }], total: 3 };
 const PLANS = [{ id: "plateia", name: "Plateia", price: 0, benefits: [] }, { id: "balcao", name: "Balcão", price: 14.9, benefits: [] }, { id: "camarote", name: "Camarote", price: 24.9, benefits: [] }];
 const FACETS = { years: [{ year: 2025, count: 3 }, { year: 2024, count: 1 }], plans: [{ id: "plateia", count: 2 }, { id: "camarote", count: 2 }] };
 
 async function makeEnv(o = {}) {
-  const calls = []; let failPool = !!o.failPoolOnce;
+  const calls = [], randomCalls = []; let randomFailed = false;
   const dom = new JSDOM(html, {
     runScripts: "dangerously", pretendToBeVisual: true, url: "http://localhost/",
     beforeParse(w) {
@@ -30,6 +30,14 @@ async function makeEnv(o = {}) {
         if (pth === "/plans") return res({ plans: PLANS });
         if (pth === "/me/home") return res({ continue: [], listIds: [] });
         if (pth === "/plays/facets") return res(o.facets || FACETS);
+        if (pth.startsWith("/plays/random")) {
+          randomCalls.push(pth);
+          if (o.randomFailOnce && !randomFailed && pth.includes("count=1")) { randomFailed = true; return res({ error: "Sem conexão." }, 500); }
+          const all = o.randomPool || CATALOG, q = new URLSearchParams(pth.split("?")[1]);
+          const want = Math.min(Number(q.get("count")) || 1, 12), ex = q.get("exclude");
+          const pool = all.filter(p => p.id !== ex);
+          return res({ plays: (pool.length ? pool : all).slice(0, want), total: all.length });
+        }
         if (pth.startsWith("/plays?")) {
           const isPool = pth.includes("pageSize=100");
           if (isPool && o.poolDelay) await tick(o.poolDelay);
@@ -44,7 +52,7 @@ async function makeEnv(o = {}) {
   const w = dom.window;
   for (let t0 = Date.now(); !w.document.querySelector("#site-header") && Date.now() - t0 < 5000;) await tick(20);
   w.eval(`DB.me = ${o.visitor ? "null" : JSON.stringify({ id: "u1", name: "Ana", role: "user", plan: "plateia", planExpiry: new Date(Date.now() + 864e6).toISOString() })}; localStorage.setItem("minidrama_token","tok");`);
-  return { w, calls };
+  return { w, calls, randomCalls };
 }
 const $ = (e, s) => e.w.document.querySelector(s), $$ = (e, s) => [...e.w.document.querySelectorAll(s)];
 const go = async (e, hash, ms = 150) => { e.w.location.hash = hash; await tick(ms); };
@@ -92,56 +100,55 @@ const key = (e, k, opts = {}) => e.w.document.dispatchEvent(new e.w.KeyboardEven
   await go(e, "#/catalogo", 200);
   $(e, "#open-filters").click(); await tick(80);
   choose(e, "#f-year", "1999"); $(e, "[data-fapply]").click(); await tick(120);
-  ok("sem resultados: mensagem com 'filtros' e atalho para limpar", () => { assert.match($(e, ".catalog-empty").textContent, /Nenhuma peça encontrada com esses filtros/); assert.ok($(e, "[data-fclear-inline]")); });
+  ok("sem resultados: mensagem com 'filtros' e atalho para limpar", () => { assert.match($(e, ".catalog-empty").textContent, /Nenhuma novelinha encontrada com esses filtros/); assert.ok($(e, "[data-fclear-inline]")); });
   $(e, "[data-fclear-inline]").click(); await tick(120);
   ok("'Limpar filtros' traz o catálogo de volta", () => { assert.equal($$(e, ".card").length, 3); assert.equal($(e, ".catalog-empty"), null); });
   $(e, "#open-filters").click(); await tick(80); await go(e, "#/home", 150);
   ok("sair do catálogo com a gaveta aberta fecha a gaveta e destrava a rolagem", () => { assert.equal($(e, "#filters-drawer"), null); assert.ok(!e.w.document.body.classList.contains("fdrawer-open")); });
   e.w.close();
 
-  console.log("\nC) Surpresa");
-  e = await makeEnv({ poolDelay: 250 });
-  await go(e, "#/surpresa", 40);
-  ok("tela abre com baralho de 5 cartas e botão ainda desabilitado enquanto carrega", () => { assert.equal($$(e, "#deck .deck-card").length, 5); assert.equal($(e, "#surprise-go").disabled, true); assert.match($(e, "#surprise-go").textContent, /Preparando/); });
-  await tick(400);
-  ok("depois de carregar: botão habilitado 'Sortear peça'", () => { assert.equal($(e, "#surprise-go").disabled, false); assert.match($(e, "#surprise-go").textContent, /Sortear peça/); });
+  console.log("\nC) Surpresa (sorteio no servidor, entre TODAS as novelinhas)");
+  e = await makeEnv({ randomPool: [P("old1", "A Mais Antiga"), P("n2", "Novelinha Dois"), P("n3", "Novelinha Três")] });
+  await go(e, "#/surpresa", 60);
+  ok("a tela abre com o baralho de 5 cartas e o botão JÁ habilitado (não espera carregar uma lista)", () => { assert.equal($$(e, "#deck .deck-card").length, 5); assert.equal($(e, "#surprise-go").disabled, false); assert.match($(e, "#surprise-go").textContent, /Sortear novelinha/); });
+  ok("as capas do baralho vêm do sorteio entre todas (/plays/random?count=5) e não de uma lista das mais recentes", () => { assert.ok(e.randomCalls.includes("/plays/random?count=5")); assert.ok(!e.calls.some(c => c.includes("pageSize=100"))); });
   ok("barra flutuante: Surpresa ativa, 5 abas, sem 'Buscar' (a lupa fica no topo)", () => { const t = $$(e, ".fnav-item").map(a => a.textContent.trim()); assert.equal(t.length, 5); assert.ok(t.includes("Surpresa")); assert.ok(!t.includes("Buscar")); assert.equal($(e, ".fnav-item.active").textContent.trim(), "Surpresa"); });
-  ok("o rodapé mostra a versão (para conferir se o deploy novo está no ar)", () => assert.match($(e, ".footer-bottom").textContent, /v2026\.10\.21-mobile/));
-  $(e, "#surprise-go").click();
-  ok("ao sortear, o baralho embaralha e o botão trava (sem sorteio duplo)", () => { assert.ok($(e, "#deck").classList.contains("shuffling")); assert.equal($(e, "#surprise-go").disabled, true); });
+  ok("o rodapé mostra a versão (para conferir se o deploy novo está no ar)", () => assert.match($(e, ".footer-bottom").textContent, /v\d{4}\.\d{2}\.\d{2}-/));
+  $(e, "#surprise-go").click(); $(e, "#surprise-go").click(); $(e, "#surprise-go").click();
+  ok("ao sortear, o baralho embaralha, o botão trava e clique repetido NÃO dispara vários sorteios", () => { assert.ok($(e, "#deck").classList.contains("shuffling")); assert.equal($(e, "#surprise-go").disabled, true); assert.equal(e.randomCalls.filter(c => c.startsWith("/plays/random?count=1")).length, 1); });
   await tick(1000);
-  ok("mostra a peça sorteada com link para o reel e o botão vira 'Sortear outra'", () => {
+  ok("mostra a novelinha sorteada com link para o player e o botão vira 'Sortear outra'", () => {
     const pick = $(e, ".pick"); assert.ok(pick);
-    assert.match(pick.querySelector(".btn-gold").getAttribute("href"), /^#\/reel\/p[12]$/);
+    assert.match(pick.querySelector(".btn-gold").getAttribute("href"), /^#\/reel\/(old1|n2|n3)$/);
     assert.match($(e, "#surprise-go").textContent, /Sortear outra/); assert.equal($(e, "#surprise-go").disabled, false);
     assert.ok($(e, "#deck").classList.contains("done"));
   });
-  const seen = []; for (let i = 0; i < 6; i++) { seen.push($(e, ".pick h2").textContent); $(e, "#surprise-go").click(); await tick(1000); }
-  seen.push($(e, ".pick h2").textContent);
-  ok("com 2 peças liberadas, o sorteio alterna e nunca repete a anterior; a bloqueada nunca sai", () => { for (let i = 1; i < seen.length; i++) assert.notEqual(seen[i], seen[i - 1]); assert.ok(!seen.includes("Peça Três")); });
+  const firstCall = e.randomCalls.filter(c => c.startsWith("/plays/random?count=1"))[0];
+  const firstId = $(e, ".pick .btn-gold").getAttribute("href").split("/").pop();
+  ok("1º sorteio sem 'exclude'", () => assert.equal(firstCall, "/plays/random?count=1"));
+  $(e, "#surprise-go").click(); await tick(1000);
+  ok("2º sorteio pede ao servidor para excluir a anterior e nunca repete", () => { const second = e.randomCalls.filter(c => c.startsWith("/plays/random?count=1"))[1]; assert.equal(second, "/plays/random?count=1&exclude=" + firstId); assert.notEqual($(e, ".pick .btn-gold").getAttribute("href").split("/").pop(), firstId); });
   ok("só há UM cartão de resultado por vez (sem listeners duplicados)", () => assert.equal($$(e, ".pick").length, 1));
   e.w.close();
 
   console.log("\nD) Surpresa: casos de borda");
-  e = await makeEnv({ pool: [P("l1", "Só Bloqueada", { canWatch: false, requiresPlan: "camarote" })] });
-  await go(e, "#/surpresa", 250); $(e, "#surprise-go").click(); await tick(1000);
-  ok("se nada é liberado, sorteia entre todas e avisa o plano em vez de oferecer 'Assistir'", () => { assert.match($(e, ".pick-note").textContent, /plano Camarote/); assert.match($(e, ".pick .btn-gold").textContent, /Ver detalhes/); assert.match($(e, ".pick .btn-gold").getAttribute("href"), /^#\/peca\/l1$/); });
+  e = await makeEnv({ randomPool: [P("l1", "Só Bloqueada", { canWatch: false, requiresPlan: "camarote" })] });
+  await go(e, "#/surpresa", 120); $(e, "#surprise-go").click(); await tick(1000);
+  ok("a sorteada pode ser de plano que a pessoa não tem: mostra o plano, 'Ver detalhes' e 'Ver planos' (sorteio é de TODAS)", () => { assert.match($(e, ".pick-note").textContent, /plano Camarote/); assert.match($(e, ".pick .btn-gold").textContent, /Ver detalhes/); assert.match($(e, ".pick .btn-gold").getAttribute("href"), /^#\/novelinha\/l1$/); assert.equal($(e, '.pick a[href="#/planos"]').textContent, "Ver planos"); });
   e.w.close();
-  e = await makeEnv({ pool: [] });
-  await go(e, "#/surpresa", 250);
-  ok("catálogo vazio: botão desabilitado com aviso claro", () => { assert.match($(e, "#surprise-go").textContent, /Ainda não há peças/); assert.equal($(e, "#surprise-go").disabled, true); });
+  e = await makeEnv({ randomPool: [] });
+  await go(e, "#/surpresa", 200);
+  ok("catálogo vazio: botão desabilitado com aviso claro", () => { assert.match($(e, "#surprise-go").textContent, /Ainda não há novelinhas/); assert.equal($(e, "#surprise-go").disabled, true); });
   e.w.close();
-  e = await makeEnv({ failPoolOnce: true });
-  await go(e, "#/surpresa", 250);
-  ok("falha ao carregar: botão vira 'Tentar de novo' e o erro aparece", () => { assert.match($(e, "#surprise-go").textContent, /Tentar de novo/); assert.match($(e, "#toast-host").textContent, /Sem conexão/); });
-  const nPool = () => e.calls.filter(c => c.includes("pageSize=100")).length, n0 = nPool();
-  $(e, "#surprise-go").click(); await tick(200);
-  ok("'Tentar de novo' recarrega UMA vez e libera o sorteio", () => { assert.equal(nPool(), n0 + 1); assert.match($(e, "#surprise-go").textContent, /Sortear peça/); });
+  e = await makeEnv({ randomFailOnce: true });
+  await go(e, "#/surpresa", 150);
   $(e, "#surprise-go").click(); await tick(1000);
-  ok("depois da recarga, sortear gera exatamente um resultado", () => assert.equal($$(e, ".pick").length, 1));
+  ok("falha ao sortear: avisa o erro, mostra 'Tentar de novo' e libera o botão (sem travar)", () => { assert.match($(e, "#toast-host").textContent, /Sem conexão/); assert.match($(e, "#surprise-go").textContent, /Tentar de novo/); assert.equal($(e, "#surprise-go").disabled, false); assert.equal($(e, ".pick"), null); });
+  $(e, "#surprise-go").click(); await tick(1000);
+  ok("'Tentar de novo' sorteia e gera exatamente um resultado", () => { assert.equal($$(e, ".pick").length, 1); assert.match($(e, "#surprise-go").textContent, /Sortear outra/); });
   e.w.close();
   e = await makeEnv();
-  await go(e, "#/surpresa", 250); $(e, "#surprise-go").click(); await go(e, "#/home", 1000);
+  await go(e, "#/surpresa", 150); $(e, "#surprise-go").click(); await go(e, "#/home", 1000);
   ok("sair da Surpresa no meio do sorteio não quebra nem desenha por cima da home", () => { assert.equal($(e, ".pick"), null); assert.equal(e.w.location.hash, "#/home"); });
   e.w.close();
 

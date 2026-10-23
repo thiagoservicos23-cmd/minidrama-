@@ -51,11 +51,11 @@ test("linha com vídeo mas sem capa é aceita; link de vídeo inválido mantém 
 });
 
 test("sem cabeçalho: nome;capa;video;duracao e nomes repetidos valem o primeiro", () => {
-  const r = parseCoverCsv("Peça A;https://x.com/a.png;https://x.com/a.mp4;80\nPeça A;https://x.com/z.png;https://x.com/z.mp4;10");
+  const r = parseCoverCsv("Novelinha A;https://x.com/a.png;https://x.com/a.mp4;80\nNovelinha A;https://x.com/z.png;https://x.com/z.mp4;10");
   assert.equal(r.map.size, 1);
-  assert.equal(r.map.get("peca a").video, "https://x.com/a.mp4");
-  assert.equal(r.map.get("peca a").minutes, 80);
-  assert.deepEqual(Array.from(r.duplicates), ["Peça A"]);
+  assert.equal(r.map.get("novelinha a").video, "https://x.com/a.mp4");
+  assert.equal(r.map.get("novelinha a").minutes, 80);
+  assert.deepEqual(Array.from(r.duplicates), ["Novelinha A"]);
 });
 
 test("classifica o tipo de link e avisa de páginas que não tocam", () => {
@@ -95,9 +95,9 @@ const call = (method, p, body) => new Promise((resolve, reject) => {
   });
   req.on("error", reject); if (body) req.write(JSON.stringify(body)); req.end();
 });
-const base_ = { title: "Peça", durationMinutes: 90, genres: [] };
+const base_ = { title: "Novelinha", durationMinutes: 90, genres: [] };
 
-test("cria peça com link direto de vídeo (.m3u8) e capa por URL", async () => {
+test("cria novelinha com link direto de vídeo (.m3u8) e capa por URL", async () => {
   const r = await call("POST", "/", { ...base_, videoUrl: " https://cdn.x/abc/playlist.m3u8 ", posterUrl: "https://x.com/capa.png" });
   assert.equal(r.status, 201);
   assert.equal(db.plays[0].videoUrl, "https://cdn.x/abc/playlist.m3u8");

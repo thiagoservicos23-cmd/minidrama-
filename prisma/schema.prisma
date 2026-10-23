@@ -103,7 +103,7 @@ model EmailLog {
   id     String   @id @default(cuid())
   userId String
   type   String   // welcome | digest | expiry-3 | expiry-2 | expiry-1 | expired | missyou | featured | payment
-  key    String   // ex.: data de vencimento, id da peça, data do dia
+  key    String   // ex.: data de vencimento, id da novelinha, data do dia
   sentAt DateTime @default(now())
 
   @@unique([userId, type, key])

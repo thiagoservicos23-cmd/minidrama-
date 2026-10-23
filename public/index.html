@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Mini Drama — peças de teatro online</title>
-<meta name="description" content="Assista a peças de teatro completas, onde e quando quiser. Streaming de teatro feito por grupos independentes.">
+<title>Mini Drama — novelinhas sem limite</title>
+<meta name="description" content="novelinhas sem limite">
 <meta name="theme-color" content="#120D0F">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
@@ -266,7 +266,7 @@ body.reel-open{overflow:hidden;}
 .reel.fs-css .reel-top, .reel.fs-css .reel-nav, .reel.fs-css .reel-hint{display:none;}
 @media (hover:hover) and (pointer:fine){ .reel-btn-fs{display:none;} }
 
-/* Tela larga: o título sobe para o canto e some junto com os controles, para não cobrir a peça. */
+/* Tela larga: o título sobe para o canto e some junto com os controles, para não cobrir a novelinha. */
 @media (min-aspect-ratio:1/1){
   .reel-info{bottom:auto; top:72px; right:96px;}
   .reel-rail{bottom:auto; top:50%; transform:translateY(-50%);}
@@ -425,6 +425,42 @@ body.fdrawer-open{overflow:hidden;}
 @keyframes pick-in{from{opacity:0; transform:translateY(14px);}}
 @media (max-width:560px){ .pick{grid-template-columns:1fr; text-align:center;} .pick-poster{width:150px; margin:0 auto;} .pick-meta, .pick-actions{justify-content:center;} }
 
+/* ===== Pop-up de assinatura (principal + mini) ===== */
+body.conv-open{overflow:hidden;}
+.conv-overlay{position:fixed; inset:0; z-index:140; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(0,0,0,.74); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px); animation:conv-fade .3s ease both;}
+.conv-card{position:relative; width:min(430px,100%); max-height:calc(100vh - 40px); max-height:calc(100dvh - 40px); overflow-y:auto; text-align:center; padding:30px 24px 20px; border-radius:1.5rem; background:linear-gradient(160deg, #2a1319, #121212 58%); border:1px solid rgba(201,162,75,.38); box-shadow:0 30px 80px rgba(0,0,0,.7); transform-origin:100% 100%; animation:conv-pop .42s cubic-bezier(.3,1.3,.5,1) both;}
+.conv-card.closing{animation:conv-shrink .3s ease-in both;}
+.conv-close{position:absolute; top:8px; right:8px; width:44px; height:44px; padding:0; border:none; border-radius:50%; background:none; color:var(--ink-muted); display:grid; place-items:center;}
+.conv-close:hover{color:var(--ink);}
+.conv-kicker{font-size:11.5px; letter-spacing:1.4px; text-transform:uppercase; color:var(--gold-soft); margin:0 0 6px;}
+.conv-card h2{font-family:var(--font-display); font-size:clamp(24px,6.4vw,30px); line-height:1.15; margin:0 0 8px;}
+.conv-sub{color:var(--ink-muted); font-size:14px; line-height:1.6; margin:0 auto; max-width:34ch;}
+.conv-card .deck{height:clamp(210px,54vw,250px); margin:14px auto 4px;}
+.conv-bullets{list-style:none; padding:0; margin:12px 0 18px; display:grid; gap:7px; text-align:left; font-size:13.5px; color:var(--ink-muted);}
+.conv-bullets li::before{content:"✓"; color:var(--gold); font-weight:700; margin-right:9px;}
+.conv-cta{display:flex; width:100%; justify-content:center; padding:14px 18px; font-size:15px;}
+.conv-later{background:none; border:none; color:var(--ink-faint); font-size:13px; text-decoration:underline; margin-top:10px; padding:8px 12px;}
+.conv-later:hover{color:var(--ink);}
+.conv-overlay :focus-visible, .conv-mini :focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
+@keyframes conv-fade{from{opacity:0;}}
+@keyframes conv-pop{from{opacity:0; transform:translateY(26px) scale(.94);}}
+@keyframes conv-shrink{to{opacity:0; transform:translate(34vw,34vh) scale(.12);}}
+
+.conv-mini{position:fixed; right:14px; bottom:calc(96px + env(safe-area-inset-bottom,0px)); z-index:75; border-radius:18px; background:linear-gradient(160deg, #2a1319, #171112); border:1px solid rgba(201,162,75,.5); box-shadow:0 14px 36px rgba(0,0,0,.6); animation:conv-bounce 2.2s ease-in-out infinite;}
+.conv-mini-body{display:flex; align-items:center; gap:12px; padding:9px 16px 9px 12px; color:var(--ink);}
+.conv-mini-thumbs{display:flex; padding-left:10px;}
+.conv-mini-thumbs i{display:block; width:30px; height:44px; margin-left:-10px; border-radius:6px; border:1.5px solid #181824; background:var(--bg-elev-2) center/cover; box-shadow:0 4px 10px rgba(0,0,0,.5);}
+.conv-mini-thumbs i:nth-child(1){transform:rotate(-7deg);} .conv-mini-thumbs i:nth-child(3){transform:rotate(7deg);}
+.conv-mini-text b{display:block; font-size:14px; color:var(--gold-soft);}
+.conv-mini-text small{display:block; font-size:11.5px; color:var(--ink-muted); margin-top:1px;}
+.conv-mini-x{position:absolute; top:-11px; right:-11px; width:30px; height:30px; padding:0; border:1px solid rgba(244,236,227,.25); border-radius:50%; background:#1b1417; color:var(--ink-muted); display:grid; place-items:center;}
+.conv-mini-x:hover{color:var(--ink);}
+.conv-mini-x svg{width:13px; height:13px;}
+@keyframes conv-bounce{0%,100%{transform:translateY(0);} 10%{transform:translateY(-13px);} 20%{transform:translateY(0);} 30%{transform:translateY(-6px);} 40%{transform:translateY(0);}}
+@media (min-width:900px){ .conv-mini{right:28px; bottom:104px;} }
+@media (prefers-reduced-motion:reduce){ .conv-overlay, .conv-card, .conv-card.closing, .conv-mini{animation:none;} }
+body.has-conv-mini .install-banner{bottom:calc(176px + env(safe-area-inset-bottom,0px));}
+
 .page-wrap{max-width:840px; margin:0 auto; padding:50px 24px 90px;}
 .page-title{font-family:var(--font-display); font-size:32px; margin:0 0 8px;}
 .page-sub{color:var(--ink-muted); font-size:14px; margin-bottom:36px;}
@@ -545,7 +581,7 @@ td.strong{color:var(--ink); font-weight:600;}
 <div id="app">
   <header class="site-header"><span class="brand">Mini Drama<span class="dot"></span></span></header>
   <div class="sk sk-hero"></div>
-  <p class="wake-hint" id="wake-hint">Acordando o servidor… isso acontece no primeiro acesso depois de um tempo parado e leva só alguns segundos. 🎭</p>
+  <p class="wake-hint" id="wake-hint">Acordando o servidor… isso acontece no primeiro acesso depois de um tempo parado e leva só alguns segundos. 📺</p>
   <div class="container"><div class="sk sk-title"></div><div class="sk-row"><div class="sk sk-card"></div><div class="sk sk-card"></div><div class="sk sk-card"></div><div class="sk sk-card"></div><div class="sk sk-card"></div></div></div>
 </div>
 
@@ -672,19 +708,30 @@ async function loadFresh(){
   saveCache();
 }
 
+// A ordem das fileiras muda à 00:00 no fuso do servidor (a resposta traz shuffleDay/shuffleTz). Se o que o navegador
+// guardou é de outro dia, não vale mostrar: ele seria a vitrine de ontem.
+function todayIn(tz){ try{ return new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date()); }catch(e){ return null; } }
+function homeIsFromToday(home){
+  const h = home || DB.home;
+  if(!h || !h.shuffleDay || !h.shuffleTz) return true;               // sem a informação: não força atualização (evita laço)
+  const t = todayIn(h.shuffleTz);
+  return !t || t === h.shuffleDay;
+}
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible" && DB.home && !homeIsFromToday()) refreshInBackground(); });   // aba que ficou aberta durante a virada do dia
 async function refreshInBackground(){
   try{
     const before = JSON.stringify([DB.home, DB.plans, DB.me]);
     await loadFresh();
     const changed = before !== JSON.stringify([DB.home, DB.plans, DB.me]);
-    if(changed && ["#/home", "#/planos"].includes(location.hash || "#/home")) render();
+    if(changed && ["#/home", "#/planos", "#/catalogo"].includes(location.hash || "#/home")) render();
   }catch(e){ /* silencioso: o usuário já está vendo a versão guardada */ }
 }
 
 async function boot(){
+  startConversionTimer();                                            // o pop-up de assinatura conta 30 s a partir daqui
   registerServiceWorker();
   const cached = loadCache();
-  if(cached && cached.hasToken === !!getToken() && (cached.plans || []).length && cached.home && cached.home.catalog){
+  if(cached && cached.hasToken === !!getToken() && (cached.plans || []).length && cached.home && cached.home.catalog && homeIsFromToday(cached.home)){
     DB.home = cached.home; DB.plans = cached.plans; DB.me = cached.me || null;
     const seen = new Set();
     DB.plays = [...cached.home.featured, ...(cached.home.novos || []), ...cached.home.genres.flatMap(g => g.plays)].filter(p => !seen.has(p.id) && seen.add(p.id));
@@ -706,13 +753,19 @@ async function boot(){
   scheduleInstallBanner();
 }
 
-const ADMIN_ROUTES = ["#/admin","#/admin/pecas","#/admin/usuarios","#/admin/planos"];
+const ADMIN_ROUTES = ["#/admin","#/admin/novelinhas","#/admin/usuarios","#/admin/planos"];
 
 let renderSeq = 0;   // cada navegação ganha um número; resposta atrasada de uma navegação antiga é descartada
 async function render(){
   const seq = ++renderSeq;
   reelTeardown(); dropFiltersDrawer(); document.body.classList.remove("reel-open"); appRenders++;   // sai do StoryReel (se estava nele) antes de qualquer tela
   let hash = location.hash || "#/home";
+  // Links antigos (e-mails já enviados, favoritos, app instalado) continuam abrindo: #/peca/ID -> #/novelinha/ID e #/admin/pecas -> #/admin/novelinhas
+  if(hash.startsWith("#/peca/") || hash === "#/admin/pecas"){
+    hash = hash.replace("#/peca/", "#/novelinha/").replace("#/admin/pecas", "#/admin/novelinhas");
+    try{ history.replaceState(null, "", hash); }catch(e){}
+  }
+  refreshConversion();                                               // entrou numa tela onde o convite não aparece (player, planos, login)? ele sai da frente
   const user = currentUser();
 
   if(ADMIN_ROUTES.some(r=>hash.startsWith(r)) && !(user && user.role==="admin")){
@@ -737,9 +790,9 @@ async function render(){
     if(seq !== renderSeq) return;
     qs("#app main").innerHTML = html; afterPublicRender(); return;
   }
-  if(hash.startsWith("#/peca/")) {
+  if(hash.startsWith("#/novelinha/")) {
     const id = hash.split("/")[2];
-    app.innerHTML = PublicShell(`<div class="page-wrap"><p>Carregando peça...</p></div>`); afterPublicRender();
+    app.innerHTML = PublicShell(`<div class="page-wrap"><p>Carregando novelinha...</p></div>`); afterPublicRender();
     const html = await PlayDetail(id);
     if(seq !== renderSeq) return;
     qs("#app main").outerHTML = `<main>${html}</main>`; afterPublicRender();
@@ -795,7 +848,7 @@ function PublicShell(innerHtml){
     <div class="footer-grid">
       <div>
         <div class="brand" style="margin-bottom:10px;">${SITE_NAME}<span class="dot"></span></div>
-        <p style="max-width:260px; line-height:1.6;">Streaming de peças de teatro produzidas por grupos independentes. Um projeto da turma de Teatro em parceria com a turma de Tecnologia.</p>
+        <p style="max-width:260px; line-height:1.6;">novelinhas sem limite</p>
       </div>
       <div><h4>Navegação</h4><a href="#/catalogo">Catálogo</a><a href="#/planos">Planos</a><a href="#/cadastro">Criar conta</a><a href="#/home" onclick="promptInstall(); return false;">Instalar o app</a></div>
       <div><h4>Suporte</h4><a href="#/">Central de ajuda</a><a href="#/">Fale conosco</a></div>
@@ -841,12 +894,12 @@ function afterPublicRender(){
   const h = qs("#site-header");
   if(h){ window.onscroll = ()=>{ h.classList.toggle("solid", window.scrollY>10); }; }
   if(currentUser() && !DB.mine) loadMine().then(syncHearts); else syncHearts();
-  refreshInstallBanner();
+  refreshConversion(); refreshInstallBanner();
   requestAnimationFrame(placeFnavIndicator);
 }
 
 /* --------------------------- FORMATO APP: minha lista, continuar assistindo, pesquisa ------------------ */
-DB.mine = null;           // { cont: [peças com progress], list: Set(ids) } — só para quem está logado
+DB.mine = null;           // { cont: [novelinhas com progress], list: Set(ids) } — só para quem está logado
 let minePromise = null;
 function loadMine(){
   if(!currentUser()){ DB.mine = null; return Promise.resolve(null); }
@@ -866,7 +919,7 @@ function syncHearts(){
   });
 }
 async function toggleList(id){
-  if(!currentUser()){ toast("Entre na sua conta para salvar peças na lista."); go("#/login"); return; }
+  if(!currentUser()){ toast("Entre na sua conta para salvar novelinhas na lista."); go("#/login"); return; }
   if(!DB.mine) DB.mine = { cont: [], list: new Set() };
   const had = DB.mine.list.has(id);
   if(had) DB.mine.list.delete(id); else DB.mine.list.add(id);
@@ -886,7 +939,7 @@ async function toggleList(id){
     if(!left) render();
   }
 }
-const listCountText = (n) => `${n} peça${n === 1 ? "" : "s"} salva${n === 1 ? "" : "s"}`;
+const listCountText = (n) => `${n} novelinha${n === 1 ? "" : "s"} salva${n === 1 ? "" : "s"}`;
 function hasPaidPlan(user){ const pl = user && planById(user.plan); return !!(pl && pl.price > 0 && isPlanActive(user)); }
 
 /* ---- Continue assistindo ---- */
@@ -898,7 +951,7 @@ function fmtLeft(sec){
 }
 function ContinueCard(p){
   const pr = p.progress || {}, pct = pr.duration ? Math.max(2, Math.min(100, Math.round(pr.position / pr.duration * 100))) : 0;
-  const href = `#/${p.canWatch && p.hasVideo ? "reel" : "peca"}/${esc(p.id)}`;
+  const href = `#/${p.canWatch && p.hasVideo ? "reel" : "novelinha"}/${esc(p.id)}`;
   return `<div class="cw-card">
     <a class="cw-link" href="${href}" aria-label="Continuar ${esc(p.title)}">
       <div class="cw-thumb" style="background-image:url('${esc(p.backdropUrl || p.posterUrl)}')">
@@ -948,7 +1001,7 @@ async function MyListPage(){
     <h1 class="page-title">Minha lista</h1>
     <p class="page-sub" id="list-count">${listCountText(plays.length)}</p>
     ${plays.length ? `<div class="search-grid" id="list-grid">${plays.map(PlayCard).join("")}</div>`
-      : `<div class="search-empty">${ICO.heart}<p>Sua lista está vazia</p><span>Toque no coração de uma peça para guardá-la aqui e assistir depois.</span><a href="#/catalogo" class="btn btn-gold btn-sm" style="margin-top:10px;">Explorar o catálogo</a></div>`}
+      : `<div class="search-empty">${ICO.heart}<p>Sua lista está vazia</p><span>Toque no coração de uma novelinha para guardá-la aqui e assistir depois.</span><a href="#/catalogo" class="btn btn-gold btn-sm" style="margin-top:10px;">Explorar o catálogo</a></div>`}
   </div>`;
 }
 
@@ -964,7 +1017,7 @@ function SearchPage(q){
   return `<div class="container search-page">
     <form class="search-box" role="search" onsubmit="return false">
       <span class="search-ico">${ICO.search}</span>
-      <input id="search-input" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Buscar por título, direção ou elenco" aria-label="Buscar peças" value="${esc(q)}">
+      <input id="search-input" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Buscar por título, direção ou elenco" aria-label="Buscar novelinhas" value="${esc(q)}">
       <button type="button" class="search-clear" id="search-clear" aria-label="Limpar busca" ${q ? "" : "hidden"}>${ICO.x}</button>
     </form>
     <div id="search-out" aria-live="polite"></div>
@@ -996,7 +1049,7 @@ function attachSearchEvents(q0){
     if(page === 1){
       out.innerHTML = r.plays.length
         ? `<p class="search-count">${r.total} resultado${r.total === 1 ? "" : "s"} para “${esc(q)}”</p><div class="search-grid" id="search-grid">${cards}</div>${r.totalPages > 1 ? `<div class="search-more"><button type="button" class="btn btn-ghost btn-sm" id="search-more">Ver mais</button></div>` : ""}`
-        : `<div class="search-empty">${ICO.search}<p>Nenhuma peça para “${esc(q)}”</p><span>Confira a grafia ou tente o nome da direção ou de alguém do elenco.</span></div>`;
+        : `<div class="search-empty">${ICO.search}<p>Nenhuma novelinha para “${esc(q)}”</p><span>Confira a grafia ou tente o nome da direção ou de alguém do elenco.</span></div>`;
     } else {
       qs("#search-grid").insertAdjacentHTML("beforeend", cards);
       const more = qs("#search-more"); if(more && page >= r.totalPages) more.parentElement.remove();
@@ -1012,27 +1065,27 @@ function attachSearchEvents(q0){
     if(chip){ input.value = chip.dataset.recent; run(input.value); return; }
     if(e.target.closest("[data-recent-clear]")){ setRecent([]); idle(); return; }
     if(e.target.closest("#search-more")){ run(searchState.q, searchState.page + 1); return; }
-    if(e.target.closest(".card") && !e.target.closest("[data-heart]")) addRecent(searchState.q);   // guarda a busca que levou a uma peça
+    if(e.target.closest(".card") && !e.target.closest("[data-heart]")) addRecent(searchState.q);   // guarda a busca que levou a uma novelinha
   });
   run(q0);
   if(!q0) input.focus();
 }
 
 /* --------------------------- FASE 2: filtros do catálogo + Surpresa ------------------------------------ */
-const APP_VERSION = "2026.10.21-mobile";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
-const SORT_LABELS = { recent: "Mais recentes", title: "Título (A–Z)", year: "Ano (mais novo)", longest: "Mais longas", shortest: "Mais curtas" };
-let catalogFilters = { sort: "recent", year: "", plan: "" };
+const APP_VERSION = "2026.10.23-novelinhas";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
+const SORT_LABELS = { "": "Padrão", recent: "Mais recentes", title: "Título (A–Z)", year: "Ano (mais novo)", longest: "Mais longas", shortest: "Mais curtas" };
+let catalogFilters = { sort: "", year: "", plan: "" };
 let catalogFacets = null;
 
 function catalogQuery(){
   const f = catalogFilters;
   return `page=${catalogPage}&pageSize=24&genre=${encodeURIComponent(catalogGenre)}`
-    + (f.sort !== "recent" ? `&sort=${encodeURIComponent(f.sort)}` : "")
+    + (f.sort ? `&sort=${encodeURIComponent(f.sort)}` : "")
     + (f.year ? `&year=${encodeURIComponent(f.year)}` : "")
     + (f.plan ? `&plan=${encodeURIComponent(f.plan)}` : "");
 }
 function activeFilterCount(){
-  return (catalogFilters.sort !== "recent" ? 1 : 0) + (catalogFilters.year ? 1 : 0) + (catalogFilters.plan ? 1 : 0);
+  return (catalogFilters.sort ? 1 : 0) + (catalogFilters.year ? 1 : 0) + (catalogFilters.plan ? 1 : 0);
 }
 async function reloadCatalog(){
   const seq = renderSeq;
@@ -1089,7 +1142,7 @@ async function openFiltersDrawer(){
     if(e.target === el || e.target.closest("[data-fclose]")){ closeFiltersDrawer(); return; }
     const clear = e.target.closest("[data-fclear]"), apply = e.target.closest("[data-fapply]");
     if(!clear && !apply) return;
-    if(clear){ catalogFilters = { sort: "recent", year: "", plan: "" }; catalogGenre = "novos"; }
+    if(clear){ catalogFilters = { sort: "", year: "", plan: "" }; catalogGenre = "novos"; }
     else {
       catalogFilters = { sort: el.querySelector("#f-sort").value, year: el.querySelector("#f-year").value, plan: el.querySelector("#f-plan").value };
       catalogGenre = el.querySelector("#f-genre").value;
@@ -1103,25 +1156,19 @@ async function openFiltersDrawer(){
 }
 
 /* ---- Surpresa ---- */
-let surprise = { pool: null, lastId: null, busy: false };
-// Sorteia uma peça do conjunto sem repetir a anterior (quando houver mais de uma).
-function pickRandom(pool, lastId, rnd = Math.random){
-  if(!pool.length) return null;
-  const others = pool.filter(p => p.id !== lastId);            // sem laço: nunca trava, mesmo com ids repetidos
-  const src = others.length ? others : pool;
-  return src[Math.min(src.length - 1, Math.floor(rnd() * src.length))];
-}
+let surprise = { lastId: null, busy: false };
 function shuffled(list){ const a = list.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
-function deckHtml(plays){
+// Baralho de capas (o mesmo desenho serve para a tela Surpresa e para o pop-up de assinatura; o id evita duplicar elementos).
+function deckHtml(plays, id = "deck"){
   const covers = shuffled(plays.filter(p => p.posterUrl)).slice(0, 5).map(p => p.posterUrl);
-  return `<div class="deck" id="deck" aria-hidden="true">${[0, 1, 2, 3, 4].map(i => `<span class="deck-card" style="--i:${i - 2};${covers[i] ? ` background-image:url('${esc(covers[i])}')` : ""}"></span>`).join("")}</div>`;
+  return `<div class="deck" id="${esc(id)}" aria-hidden="true">${[0, 1, 2, 3, 4].map(i => `<span class="deck-card" style="--i:${i - 2};${covers[i] ? ` background-image:url('${esc(covers[i])}')` : ""}"></span>`).join("")}</div>`;
 }
 function SurprisePage(){
   return `<div class="container surprise-page">
     <h1 class="page-title">Conteúdo surpresa</h1>
-    <p class="page-sub">Não sabe o que assistir? Embaralhe o catálogo e deixe o ${esc(SITE_NAME)} escolher uma peça para você.</p>
+    <p class="page-sub">Não sabe o que assistir? Embaralhe o catálogo e deixe o ${esc(SITE_NAME)} escolher uma novelinha para você.</p>
     ${deckHtml(DB.plays || [])}
-    <div class="surprise-actions"><button type="button" class="btn btn-gold" id="surprise-go" disabled>${ICO.shuffle} <span>Preparando o baralho…</span></button></div>
+    <div class="surprise-actions"><button type="button" class="btn btn-gold" id="surprise-go">${ICO.shuffle} <span>Sortear novelinha</span></button></div>
     <div id="surprise-pick" aria-live="polite"></div>
   </div>`;
 }
@@ -1129,53 +1176,179 @@ function pickHtml(p){
   const plan = planById(p.requiresPlan), canPlay = p.canWatch && p.hasVideo, syn = String(p.synopsis || "").trim();
   const saved = inMyList(p.id);
   return `<article class="pick">
-    <a class="pick-poster" href="#/peca/${esc(p.id)}" aria-label="Abrir ${esc(p.title)}"><img src="${esc(p.posterUrl)}" alt="${esc(p.title)}"></a>
+    <a class="pick-poster" href="#/novelinha/${esc(p.id)}" aria-label="Abrir ${esc(p.title)}"><img src="${esc(p.posterUrl)}" alt="${esc(p.title)}"></a>
     <div>
-      <span class="pick-tag">Sua peça sorteada</span>
+      <span class="pick-tag">Sua novelinha sorteada</span>
       <h2>${esc(p.title)}</h2>
       <p class="pick-meta"><span>${esc(p.genre || "")}</span><span>${fmtDuration(p.durationMinutes)}</span><span>${esc(p.releaseYear)}</span></p>
       ${syn.length > 2 ? `<p class="pick-syn">${esc(syn)}</p>` : ""}
-      ${!p.canWatch ? `<p class="pick-note">Disponível no plano ${esc(plan ? plan.name : "")}.</p>` : (!p.hasVideo ? `<p class="pick-note">O vídeo desta peça ainda não foi cadastrado.</p>` : "")}
+      ${!p.canWatch ? `<p class="pick-note">Disponível no plano ${esc(plan ? plan.name : "")}.</p>` : (!p.hasVideo ? `<p class="pick-note">O vídeo desta novelinha ainda não foi cadastrado.</p>` : "")}
       <div class="pick-actions">
-        <a class="btn btn-gold" href="#/${canPlay ? "reel" : "peca"}/${esc(p.id)}">${canPlay ? `${ICO.play} Assistir` : "Ver detalhes"}</a>
+        <a class="btn btn-gold" href="#/${canPlay ? "reel" : "novelinha"}/${esc(p.id)}">${canPlay ? `${ICO.play} Assistir` : "Ver detalhes"}</a>
+        ${!p.canWatch ? `<a class="btn btn-ghost" href="#/planos">Ver planos</a>` : ""}
         <button type="button" class="btn btn-ghost" data-heart="${esc(p.id)}" aria-pressed="${saved}">${ICO.heart} Minha lista</button>
       </div>
     </div>
   </article>`;
 }
+// O sorteio é feito no servidor (GET /plays/random) e vale para TODAS as novelinhas cadastradas, sem limite de data.
 function attachSurpriseEvents(){
   const go_ = qs("#surprise-go"), out = qs("#surprise-pick");
   if(!go_) return;
   const alive = () => go_.isConnected;
   const label = (t) => { go_.querySelector("span").textContent = t; };
-  surprise = { pool: null, lastId: null, busy: false };
-  const loadPool = () => {
-    go_.disabled = true; label("Preparando o baralho…");
-    api("/plays?page=1&pageSize=100").then(r => {
-      if(!alive()) return;
-      const all = r.plays || [], playable = all.filter(p => p.canWatch && p.hasVideo);
-      surprise.pool = playable.length ? playable : all;         // prefere o que a pessoa consegue assistir agora
-      if(!surprise.pool.length){ label("Ainda não há peças"); return; }
-      const d = qs("#deck"); if(d) d.outerHTML = deckHtml(all);
-      go_.disabled = false; label("Sortear peça");
-    }).catch(e => { if(alive()){ surprise.pool = null; go_.disabled = false; label("Tentar de novo"); toast(e.message); } });
-  };
-  go_.addEventListener("click", () => {
+  surprise = { lastId: null, busy: false };
+  // capas do baralho: também sorteadas de todas (a vitrine inicial usa só o que já está na página)
+  api("/plays/random?count=5").then(r => {
+    if(!alive()) return;
+    const d = qs("#deck"); if(d && r.plays && r.plays.length) d.outerHTML = deckHtml(r.plays);
+    if(!r.total){ label("Ainda não há novelinhas"); go_.disabled = true; }
+  }).catch(() => {});
+  go_.addEventListener("click", async () => {
     if(surprise.busy) return;
-    if(!surprise.pool){ loadPool(); return; }                   // o carregamento tinha falhado
     surprise.busy = true; go_.disabled = true; out.innerHTML = "";
     const d = qs("#deck"); if(d){ d.classList.remove("done"); d.classList.add("shuffling"); }
-    setTimeout(() => {
-      if(!alive()) return;
-      const p = pickRandom(surprise.pool, surprise.lastId);
-      surprise.lastId = p.id; surprise.busy = false;
-      const d2 = qs("#deck"); if(d2){ d2.classList.remove("shuffling"); d2.classList.add("done"); }
-      out.innerHTML = pickHtml(p);
-      go_.disabled = false; label("Sortear outra");
-      syncHearts();
-    }, reelReduced() ? 0 : 800);
+    const pause = new Promise(r => setTimeout(r, reelReduced() ? 0 : 800));          // o tempo da animação do baralho
+    let pick = null, err = null;
+    try{
+      const url = "/plays/random?count=1" + (surprise.lastId ? "&exclude=" + encodeURIComponent(surprise.lastId) : "");
+      const [r] = await Promise.all([api(url), pause]);
+      pick = (r.plays || [])[0] || null;
+    }catch(e){ err = e; await pause; }
+    surprise.busy = false;
+    if(!alive()) return;
+    const d2 = qs("#deck"); if(d2) d2.classList.remove("shuffling");
+    go_.disabled = false;
+    if(err){ toast(err.message); label("Tentar de novo"); return; }
+    if(!pick){ label("Ainda não há novelinhas"); go_.disabled = true; return; }
+    surprise.lastId = pick.id;
+    if(d2) d2.classList.add("done");
+    out.innerHTML = pickHtml(pick); label("Sortear outra"); syncHearts();
   });
-  loadPool();
+}
+
+/* --------------------------- CONVERSÃO: pop-up de assinatura (principal + mini) --------------------------------
+   Aparece 30 s depois de abrir o site para quem NÃO tem plano pago ativo (visitante ou conta gratuita), a cada acesso
+   (nada é gravado no navegador). Ao fechar vira um mini fixo no canto que "pula" para chamar a atenção. Não interrompe
+   quem está assistindo nem quem já está em Planos ou preenchendo login/cadastro: espera uma tela livre. */
+const CONV_DELAY_MS = 30000;
+let conv = { fired: false, state: "idle", plays: null, prevFocus: null };     // state: idle | main | mini | gone
+
+// Telas onde o convite NÃO aparece: player, planos (já está assinando) e telas de acesso.
+function convRouteOk(hash){ return !/^#\/(reel|planos|login|cadastro|esqueci-senha|redefinir-senha|admin)/.test(hash || "#/home"); }
+// Visitante OU conta sem plano pago ativo (plano gratuito ou pago vencido).
+function convEligible(){ const u = currentUser(); return !u || !hasPaidPlan(u); }
+// O que o convite deve estar mostrando agora (função pura, testada).
+function convDecision(st){
+  if(!st.fired || st.state === "gone") return "none";
+  if(!st.eligible) return "hide";
+  if(!st.routeOk) return st.state === "idle" ? "wait" : "hide";               // ainda não apareceu: espera uma tela livre
+  return (st.state === "idle" || st.state === "main") ? "main" : "mini";
+}
+const convCheapestPlan = () => (DB.plans || []).filter(p => p.price > 0).sort((a, b) => a.price - b.price)[0] || null;
+const convPlays = () => (conv.plays && conv.plays.length ? conv.plays : (DB.plays || [])).filter(p => p.posterUrl);
+
+function convMainHtml(){
+  const user = currentUser(), plan = convCheapestPlan();
+  const sub = user ? "Você está no plano gratuito. Escolha um plano e libere mais novelinhas, quando e onde quiser."
+                   : "Crie sua conta grátis e escolha um plano para liberar mais novelinhas, quando e onde quiser.";
+  return `<div class="conv-overlay" id="conv-main" role="dialog" aria-modal="true" aria-labelledby="conv-title">
+    <div class="conv-card" id="conv-card">
+      <button type="button" class="conv-close" data-conv-close aria-label="Fechar">${ICO.x}</button>
+      <p class="conv-kicker">${esc(SITE_NAME)}</p>
+      <h2 id="conv-title">Assista novelinhas sem limite</h2>
+      <p class="conv-sub">${sub}</p>
+      ${deckHtml(convPlays(), "conv-deck")}
+      <ul class="conv-bullets">
+        <li>Pagamento por PIX, liberação na hora</li>
+        <li>Continue de onde parou, no celular ou no computador</li>
+        <li>Sua lista salva em qualquer aparelho</li>
+      </ul>
+      <a class="btn btn-gold conv-cta" href="#/planos" data-conv-cta>${plan ? `Ver planos · a partir de ${fmtMoney(plan.price)}` : "Ver planos"}</a>
+      <button type="button" class="conv-later" data-conv-close>Agora não</button>
+    </div></div>`;
+}
+function convMiniHtml(){
+  const thumbs = convPlays().slice(0, 3).map(p => `<i style="background-image:url('${esc(p.posterUrl)}')"></i>`).join("");
+  return `<aside class="conv-mini" id="conv-mini" aria-label="Oferta de assinatura">
+    <a class="conv-mini-body" href="#/planos" data-conv-cta>
+      ${thumbs ? `<span class="conv-mini-thumbs" aria-hidden="true">${thumbs}</span>` : ""}
+      <span class="conv-mini-text"><b>Assine agora</b><small>novelinhas sem limite</small></span>
+    </a>
+    <button type="button" class="conv-mini-x" data-conv-dismiss aria-label="Dispensar oferta">${ICO.x}</button>
+  </aside>`;
+}
+function convRemove(){
+  const m = document.getElementById("conv-main"), n = document.getElementById("conv-mini");
+  if(m) m.remove(); if(n) n.remove();
+  document.body.classList.remove("conv-open", "has-conv-mini");
+  document.removeEventListener("keydown", convOnKey);
+}
+function convShowMini(){
+  if(document.getElementById("conv-mini")) return;
+  document.body.insertAdjacentHTML("beforeend", convMiniHtml());
+  document.body.classList.add("has-conv-mini");
+}
+function convShowMain(){
+  if(document.getElementById("conv-main")) return;
+  conv.state = "main"; conv.prevFocus = document.activeElement;
+  const mini = document.getElementById("conv-mini"); if(mini) mini.remove();
+  document.body.classList.remove("has-conv-mini");
+  document.body.insertAdjacentHTML("beforeend", convMainHtml());
+  document.body.classList.add("conv-open");
+  document.addEventListener("keydown", convOnKey);
+  const cta = document.querySelector("#conv-main [data-conv-cta]"); if(cta) cta.focus();
+  // as capas sorteadas entre TODAS as novelinhas chegam depois (o pop-up aparece na hora, sem esperar a rede)
+  if(!conv.plays) api("/plays/random?count=5").then(r => {
+    conv.plays = (r.plays || []).filter(p => p.posterUrl);
+    const d = document.getElementById("conv-deck"); if(d && conv.plays.length) d.outerHTML = deckHtml(conv.plays, "conv-deck");
+    const m = document.getElementById("conv-mini"); if(m){ m.remove(); convShowMini(); }
+  }).catch(() => {});
+}
+// Fecha o principal e o transforma no mini (encolhe em direção ao canto). `animate=false`: troca na hora (ex.: foi para Planos).
+function convCloseMain(animate = true){
+  const main = document.getElementById("conv-main"), card = document.getElementById("conv-card");
+  if(!main) return;
+  const finish = () => {
+    if(!document.getElementById("conv-main")) return;
+    main.remove(); document.body.classList.remove("conv-open"); document.removeEventListener("keydown", convOnKey);
+    conv.state = "mini";
+    if(conv.prevFocus && conv.prevFocus.isConnected) try{ conv.prevFocus.focus(); }catch(e){}
+    refreshConversion();
+  };
+  if(animate && card && !reelReduced()){ card.classList.add("closing"); setTimeout(finish, 300); } else finish();
+}
+function convOnKey(e){
+  const main = document.getElementById("conv-main"); if(!main) return;
+  if(e.key === "Escape"){ convCloseMain(); return; }
+  if(e.key === "Tab"){                                                        // foco preso dentro do pop-up
+    const f = [...main.querySelectorAll("button, a[href]")].filter(x => !x.disabled);
+    if(!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if(e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+  }
+}
+document.addEventListener("click", (e) => {
+  const main = document.getElementById("conv-main");
+  if(main && e.target === main){ convCloseMain(); return; }                   // clique fora do cartão
+  if(e.target.closest("[data-conv-close]")){ convCloseMain(); return; }
+  if(e.target.closest("[data-conv-dismiss]")){ conv.state = "gone"; convRemove(); return; }
+  if(e.target.closest("#conv-main [data-conv-cta]")){ convCloseMain(false); }  // o link segue para Planos; o pop-up não fica para trás
+});
+
+// Reconcilia o que está na tela com o que deveria estar. Chamada ao disparar o tempo e a cada troca de tela/login.
+function refreshConversion(){
+  const action = convDecision({ fired: conv.fired, state: conv.state, eligible: convEligible(), routeOk: convRouteOk(location.hash) && !reel });
+  if(action === "main") convShowMain();
+  else if(action === "mini") convShowMini();
+  else if(action === "hide"){ if(conv.state === "main") conv.state = "mini"; convRemove(); }
+  if(action !== "main") refreshInstallBanner();                               // o balão de instalar espera enquanto o pop-up principal está aberto
+}
+function startConversionTimer(){
+  if(conv.started) return;
+  conv.started = true;
+  setTimeout(() => { conv.fired = true; refreshConversion(); }, CONV_DELAY_MS);   // exatamente 30 s depois de abrir o site
 }
 
 /* --------------------------- HOME PAGE ---------------------------------- */
@@ -1188,13 +1361,13 @@ function HomePage(){
     ${featured.map((p,i)=>`
       <div class="hero-slide ${i===0?'active':''}" data-i="${i}" data-bg="${esc(p.backdropUrl)}" ${i===0?`style="background-image:url('${esc(p.backdropUrl)}')"`:''}>
         <div class="hero-content reveal">
-          <div class="hero-eyebrow"><span class="dot"></span> Em cartaz na plataforma</div>
+          <div class="hero-eyebrow"><span class="dot"></span> Em destaque na plataforma</div>
           <h1 class="hero-title">${esc(p.title)}</h1>
           <div class="hero-meta"><span>${ICO.clock} ${fmtDuration(p.durationMinutes)}</span>${p.genre ? `<span>${esc(p.genre)}</span>` : ""}<span>${p.releaseYear}</span></div>
           <p class="hero-desc">${esc(p.synopsis)}</p>
           <div class="hero-actions">
-            <a href="#/${p.canWatch && p.hasVideo ? "reel" : "peca"}/${p.id}" class="btn btn-gold">${ICO.play} Assistir agora</a>
-            <a href="#/peca/${p.id}" class="btn btn-ghost">${ICO.info} Mais detalhes</a>
+            <a href="#/${p.canWatch && p.hasVideo ? "reel" : "novelinha"}/${p.id}" class="btn btn-gold">${ICO.play} Assistir agora</a>
+            <a href="#/novelinha/${p.id}" class="btn btn-ghost">${ICO.info} Mais detalhes</a>
           </div>
         </div>
       </div>`).join("")}
@@ -1205,7 +1378,7 @@ function HomePage(){
   (home.genres || []).forEach(g => sections.push(PlayRow(g.label, g.id, g.plays, g.total)));
   const rows = sections.join("");
   return `${hero}
-  <div class="container">${currentUser() ? `<div id="cw-slot"></div>` : ""}${rows || `<p style="color:var(--ink-muted); text-align:center; padding:60px 0;">As primeiras peças estão chegando. Volte em breve! 🎭</p>`}</div>`;
+  <div class="container">${currentUser() ? `<div id="cw-slot"></div>` : ""}${rows || `<p style="color:var(--ink-muted); text-align:center; padding:60px 0;">As primeiras novelinhas estão chegando. Volte em breve! 📺</p>`}</div>`;
 }
 function setCatalogGenre(g){ catalogGenre = g; catalogPage = 1; }
 function PlayRow(title, genreId, plays, total){
@@ -1215,7 +1388,7 @@ function PlayRow(title, genreId, plays, total){
 }
 function PlayCard(p){
   const saved = inMyList(p.id);
-  return `<a class="card" href="#/${p.canWatch && p.hasVideo ? "reel" : "peca"}/${p.id}">
+  return `<a class="card" href="#/${p.canWatch && p.hasVideo ? "reel" : "novelinha"}/${p.id}">
     <div class="card-art">
       <img class="card-poster" src="${esc(p.posterUrl)}" alt="${esc(p.title)}" loading="lazy">
       ${planLevel(p.requiresPlan)>0 ? `<span class="card-badge">${planById(p.requiresPlan)?.name || ''}</span>` : ``}
@@ -1240,6 +1413,7 @@ function attachHomeEvents(){
   if(heroTimer) clearInterval(heroTimer);
   if(slides.length>1) heroTimer = setInterval(()=>{ setHero((heroIndex+1) % slides.length); }, 6500);
   if(currentUser()){ fillContinue(); loadMine().then(() => { fillContinue(); syncHearts(); }); }   // progresso e lista sempre atualizados ao voltar para a home
+  if(!homeIsFromToday()) refreshInBackground();                      // abriu a home depois da virada do dia: busca a ordem nova
 }
 
 /* --------------------------- CATALOG PAGE -------------------------------- */
@@ -1252,7 +1426,7 @@ function PaginationControls(meta, gotoFnName){
   const page = meta.page || 1, totalPages = meta.totalPages;
   return `<div style="display:flex; justify-content:center; align-items:center; gap:14px; margin:10px 0 50px;">
     <button class="btn btn-ghost btn-sm" ${page<=1?'disabled':''} onclick="${gotoFnName}(${page-1})">${ICO.chevronLeft} Anterior</button>
-    <span style="color:var(--ink-muted); font-size:13px;">Página ${page} de ${totalPages} (${meta.total} peças)</span>
+    <span style="color:var(--ink-muted); font-size:13px;">Página ${page} de ${totalPages} (${meta.total} novelinhas)</span>
     <button class="btn btn-ghost btn-sm" ${page>=totalPages?'disabled':''} onclick="${gotoFnName}(${page+1})">Próxima</button>
   </div>`;
 }
@@ -1267,7 +1441,7 @@ async function CatalogPage(){
   catalogMeta = r;
   const trending = tr && tr.plays && tr.plays.length
     ? `<div class="section-row" id="trending-row"><div class="section-row-head"><h2 class="section-title">Em alta</h2></div>${RailWrap(tr.plays.map(p => PlayCard(p)).join(""))}</div>
-       <h2 class="section-title" style="margin:6px 0 14px;">Todas as peças</h2>` : "";
+       <h2 class="section-title" style="margin:6px 0 14px;">Todas as novelinhas</h2>` : "";
   const genres = [{ id:"novos", label:"Novos Na Plataforma" }, ...genreList()];
   const n = activeFilterCount();
   return `<div class="container" style="padding-top:36px;">
@@ -1278,7 +1452,7 @@ async function CatalogPage(){
       <button type="button" class="btn btn-ghost btn-filters" id="open-filters" aria-haspopup="dialog">${ICO.sliders} Filtros${n ? `<span class="chip-count" aria-label="${n} filtro${n === 1 ? "" : "s"} ativo${n === 1 ? "" : "s"}">${n}</span>` : ""}</button>
     </div>
     <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:18px; margin-bottom:24px;">
-      ${r.plays.length ? r.plays.map(p=>PlayCard(p)).join("") : `<div class="catalog-empty"><p>Nenhuma peça encontrada${n ? " com esses filtros" : " nesse gênero"}.</p>${n ? `<button type="button" class="catalog-clear" data-fclear-inline>Limpar filtros</button>` : ""}</div>`}
+      ${r.plays.length ? r.plays.map(p=>PlayCard(p)).join("") : `<div class="catalog-empty"><p>Nenhuma novelinha encontrada${n ? " com esses filtros" : " nesse gênero"}.</p>${n ? `<button type="button" class="catalog-clear" data-fclear-inline>Limpar filtros</button>` : ""}</div>`}
     </div>
     ${PaginationControls(catalogMeta, "goToCatalogPage")}
   </div>`;
@@ -1295,7 +1469,7 @@ async function goToCatalogPage(n){
 function attachCatalogEvents(){
   qsa("#genre-filters .chip").forEach(btn => btn.addEventListener("click", () => { catalogGenre = btn.dataset.genre; catalogPage = 1; reloadCatalog(); }));
   const of = qs("#open-filters"); if(of) of.addEventListener("click", openFiltersDrawer);
-  const cl = qs("[data-fclear-inline]"); if(cl) cl.addEventListener("click", () => { catalogFilters = { sort: "recent", year: "", plan: "" }; catalogPage = 1; reloadCatalog(); });
+  const cl = qs("[data-fclear-inline]"); if(cl) cl.addEventListener("click", () => { catalogFilters = { sort: "", year: "", plan: "" }; catalogPage = 1; reloadCatalog(); });
 }
 
 /* --------------------------- PLAY DETAIL --------------------------------- */
@@ -1314,7 +1488,7 @@ function detectVideoDuration(file){
     videoEl.src = url;
   });
 }
-// Transforma "minha_peca-ATO_final.mp4" em "Minha Peca Ato Final".
+// Transforma "minha_novelinha-EP_final.mp4" em "Minha Novelinha Ep Final".
 function titleFromFilename(filename){
   const base = filename.replace(/\.[^/.]+$/, "");
   return base.replace(/[_\-]+/g, " ").replace(/\s+/g, " ").trim().replace(/\b\w/g, c => c.toUpperCase());
@@ -1357,10 +1531,10 @@ function guessGenres(text){
 }
 
 /* --------------------------- STORYREEL (player vertical) ------------------------------
-   Feed estilo Reels/TikTok: uma peça por tela, rolagem com scroll-snap (CSS puro) e player Plyr
+   Feed estilo Reels/TikTok: uma novelinha por tela, rolagem com scroll-snap (CSS puro) e player Plyr
    (+ hls.js para .m3u8). Só a tela ATIVA tem player montado; as outras ficam só com a capa, então
    memória e banda não crescem com o tamanho do feed. O link do vídeo vem de /api/plays/:id (a listagem
-   nunca o traz), logo quem não tem direito à peça nunca recebe o link. */
+   nunca o traz), logo quem não tem direito à novelinha nunca recebe o link. */
 const REEL_SVG = (path, size = 22) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
 const REEL_ICO = {
   volume: REEL_SVG('<path d="M11 5L6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/>'),
@@ -1387,7 +1561,7 @@ let appRenders = 0;       // quantas telas o site já desenhou (para o "Voltar" 
 
 /* ---- funções puras (testadas em tests/storyreel.test.js) ---- */
 function ytId(url){ const m = String(url || "").match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{6,})/); return m ? m[1] : null; }
-// A peça escolhida vem primeiro; depois as outras que a pessoa PODE assistir e que já têm vídeo.
+// A novelinha escolhida vem primeiro; depois as outras que a pessoa PODE assistir e que já têm vídeo.
 function buildReelFeed(plays, startId){
   const start = startId ? plays.find(p => p.id === startId) : null;
   const rest = plays.filter(p => p.canWatch && p.hasVideo && (!start || p.id !== start.id));
@@ -1407,9 +1581,9 @@ function reelMetaHtml(p){
 }
 function reelPanelHtml(kind, p){
   const plan = planById(p.requiresPlan), user = currentUser();
-  if(kind === "locked") return `${REEL_ICO.lock}<h3>Conteúdo do plano ${esc(plan ? plan.name : "")}</h3><p>Assine para assistir à peça completa (${fmtDuration(p.durationMinutes)}).</p>
+  if(kind === "locked") return `${REEL_ICO.lock}<h3>Conteúdo do plano ${esc(plan ? plan.name : "")}</h3><p>Assine para assistir à novelinha completa (${fmtDuration(p.durationMinutes)}).</p>
     <div class="reel-panel-actions"><a href="#/planos" class="btn btn-gold btn-sm">Ver planos</a>${user ? "" : `<a href="#/login" class="btn btn-ghost btn-sm">Entrar</a>`}</div>`;
-  if(kind === "novideo") return `${REEL_ICO.film}<h3>Vídeo ainda não cadastrado</h3><p>A produção ainda vai anexar o link de exibição desta peça.</p>`;
+  if(kind === "novideo") return `${REEL_ICO.film}<h3>Vídeo ainda não cadastrado</h3><p>A produção ainda vai anexar o link de exibição desta novelinha.</p>`;
   return `${REEL_ICO.alert}<h3>Não foi possível reproduzir</h3><p>${esc(kind)}</p><div class="reel-panel-actions"><button class="btn btn-ghost btn-sm" data-act="retry">Tentar de novo</button></div>`;
 }
 function reelSlideHtml(p, i){
@@ -1430,14 +1604,14 @@ function reelSlideHtml(p, i){
     </div>
     <div class="reel-rail">
       ${watchable ? `<button class="reel-btn" data-act="sound" aria-label="Ativar ou silenciar o som" aria-pressed="false">${REEL_ICO.volume}</button><button class="reel-btn reel-btn-fs" data-act="fs" aria-label="Tela cheia">${REEL_ICO.expand}</button>` : ""}
-      <button class="reel-btn" data-act="info" aria-label="Detalhes da peça">${REEL_ICO.info}</button>
+      <button class="reel-btn" data-act="info" aria-label="Detalhes da novelinha">${REEL_ICO.info}</button>
       <button class="reel-btn" data-act="share" aria-label="Compartilhar">${REEL_ICO.share}</button>
     </div>
   </section>`;
 }
 function reelEndHtml(i){
   return `<section class="reel-slide reel-end" data-i="${i}" aria-label="Fim da lista">
-    <h2>Você viu tudo por aqui</h2><p>Não há mais peças liberadas para você nesta lista.</p>
+    <h2>Você viu tudo por aqui</h2><p>Não há mais novelinhas liberadas para você nesta lista.</p>
     <div class="reel-panel-actions"><a href="#/catalogo" class="btn btn-gold btn-sm">Ver o catálogo</a><button class="btn btn-ghost btn-sm" data-act="top">Voltar ao início</button></div>
   </section>`;
 }
@@ -1632,7 +1806,7 @@ function reelSetActive(i){
 }
 function reelGo(i){
   const r = reel; if(!r) return;
-  i = Math.max(0, Math.min(r.last, i));                  // com mais de uma peça, a última posição é a tela de "fim"
+  i = Math.max(0, Math.min(r.last, i));                  // com mais de uma novelinha, a última posição é a tela de "fim"
   const s = reelSlideEl(i);
   if(s) s.scrollIntoView({ behavior: reelReduced() ? "auto" : "smooth", block: "start" });
 }
@@ -1701,14 +1875,14 @@ function reelOpenSheet(){
     ${syn.length > 2 ? `<p class="reel-sheet-syn">${esc(syn)}</p>` : ""}
     ${staff ? `<p class="reel-sheet-cast">${staff}</p>` : ""}
     <p class="reel-sheet-plan">Plano necessário: ${esc(plan ? plan.name : "Plateia")}</p>
-    <a class="btn btn-ghost btn-sm" href="#/peca/${esc(p.id)}">Ver página da peça</a></div>`;
+    <a class="btn btn-ghost btn-sm" href="#/novelinha/${esc(p.id)}">Ver página da novelinha</a></div>`;
   r.sheet.classList.add("open");
   const close = r.sheet.querySelector('[data-act="closesheet"]'); if(close) close.focus();
 }
 function reelCloseSheet(){ const r = reel; if(r) r.sheet.classList.remove("open"); }
 async function reelShare(){
   const r = reel, p = r && r.items[r.active]; if(!p) return;
-  const url = location.origin + location.pathname + "#/peca/" + p.id;
+  const url = location.origin + location.pathname + "#/novelinha/" + p.id;
   if(navigator.share){ try{ await navigator.share({ title: p.title, text: p.title + " — " + SITE_NAME, url }); }catch(e){} return; }
   try{ await navigator.clipboard.writeText(url); toast("Link copiado."); }catch(e){ window.prompt("Copie o link:", url); }
 }
@@ -1771,24 +1945,24 @@ async function openReel(startId, seq){
   let plays = [];
   try{ plays = (await api("/plays?page=1&pageSize=100")).plays || []; }catch(e){ toast(e.message); }
   if(seq !== renderSeq) return;
-  if(startId && !plays.some(p => p.id === startId)){      // peça fora das 100 mais recentes: busca só ela
+  if(startId && !plays.some(p => p.id === startId)){      // novelinha fora das 100 mais recentes: busca só ela
     try{
       const d = await api("/plays/" + encodeURIComponent(startId));
       if(seq !== renderSeq) return;
       plays.unshift(Object.assign({}, d.play, { canWatch: d.canWatch, hasVideo: !!d.play.videoUrl, videoUrl: undefined }));
-    }catch(e){ if(seq !== renderSeq) return; toast("Peça não encontrada."); go("#/catalogo"); return; }
+    }catch(e){ if(seq !== renderSeq) return; toast("Novelinha não encontrada."); go("#/catalogo"); return; }
   }
   const items = buildReelFeed(plays, startId);
-  if(!items.length){ toast("Ainda não há peças com vídeo para você assistir."); go("#/home"); return; }
+  if(!items.length){ toast("Ainda não há novelinhas com vídeo para você assistir."); go("#/home"); return; }
 
   app.innerHTML = reelShellHtml(`
     <div class="reel-scroller" id="reel-scroller">${items.map(reelSlideHtml).join("")}${items.length > 1 ? reelEndHtml(items.length) : ""}</div>
-    <div class="reel-nav"><button class="reel-btn" data-act="up" aria-label="Peça anterior">${REEL_ICO.up}</button><button class="reel-btn" data-act="down" aria-label="Próxima peça">${REEL_ICO.down}</button></div>
+    <div class="reel-nav"><button class="reel-btn" data-act="up" aria-label="Novelinha anterior">${REEL_ICO.up}</button><button class="reel-btn" data-act="down" aria-label="Próxima novelinha">${REEL_ICO.down}</button></div>
     <div class="reel-sheet" id="reel-sheet"></div>`);
   const root = document.getElementById("reel");
   let seen = false; try{ seen = !!localStorage.getItem("md_reel_hint_v1"); }catch(e){}
   if(items.length > 1 && !seen){
-    root.insertAdjacentHTML("beforeend", `<div class="reel-hint" id="reel-hint">${REEL_ICO.up} Deslize para ver a próxima peça</div>`);
+    root.insertAdjacentHTML("beforeend", `<div class="reel-hint" id="reel-hint">${REEL_ICO.up} Deslize para ver a próxima novelinha</div>`);
     try{ localStorage.setItem("md_reel_hint_v1", "1"); }catch(e){}
     setTimeout(() => { const h = document.getElementById("reel-hint"); if(h) h.classList.add("gone"); }, 4500);
   }
@@ -1818,7 +1992,7 @@ async function PlayDetail(id){
     const r = await api("/plays/" + id);
     play = r.play; canWatch = r.canWatch;
   }catch(e){
-    return `<div class="page-wrap"><p>Peça não encontrada. <a href="#/catalogo" style="color:var(--gold-soft)">Voltar ao catálogo</a></p></div>`;
+    return `<div class="page-wrap"><p>Novelinha não encontrada. <a href="#/catalogo" style="color:var(--gold-soft)">Voltar ao catálogo</a></p></div>`;
   }
   const user = currentUser();
   return `
@@ -1834,9 +2008,9 @@ async function PlayDetail(id){
     <div class="player-shell" style="margin-bottom:26px;">
       ${canWatch ? (
         play.videoUrl ? `<a class="player-launch" href="#/reel/${esc(play.id)}" aria-label="Assistir ${esc(play.title)}" style="background-image:url('${esc(play.backdropUrl)}')"><span class="player-launch-btn">${ICO.play}</span><span class="player-launch-label">Assistir em tela cheia</span></a>`
-        : `<div class="player-locked">${ICO.play}<h3>Vídeo ainda não cadastrado</h3><p>A produção ainda vai anexar o link de exibição desta peça.</p></div>`
+        : `<div class="player-locked">${ICO.play}<h3>Vídeo ainda não cadastrado</h3><p>A produção ainda vai anexar o link de exibição desta novelinha.</p></div>`
       ) : `<div class="player-locked">${ICO.lock}<h3>Conteúdo do plano ${esc(planById(play.requiresPlan)?.name||'')}</h3>
-        <p>Assine para assistir a peça completa (${fmtDuration(play.durationMinutes)}).</p>
+        <p>Assine para assistir a novelinha completa (${fmtDuration(play.durationMinutes)}).</p>
         <div style="margin-top:16px;"><a href="#/planos" class="btn btn-gold btn-sm">Ver planos</a></div></div>`}
     </div>
     <div class="detail-actions">${!user ? `<a href="#/cadastro" class="btn btn-gold">Criar conta para assistir</a>` : ``}<button type="button" class="btn btn-ghost" data-heart="${esc(play.id)}" aria-pressed="${inMyList(play.id)}">${ICO.heart} Minha lista</button></div>
@@ -1849,12 +2023,12 @@ async function PlayDetail(id){
 function PlansPage(){
   const user = currentUser();
   return `
-  <div class="plans-hero"><h1>Escolha seu lugar na plateia</h1><p>Do fundo da plateia ao camarote: planos pensados para quem ama teatro, em qualquer orçamento. Pagamento por PIX, liberação na hora.</p></div>
+  <div class="plans-hero"><h1>Escolha seu plano</h1><p>Planos pensados para quem ama novelinhas, em qualquer orçamento. Pagamento por PIX, liberação na hora.</p></div>
   <div class="plans-grid">${DB.plans.map(pl => PlanCard(pl, user)).join("")}</div>
   <div class="plans-faq">
     <details class="faq-item" open><summary>Como funciona o pagamento?</summary><p>Você escolhe o plano, informa CPF e celular e paga por PIX (QR Code ou "copia e cola"). Assim que o banco confirma, o plano é liberado automaticamente — normalmente em segundos — e vale por 30 dias.</p></details>
     <details class="faq-item"><summary>A assinatura renova sozinha?</summary><p>Não. Você nunca é cobrado sem querer: quando faltarem poucos dias, avisamos por e-mail e você renova se quiser. Se renovar o mesmo plano antes de vencer, os 30 dias novos são somados aos que sobraram.</p></details>
-    <details class="faq-item"><summary>O plano Plateia é realmente gratuito?</summary><p>Sim, sem custo e sem prazo. Você acompanha sinopses e as peças liberadas no plano gratuito.</p></details>
+    <details class="faq-item"><summary>O plano Plateia é realmente gratuito?</summary><p>Sim, sem custo e sem prazo. Você acompanha sinopses e as novelinhas liberadas no plano gratuito.</p></details>
     <details class="faq-item"><summary>É seguro informar meu CPF?</summary><p>O CPF é usado só para gerar a cobrança PIX. Não guardamos o número completo — só os 2 últimos dígitos, para conferência.</p></details>
   </div>`;
 }
@@ -2004,7 +2178,7 @@ async function onPaid(payment){
   await loadFresh().catch(()=>{});
   setCheckout(`${coHead("Pagamento confirmado")}<div class="co-ok"><div class="big">🎉</div><h3>Tudo certo! Plano ${esc(checkout.plan.name)} ativo</h3>
     <p style="color:var(--ink-muted); font-size:14px; line-height:1.6;">Seu acesso vale até <b style="color:var(--gold-soft);">${fmtDate(payment.validUntil)}</b>.<br>O comprovante fica em <b>Minha conta › Meus pagamentos</b>.</p>
-    <button class="btn btn-gold btn-block" style="margin-top:14px;" onclick="closeCheckout(); go('#/catalogo'); render();">Ver as peças</button></div>`);
+    <button class="btn btn-gold btn-block" style="margin-top:14px;" onclick="closeCheckout(); go('#/catalogo'); render();">Ver as novelinhas</button></div>`);
 }
 async function cancelCheckout(){
   try{ if(checkout.payment) await api("/payments/" + checkout.payment.id + "/cancel", { method:"POST" }); }catch(e){}
@@ -2019,12 +2193,12 @@ function AuthHead(sub){
   return `<div class="auth-logo"><img src="/icons/icon-192.png" alt="" width="48" height="48"></div>
     <h1 class="auth-brand">${esc(SITE_NAME)}</h1><p class="auth-sub">${sub}</p>`;
 }
-// "Prova social" verdadeira: capas de peças que existem de fato e quantas há para assistir (nada de números inventados).
+// "Prova social" verdadeira: capas de novelinhas que existem de fato e quantas há para assistir (nada de números inventados).
 function AuthProof(){
   const plays = (DB.plays || []).filter(p => p.posterUrl), total = DB.playsTotal || plays.length;
   if(!plays.length || !total) return "";
   const covers = shuffled(plays).slice(0, 4);
-  return `<div class="auth-proof"><p><b>${total} ${total === 1 ? "peça" : "peças"}</b> de teatro para assistir quando e onde quiser.</p>
+  return `<div class="auth-proof"><p><b>${total} ${total === 1 ? "novelinha" : "novelinhas"}</b> para assistir quando e onde quiser.</p>
     <div class="auth-covers" aria-hidden="true">${covers.map(c => `<img src="${esc(c.posterUrl)}" alt="" loading="lazy">`).join("")}</div></div>`;
 }
 function LoginPage(){
@@ -2142,7 +2316,7 @@ function attachAuthEvents(){
         const r = await api("/auth/signup", { method:"POST", body:{ name: fd.get("name"), email: fd.get("email"), password: fd.get("password") } });
         setToken(r.token); DB.me = r.user;
         await loadFresh().catch(()=>{});
-        toast("Conta criada! Bem-vindo(a) ao " + SITE_NAME + " 🎭");
+        toast("Conta criada! Bem-vindo(a) ao " + SITE_NAME + " 📺");
         go("#/home");
       }catch(err){ msg.textContent = err.message; msg.style.display="block"; btn.disabled = false; btn.textContent = "Criar conta"; }
     });
@@ -2246,7 +2420,7 @@ function AdminLayout(hash){
   const section = hash.split("/")[2] || "";
   const nav = [
     { key:"", label:"Visão geral", icon:ICO.grid, href:"#/admin" },
-    { key:"pecas", label:"Peças", icon:ICO.film, href:"#/admin/pecas" },
+    { key:"novelinhas", label:"Novelinhas", icon:ICO.film, href:"#/admin/novelinhas" },
     { key:"usuarios", label:"Usuários", icon:ICO.users, href:"#/admin/usuarios" },
     { key:"generos", label:"Gêneros", icon:ICO.grid, href:"#/admin/generos" },
     { key:"planos", label:"Planos", icon:ICO.ticket, href:"#/admin/planos" },
@@ -2267,7 +2441,7 @@ async function afterAdminRender(hash, seq){
   const main = qs("#admin-main");
   const stale = () => seq !== undefined && seq !== renderSeq;
   try{
-    if(section==="pecas") { adminPlaysPage = 1; await loadAdminPlaysPage(); if(stale()) return; main.innerHTML = AdminPlays(); attachAdminPlaysEvents(); return; }
+    if(section==="novelinhas") { adminPlaysPage = 1; await loadAdminPlaysPage(); if(stale()) return; main.innerHTML = AdminPlays(); attachAdminPlaysEvents(); return; }
     if(section==="usuarios") { await refreshUsers(); if(stale()) return; main.innerHTML = AdminUsers(); attachAdminUsersEvents(); return; }
     if(section==="generos") { adminGenres = (await api("/plays/admin/genres")).genres; if(stale()) return; main.innerHTML = AdminGenres(); return; }
     if(section==="planos") { await refreshPlans(); if(stale()) return; main.innerHTML = AdminPlans(); return; }
@@ -2290,7 +2464,7 @@ function AdminDashboard(){
   <div class="stat-grid">
     <div class="stat-card"><div class="stat-label">Usuários cadastrados</div><div class="stat-value">${totalUsers}</div></div>
     <div class="stat-card"><div class="stat-label">Assinaturas ativas (pagas)</div><div class="stat-value">${activeSubs}</div></div>
-    <div class="stat-card"><div class="stat-label">Peças no catálogo</div><div class="stat-value">${totalPlays}</div></div>
+    <div class="stat-card"><div class="stat-label">Novelinhas no catálogo</div><div class="stat-value">${totalPlays}</div></div>
     <div class="stat-card"><div class="stat-label">Receita confirmada (30 dias)</div><div class="stat-value">${fmtMoney(stats.revenue)}</div><div style="font-size:12px; color:var(--ink-faint); margin-top:6px;">${stats.count} pagamento${stats.count===1?'':'s'} confirmado${stats.count===1?'':'s'}</div></div>
   </div>
   <div class="admin-panel">
@@ -2410,23 +2584,23 @@ function StatusBadge(u){
   return `<span class="badge badge-ok">Ativo</span>`;
 }
 
-/* ---- Admin: Peças ---- */
+/* ---- Admin: Novelinhas ---- */
 function AdminPlays(){
   const list = adminPlaysList;
   return `
-  <div class="admin-topbar"><h1 class="admin-h1">Peças</h1>
+  <div class="admin-topbar"><h1 class="admin-h1">Novelinhas</h1>
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <input class="search-input" id="play-search" placeholder="Buscar peça..." value="${esc(adminPlaySearch)}">
+      <input class="search-input" id="play-search" placeholder="Buscar novelinha..." value="${esc(adminPlaySearch)}">
       <button class="btn btn-ghost btn-sm" onclick="openGenresModal()">Atualizar gêneros (CSV)</button>
       <button class="btn btn-ghost btn-sm" onclick="openMovePlansModal()">Mover séries de plano</button>
       <button class="btn btn-danger btn-sm" onclick="openDeletePlanModal()">Excluir séries de um plano</button>
-      <button class="btn btn-ghost btn-sm" onclick="openBatchModal()">Cadastrar várias peças</button>
-      <button class="btn btn-gold btn-sm" onclick="openPlayModal()">+ Nova peça</button>
+      <button class="btn btn-ghost btn-sm" onclick="openBatchModal()">Cadastrar várias novelinhas</button>
+      <button class="btn btn-gold btn-sm" onclick="openPlayModal()">+ Nova novelinha</button>
     </div>
   </div>
   <div class="admin-panel"><div class="table-scroll">
-    ${list.length===0 ? EmptyState(ICO.film, "Nenhuma peça encontrada", "Cadastre a primeira peça do seu grupo.") : `
-    <table><thead><tr><th>Peça</th><th>Gênero</th><th>Duração</th><th>Plano mínimo</th><th>Vídeo</th><th></th></tr></thead>
+    ${list.length===0 ? EmptyState(ICO.film, "Nenhuma novelinha encontrada", "Cadastre a primeira novelinha do seu grupo.") : `
+    <table><thead><tr><th>Novelinha</th><th>Gênero</th><th>Duração</th><th>Plano mínimo</th><th>Vídeo</th><th></th></tr></thead>
     <tbody>${list.map(p=>`
       <tr>
         <td class="strong" style="display:flex; align-items:center; gap:10px;"><img src="${esc(p.posterUrl)}" style="width:34px;height:48px;object-fit:cover;border-radius:2px;" onerror="this.style.visibility='hidden'">${esc(p.title)}</td>
@@ -2451,10 +2625,10 @@ async function openPlayModal(id){
   let p = null;
   if(id){ try{ const r = await api("/plays/" + id); p = r.play; }catch(e){ toast(e.message); return; } }
   qs("#play-modal-box").innerHTML = `
-    <div class="modal-head"><h3>${p? "Editar peça" : "Nova peça"}</h3><button class="modal-close" onclick="closeModal('play-modal')">&times;</button></div>
+    <div class="modal-head"><h3>${p? "Editar novelinha" : "Nova novelinha"}</h3><button class="modal-close" onclick="closeModal('play-modal')">&times;</button></div>
     <form id="play-form">
       <input type="hidden" name="id" value="${p?p.id:''}">
-      <div class="field"><label>Título da peça</label><input type="text" name="title" required value="${p?esc(p.title):''}"></div>
+      <div class="field"><label>Título da novelinha</label><input type="text" name="title" required value="${p?esc(p.title):''}"></div>
       <div class="field">
         <label>Gêneros (marque quantos quiser — a série aparece em todas as seções marcadas)</label>
         <div class="genre-checks">${genreList().map(g=>`<label class="checkbox-row"><input type="checkbox" name="genres" value="${esc(g.id)}" ${p && (p.genres||[]).includes(g.id) ? 'checked' : ''}> ${esc(g.label)}</label>`).join("")}</div>
@@ -2479,7 +2653,7 @@ async function openPlayModal(id){
         <input type="text" inputmode="url" name="backdropUrl" id="backdrop-url-field" value="${p && p.backdropUrl !== p.posterUrl ? esc(p.backdropUrl) : ''}" placeholder="Opcional — se vazio, o site usa a capa">
         <input type="file" id="backdrop-file-input" accept="image/png,image/jpeg" style="margin-top:6px;">
       </div>
-      <div class="field"><label>URL do vídeo da peça</label><input type="url" name="videoUrl" id="video-url-field" value="${p?esc(p.videoUrl):''}" placeholder="https://..."></div>
+      <div class="field"><label>URL do vídeo da novelinha</label><input type="url" name="videoUrl" id="video-url-field" value="${p?esc(p.videoUrl):''}" placeholder="https://..."></div>
       <div class="field">
         <label>Ou envie o arquivo de vídeo direto para o Bunny.net (preenche a URL acima, o título e a duração sozinho)</label>
         <input type="file" id="bunny-file-input" accept="video/*">
@@ -2492,10 +2666,10 @@ async function openPlayModal(id){
         <div id="bunny-progress" class="field-hint" style="display:none; margin-top:8px;"></div>
       </div>
       <div class="field"><label class="checkbox-row"><input type="checkbox" name="featured" ${p&&p.featured?'checked':''}> Destacar na página inicial (banner rotativo)</label></div>
-      <div class="field-hint">O upload pode demorar alguns minutos dependendo do tamanho do vídeo (peças têm +1h). Depois de enviado, o Bunny ainda leva um tempo pra processar antes do vídeo ficar disponível pra assistir.</div>
+      <div class="field-hint">O upload pode demorar alguns minutos dependendo do tamanho do vídeo (novelinhas têm +1h). Depois de enviado, o Bunny ainda leva um tempo pra processar antes do vídeo ficar disponível pra assistir.</div>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost btn-sm" onclick="closeModal('play-modal')">Cancelar</button>
-        <button type="submit" class="btn btn-gold btn-sm">Salvar peça</button>
+        <button type="submit" class="btn btn-gold btn-sm">Salvar novelinha</button>
       </div>
     </form>`;
   openModal("play-modal");
@@ -2532,8 +2706,8 @@ async function openPlayModal(id){
     };
     const existingId = fd.get("id");
     try{
-      if(existingId){ await api("/plays/" + existingId, { method:"PUT", body:data }); toast("Peça atualizada."); }
-      else{ await api("/plays", { method:"POST", body:data }); toast("Peça cadastrada."); }
+      if(existingId){ await api("/plays/" + existingId, { method:"PUT", body:data }); toast("Novelinha atualizada."); }
+      else{ await api("/plays", { method:"POST", body:data }); toast("Novelinha cadastrada."); }
       closeModal("play-modal"); render();
     }catch(err){ toast(err.message); }
   });
@@ -2549,7 +2723,7 @@ async function uploadVideoToBunny(){
   if(!window.tus){ toast("Não foi possível carregar o enviador de vídeo. Recarregue a página."); return; }
 
   const titleField = qs('#play-form [name="title"]');
-  const title = (titleField && titleField.value.trim()) || "Peça sem título";
+  const title = (titleField && titleField.value.trim()) || "Novelinha sem título";
 
   progressEl.style.display = "block";
   progressEl.textContent = "Preparando upload...";
@@ -2585,7 +2759,7 @@ async function uploadVideoToBunny(){
       progressEl.textContent = "Upload concluído! O Bunny ainda vai processar o vídeo (alguns minutos) antes de ficar disponível.";
       const urlField = qs("#video-url-field");
       if(urlField) urlField.value = prep.playbackUrl;
-      toast("Vídeo enviado! Clique em \"Salvar peça\" para confirmar.");
+      toast("Vídeo enviado! Clique em \"Salvar novelinha\" para confirmar.");
     }
   });
   upload.start();
@@ -2601,7 +2775,7 @@ function parseGenreSheet(text){
   const rows = parseCsv(text);
   if(!rows.length) return [];
   const head = rows[0].map(h => normName(h).replace(/ /g, "_"));
-  const nameKeys = ["nome", "titulo", "serie", "peca", "name"];
+  const nameKeys = ["nome", "titulo", "serie", "novelinha", "peca", "name"];   // "peca" continua valendo para planilhas antigas
   const isGenreCol = (h) => ["genero", "categoria", "genre"].some(k => h.startsWith(k));
   let iName = head.findIndex(h => nameKeys.includes(h));
   let iGen = head.map((h, i) => isGenreCol(h) ? i : -1).filter(i => i >= 0);
@@ -2916,7 +3090,7 @@ async function readTextFile(file){
 // Tira da lista os itens que vieram de uma planilha anterior (para poder trocar de planilha sem duplicar).
 function dropCsvItems(){ batchFiles = batchFiles.filter(f => !f.csv); }
 
-// Linhas da planilha com url_video viram peças da lista (sem upload: só grava capa + link do vídeo).
+// Linhas da planilha com url_video viram novelinhas da lista (sem upload: só grava capa + link do vídeo).
 function addCsvVideoItems(r){
   const skipped = [];
   const existing = new Set();
@@ -2971,11 +3145,11 @@ function openBatchModal(){
   // Todas as séries do lote entram no plano Balcão (dá para trocar aqui antes de enviar).
   batchPlan = (DB.plans.find(p => p.id === "balcao") || DB.plans.find(p => p.price > 0) || DB.plans[0]).id;
   qs("#batch-modal-box").innerHTML = `
-    <div class="modal-head"><h3>Cadastrar várias peças de uma vez</h3><button class="modal-close" onclick="closeModal('batch-modal'); goToAdminPlaysPage(1);">&times;</button></div>
+    <div class="modal-head"><h3>Cadastrar várias novelinhas de uma vez</h3><button class="modal-close" onclick="closeModal('batch-modal'); goToAdminPlaysPage(1);">&times;</button></div>
     <p style="color:var(--ink-muted); font-size:13px; margin-bottom:14px; line-height:1.6;">
       Escolha os vídeos do computador <b>ou</b> cole links do Google Drive (bem mais rápido — o Bunny busca
       direto do Drive, sem passar pela sua internet). Título e gênero são sugeridos automaticamente
-      (dá pra ajustar). As peças entram com sinopse "." e banner vazio; depois, edite cada uma para completar sinopse e elenco.
+      (dá pra ajustar). As novelinhas entram com sinopse "." e banner vazio; depois, edite cada uma para completar sinopse e elenco.
     </p>
     <div class="field"><label>Arquivos do computador</label><input type="file" id="batch-file-input" accept="video/*" multiple></div>
     <div class="field">
@@ -2991,7 +3165,7 @@ Ventos de Dona Flor | https://drive.google.com/file/d/YYYYY/view"></textarea>
     <div class="field">
       <label>Planilha de capas e vídeos (CSV com as colunas <b>nome</b>, <b>url_capa</b> e <b>url_video</b>)</label>
       <input type="file" id="batch-csv-input" accept=".csv,text/csv,text/plain">
-      <div class="field-hint" id="batch-csv-info">Opcional. Cada linha com <b>url_video</b> (link direto: .m3u8, .mp4 ou YouTube) vira uma peça já pronta, com a capa da planilha — sem enviar arquivo. Linhas só com <b>url_capa</b> preenchem a capa dos vídeos acima quando o nome for igual (não importa maiúsculas, acentos ou "_"). Coluna extra opcional: <b>duracao</b> (em minutos).</div>
+      <div class="field-hint" id="batch-csv-info">Opcional. Cada linha com <b>url_video</b> (link direto: .m3u8, .mp4 ou YouTube) vira uma novelinha já pronta, com a capa da planilha — sem enviar arquivo. Linhas só com <b>url_capa</b> preenchem a capa dos vídeos acima quando o nome for igual (não importa maiúsculas, acentos ou "_"). Coluna extra opcional: <b>duracao</b> (em minutos).</div>
     </div>
     <div id="batch-list" style="margin-top:16px; display:flex; flex-direction:column; gap:10px;"></div>
     <div class="modal-actions">
@@ -3010,7 +3184,7 @@ function onBatchLinksSubmit(){
     const parts = line.split("|");
     let title, url;
     if(parts.length >= 2){ title = parts[0].trim(); url = parts.slice(1).join("|").trim(); }
-    else { title = "Peça sem título"; url = line.trim(); }
+    else { title = "Novelinha sem título"; url = line.trim(); }
     if(!url) continue;
     batchFiles.push({ driveUrl: url, title, duration: 60, status: "Pronto para importar (ajuste a duração — não dá pra detectar de um link)" });
   }
@@ -3076,7 +3250,7 @@ async function processBatchItem(i){
   const item = batchFiles[i];
   const setStatus = (txt) => { const el = qs("#batch-status-"+i); if(el) el.textContent = txt; };
   try{
-    setStatus("Criando peça...");
+    setStatus("Criando novelinha...");
     const created = await api("/plays", { method:"POST", body:{
       title: item.title, genres: guessGenres(item.title), releaseYear: new Date().getFullYear(),
       durationMinutes: item.duration, requiresPlan: batchPlan,
@@ -3108,7 +3282,7 @@ async function processBatchItem(i){
         upload.start();
       });
       await api("/plays/" + playId, { method:"PUT", body:{ videoUrl: prep.playbackUrl } });
-      setStatus("✔ Concluído — edite a peça depois para completar gênero, sinopse etc.");
+      setStatus("✔ Concluído — edite a novelinha depois para completar gênero, sinopse etc.");
     } else if(item.driveUrl){
       // Link (Google Drive etc.): o Bunny busca sozinho, servidor-a-servidor.
       setStatus("Pedindo para o Bunny buscar o vídeo...");
@@ -3124,14 +3298,14 @@ async function processBatchItem(i){
         setStatus("Aguardando o Bunny confirmar... (tentativa " + (attempt+1) + "/20)");
       }
       if(!found){
-        setStatus("Não localizei a confirmação a tempo. Confira no painel do Bunny e cole a URL manualmente na peça, se precisar.");
+        setStatus("Não localizei a confirmação a tempo. Confira no painel do Bunny e cole a URL manualmente na novelinha, se precisar.");
         return;
       }
       await api("/plays/" + playId, { method:"PUT", body:{ videoUrl: found.playbackUrl } });
       setStatus("✔ Importação iniciada — o Bunny ainda está baixando/processando em segundo plano.");
     } else if(item.videoUrl){
-      // Link direto (da planilha): o vídeo já está hospedado, então a peça já foi criada com ele.
-      setStatus("✔ Concluído — capa e vídeo gravados direto do link. Edite a peça depois para completar sinopse e elenco.");
+      // Link direto (da planilha): o vídeo já está hospedado, então a novelinha já foi criada com ele.
+      setStatus("✔ Concluído — capa e vídeo gravados direto do link. Edite a novelinha depois para completar sinopse e elenco.");
     } else {
       setStatus("Nada para enviar (nem arquivo nem link).");
     }
@@ -3148,7 +3322,7 @@ async function importVideoFromUrl(){
   const url = urlInput.value.trim();
   if(!url){ toast("Cole um link primeiro."); return; }
   const titleField = qs('#play-form [name="title"]');
-  const title = (titleField && titleField.value.trim()) || "Peça sem título";
+  const title = (titleField && titleField.value.trim()) || "Novelinha sem título";
 
   progressEl.style.display = "block";
   progressEl.textContent = "Pedindo para o Bunny buscar o vídeo...";
@@ -3171,12 +3345,12 @@ async function importVideoFromUrl(){
       if(r.found){
         qs("#video-url-field").value = r.playbackUrl;
         progressEl.textContent = "Importação iniciada! O Bunny ainda vai processar o vídeo (alguns minutos) antes de ficar disponível.";
-        toast("Vídeo importado! Clique em \"Salvar peça\" para confirmar.");
+        toast("Vídeo importado! Clique em \"Salvar novelinha\" para confirmar.");
         return;
       }
     }catch(e){ /* tenta de novo */ }
     if(tries >= 20){
-      progressEl.textContent = "Ainda não localizei o vídeo importado. Ele pode estar demorando mais — confira no painel do Bunny.net, ou tente salvar a peça e colar a URL manualmente depois.";
+      progressEl.textContent = "Ainda não localizei o vídeo importado. Ele pode estar demorando mais — confira no painel do Bunny.net, ou tente salvar a novelinha e colar a URL manualmente depois.";
       return;
     }
     setTimeout(poll, 4000);
@@ -3185,8 +3359,8 @@ async function importVideoFromUrl(){
 }
 
 async function deletePlay(id){
-  if(!confirm("Remover esta peça definitivamente?")) return;
-  try{ await api("/plays/" + id, { method:"DELETE" }); toast("Peça removida."); render(); }
+  if(!confirm("Remover esta novelinha definitivamente?")) return;
+  try{ await api("/plays/" + id, { method:"DELETE" }); toast("Novelinha removida."); render(); }
   catch(e){ toast(e.message); }
 }
 let adminPlaySearchDebounce = null;
@@ -3318,7 +3492,7 @@ function isIos(){ const ua = navigator.userAgent; return (/iphone|ipad|ipod/i.te
 function isMobileUA(){ return isIos() || /android|mobile/i.test(navigator.userAgent); }
 function isInAppBrowser(){ return /FBAN|FBAV|Instagram|MicroMessenger|Snapchat|TikTok|; wv\)/i.test(navigator.userAgent); }
 window.addEventListener("beforeinstallprompt", (e)=>{ e.preventDefault(); deferredInstall = e; refreshInstallBanner(); });   // pode chegar depois dos primeiros segundos
-window.addEventListener("appinstalled", ()=>{ deferredInstall = null; removeInstallBanner(); toast("App instalado! Procure o Mini Drama na sua tela inicial 🎭"); });
+window.addEventListener("appinstalled", ()=>{ deferredInstall = null; removeInstallBanner(); toast("App instalado! Procure o Mini Drama na sua tela inicial 📺"); });
 
 function removeInstallBanner(){ const b = document.getElementById("install-banner"); if(b) b.remove(); }
 function dismissInstallBanner(){ try{ localStorage.setItem("md_install_dismissed", String(Date.now())); }catch(e){} removeInstallBanner(); }
@@ -3373,7 +3547,7 @@ function showInstallBanner(mode){
 }
 // Reavalia o convite sempre que algo muda (passou o tempo, o navegador liberou a instalação, trocou de tela).
 function refreshInstallBanner(){
-  if(!installReady || reel) return;                                    // nunca por cima do StoryReel
+  if(!installReady || reel || conv.state === "main") return;           // nunca por cima do StoryReel nem do pop-up de assinatura
   const mode = currentInstallMode(), cur = document.getElementById("install-banner");
   if(!mode || (cur && cur.dataset.mode === mode)) return;
   if(cur) cur.remove();

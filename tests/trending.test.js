@@ -5,7 +5,7 @@ const path = require("path");
 const http = require("http");
 
 process.env.JWT_SECRET = "teste";
-const mk = (id, extra = {}) => ({ id, title: "Peça " + id, durationMinutes: 90, releaseYear: 2025, synopsis: "s", posterUrl: "", backdropUrl: "", videoUrl: "", requiresPlan: "plateia", featured: false, createdAt: new Date(2025, 0, Number(id.replace(/\D/g, "")) || 1), updatedAt: new Date(), hasPosterData: false, hasBackdropData: false, announcedAt: null, genres: [], ...extra });
+const mk = (id, extra = {}) => ({ id, title: "Novelinha " + id, durationMinutes: 90, releaseYear: 2025, synopsis: "s", posterUrl: "", backdropUrl: "", videoUrl: "", requiresPlan: "plateia", featured: false, createdAt: new Date(2025, 0, Number(id.replace(/\D/g, "")) || 1), updatedAt: new Date(), hasPosterData: false, hasBackdropData: false, announcedAt: null, genres: [], ...extra });
 const db = { plays: [], watching: [], saved: [], lastWatchWhere: null, lastSavedWhere: null };
 const fake = {
   user: { findUnique: async () => null },
@@ -67,19 +67,19 @@ test("com pouca atividade, completa com destaques e depois com as mais novas (e 
   assert.equal(r.body.ranked, 1);
 });
 
-test("sem nenhuma atividade ainda assim devolve peças (a seção nunca fica vazia) com ranked = 0", async () => {
+test("sem nenhuma atividade ainda assim devolve novelinhas (a seção nunca fica vazia) com ranked = 0", async () => {
   reset();
   const r = await get("/trending?limit=3");
   assert.equal(r.body.plays.length, 3); assert.equal(r.body.ranked, 0);
 });
 
-test("não repete peça já ranqueada no complemento", async () => {
+test("não repete novelinha já ranqueada no complemento", async () => {
   reset(); db.watching = [n("p1", 1), n("p2", 1)];
   const r = await get("/trending?limit=6");
   assert.equal(new Set(ids(r)).size, 6);
 });
 
-test("peça apagada com atividade pendente some do ranking sem quebrar", async () => {
+test("novelinha apagada com atividade pendente some do ranking sem quebrar", async () => {
   reset(); db.watching = [n("p-apagada", 9), n("p3", 1)];
   const r = await get("/trending?limit=2");
   assert.equal(r.status, 200); assert.ok(!ids(r).includes("p-apagada")); assert.equal(r.body.ranked, 1);
@@ -87,7 +87,7 @@ test("peça apagada com atividade pendente some do ranking sem quebrar", async (
 
 test("limite inválido ou exagerado é contido (1 a 24)", async () => {
   reset();
-  assert.equal((await get("/trending?limit=999")).body.plays.length, 6);        // só há 6 peças, mas o teto é 24
+  assert.equal((await get("/trending?limit=999")).body.plays.length, 6);        // só há 6 novelinhas, mas o teto é 24
   assert.equal((await get("/trending?limit=abc")).body.plays.length, 6);        // inválido cai em 12
   assert.equal((await get("/trending?limit=0")).body.plays.length, 6);
   assert.equal((await get("/trending?limit=-5")).body.plays.length, 1);         // negativo vira 1

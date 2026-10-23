@@ -11,6 +11,7 @@ const sel = (a = {}) => {
   const { where = {}, orderBy, take, skip = 0, select } = a;
   let r = db.plays.filter((p) => Object.entries(where).every(([k, v]) => {
     if (k === "genres") return db.pg.some((x) => x.playId === p.id && x.genre === v.some.genre);
+    if (k === "id" && v && typeof v === "object") return v.in ? v.in.includes(p.id) : !v.notIn.includes(p.id);
     return p[k] === v;
   }));
   if (orderBy && orderBy.createdAt === "desc") r = r.slice().sort((a, b) => b.createdAt - a.createdAt);
@@ -20,8 +21,10 @@ const fake = {
   user: { findUnique: async () => null },
   plan: { findMany: async () => db.plans, findUnique: async ({ where }) => db.plans.find((p) => p.id === where.id) || null },
   play: { findMany: async (a) => sel(a), count: async (a) => sel({ where: (a && a.where) || {} }).length },
-  playGenre: { groupBy: async () => { const m = {}; db.pg.forEach((x) => (m[x.genre] = (m[x.genre] || 0) + 1)); return Object.entries(m).map(([genre, n]) => ({ genre, _count: { _all: n } })); } },
+  playGenre: { findMany: async () => db.pg.map((x) => ({ genre: x.genre, playId: x.playId })), groupBy: async () => { const m = {}; db.pg.forEach((x) => (m[x.genre] = (m[x.genre] || 0) + 1)); return Object.entries(m).map(([genre, n]) => ({ genre, _count: { _all: n } })); } },
 };
+// A ordem das fileiras muda a cada dia (embaralhamento diário): congela o relógio para o teste não depender de "que dia é hoje".
+require("../src/utils/dailyOrder").clock.now = () => new Date("2026-10-21T15:00:00Z");
 const clientPath = require.resolve(path.join(__dirname, "../src/prismaClient"));
 require.cache[clientPath] = { id: clientPath, filename: clientPath, loaded: true, exports: fake };
 const express = require("express");
@@ -46,6 +49,13 @@ function seed() {
   db.pg.push({ playId: "p402", genre: "animes" });   // p402 (dublados) também é anime: aparece nas duas seções
 }
 
+// Todas as séries de um gênero, página por página (a ordem é a do dia: não dá para contar com a 1ª página).
+async function allOfGenre(genre) {
+  const out = []; let page = 1, totalPages = 1;
+  do { const r = await get(`/?page=${page}&pageSize=100&genre=${genre}`); out.push(...r.body.plays); totalPages = r.body.totalPages; page++; } while (page <= totalPages);
+  return out;
+}
+
 test("o banner mostra os destaques mesmo sendo os mais antigos de 400+ séries", async () => {
   seed();
   const r = await get("/feed/home");
@@ -68,17 +78,16 @@ test("uma série com 2 gêneros aparece nas duas seções; só entram seções c
   assert.deepEqual(ids, ["ia", "animes", "dublados"].sort((a, b) => ["dublados", "brasileiras", "ia", "animes"].indexOf(a) - ["dublados", "brasileiras", "ia", "animes"].indexOf(b)), "ordem oficial, sem seções vazias");
   const inRow = (g) => r.body.genres.find((x) => x.id === g).plays.map((p) => p.id);
   // p402 está em "animes" e "dublados"; o catálogo traz as 20 mais novas de cada, então confere pela listagem do gênero:
-  return Promise.all([get("/?page=1&pageSize=100&genre=animes"), get("/?page=1&pageSize=100&genre=dublados")]).then(([a, d]) => {
-    assert.ok(a.body.plays.some((p) => p.id === "p402"));
-    assert.ok(d.body.plays.some((p) => p.id === "p402"));
-    assert.ok(inRow("animes").length <= 20 && inRow("dublados").length <= 20);
-  });
+  // (a ordem dentro do gênero é a do dia, então a série pode cair em qualquer página: percorre o gênero inteiro)
+  const [a, d] = await Promise.all([allOfGenre("animes"), allOfGenre("dublados")]);
+  assert.ok(a.some((p) => p.id === "p402"));
+  assert.ok(d.some((p) => p.id === "p402"));
+  assert.ok(inRow("animes").length <= 20 && inRow("dublados").length <= 20);
 });
 
 test("a série traz os gêneros em ids, nomes para exibir e o primeiro nome em 'genre'", async () => {
   seed();
-  const r = await get("/?page=1&pageSize=100&genre=animes");
-  const p402 = r.body.plays.find((p) => p.id === "p402");
+  const p402 = (await allOfGenre("animes")).find((p) => p.id === "p402");
   assert.deepEqual(p402.genres, ["dublados", "animes"].sort((a, b) => ["dublados", "animes"].indexOf(a) - ["dublados", "animes"].indexOf(b)));
   assert.deepEqual(p402.genreLabels, ["Dublados", "Animes"]);
   assert.equal(p402.genre, "Dublados");

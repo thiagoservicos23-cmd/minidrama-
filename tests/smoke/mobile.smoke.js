@@ -18,7 +18,7 @@ const UA = {
   desktop: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
 };
 const P = (id, title, extra = {}) => ({ id, title, posterUrl: "http://x/" + id + ".png", backdropUrl: "http://x/b.png", requiresPlan: "plateia", canWatch: true, hasVideo: true, durationMinutes: 90, releaseYear: 2025, genre: "Drama", synopsis: "s", ...extra });
-const CATALOG = [P("p1", "Peça Um"), P("p2", "Peça Dois"), P("p3", "Peça Três"), P("p4", "Peça Quatro"), P("p5", "Peça Cinco"), P("p6", "Peça Seis")];
+const CATALOG = [P("p1", "Novelinha Um"), P("p2", "Novelinha Dois"), P("p3", "Novelinha Três"), P("p4", "Novelinha Quatro"), P("p5", "Novelinha Cinco"), P("p6", "Novelinha Seis")];
 const PLANS = [{ id: "plateia", name: "Plateia", price: 0, benefits: [] }];
 
 async function makeEnv(o = {}) {
@@ -70,8 +70,8 @@ const fill = (el, v) => { el.value = v; };
   ok("botão principal 'Entrar', botão secundário 'Criar conta grátis' e link 'Esqueci minha senha'", () => { assert.equal($(e, "#login-form .auth-btn-primary").textContent.trim(), "Entrar"); assert.equal($(e, ".auth-btn-secondary").getAttribute("href"), "#/cadastro"); assert.equal($(e, '.auth-foot a[href="#/esqueci-senha"]').textContent, "Esqueci minha senha"); });
   ok("sem botão de Google nem promessas falsas (o servidor não tem login social)", () => assert.ok(!/google/i.test($(e, ".auth-wrap").innerHTML)));
   ok("sem barra de navegação por cima do login", () => assert.equal($(e, ".fnav"), null));
-  ok("prova social VERDADEIRA: conta as peças reais e mostra até 4 capas delas", () => {
-    assert.match($(e, ".auth-proof p").textContent, /^6 peças de teatro/);
+  ok("prova social VERDADEIRA: conta as novelinhas reais e mostra até 4 capas delas", () => {
+    assert.match($(e, ".auth-proof p").textContent, /^6 novelinhas para assistir/);
     const imgs = $$(e, ".auth-covers img"); assert.equal(imgs.length, 4);
     assert.ok(imgs.every(i => /^http:\/\/x\/p\d\.png$/.test(i.getAttribute("src"))));
     assert.equal(new Set(imgs.map(i => i.src)).size, 4);
@@ -101,7 +101,7 @@ const fill = (el, v) => { el.value = v; };
 
   e = await makeEnv({ noPlays: true });
   await go(e, "#/login");
-  ok("sem peças cadastradas, o bloco de prova social não aparece (nada de '0 peças')", () => assert.equal($(e, ".auth-proof"), null));
+  ok("sem novelinhas cadastradas, o bloco de prova social não aparece (nada de '0 novelinhas')", () => assert.equal($(e, ".auth-proof"), null));
   e.w.close();
 
   console.log("\nB) Cadastro e recuperação de senha");

@@ -1,4 +1,4 @@
-// Popula o banco com dados iniciais: usuário admin, planos e peças de exemplo.
+// Popula o banco com dados iniciais: usuário admin, planos e novelinhas de exemplo.
 // Rode com: npm run seed
 const { PrismaClient } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
@@ -24,8 +24,8 @@ async function main() {
       featured: false,
       sortOrder: 0,
       benefits: JSON.stringify([
-        "Sinopse e ficha técnica completas de todas as peças",
-        "1 peça liberada por mês, escolhida pela produção",
+        "Sinopse e ficha técnica completas de todas as novelinhas",
+        "1 novelinha liberada por mês, escolhida pela produção",
         "Qualidade padrão"
       ])
     },
@@ -39,7 +39,7 @@ async function main() {
       benefits: JSON.stringify([
         "Catálogo completo liberado, sem espera",
         "1 tela por vez",
-        "Continuar de onde parou em qualquer peça"
+        "Continuar de onde parou em qualquer novelinha"
       ])
     },
     {
@@ -90,7 +90,7 @@ async function main() {
       where: { email: "convidado@minidrama.app" },
       update: {},
       create: {
-        name: "Espectador Convidado",
+        name: "Usuário Convidado",
         email: "convidado@minidrama.app",
         password: demoPass,
         role: "user",
@@ -102,7 +102,7 @@ async function main() {
     console.log("Usuário demo criado: convidado@minidrama.app / 123456");
   }
 
-  // ---------- Peças ----------
+  // ---------- Novelinhas ----------
   const plays = [
     {
       id: "p1", title: "A Farsa do Silêncio", durationMinutes: 95, releaseYear: 2024,
@@ -153,13 +153,13 @@ async function main() {
       videoUrl: "", requiresPlan: "plateia", featured: false
     }
   ];
-  // Peças de exemplo: só entram se o catálogo estiver vazio (não ressuscita o que o grupo apagou).
+  // Novelinhas de exemplo: só entram se o catálogo estiver vazio (não ressuscita o que o grupo apagou).
   if ((await prisma.play.count()) === 0) {
     for (const p of plays) {
       await prisma.play.create({ data: p });
     }
   } else {
-    console.log("Catálogo já tem peças: as de exemplo não foram adicionadas.");
+    console.log("Catálogo já tem novelinhas: as de exemplo não foram adicionadas.");
   }
 
   console.log("Banco semeado com sucesso.");

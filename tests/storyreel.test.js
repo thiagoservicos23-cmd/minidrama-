@@ -24,18 +24,18 @@ test("ytId reconhece os formatos de link do YouTube", () => {
   assert.equal(ytId(""), null);
 });
 
-test("feed: a peça escolhida vem primeiro e só entram peças que a pessoa pode assistir", () => {
+test("feed: a novelinha escolhida vem primeiro e só entram novelinhas que a pessoa pode assistir", () => {
   const plays = [P("a"), P("b", false), P("c", true, false), P("d"), P("e")];
   assert.deepEqual(Array.from(buildReelFeed(plays, "d"), (p) => p.id), ["d", "a", "e"]);
 });
 
-test("feed: peça escolhida bloqueada ou sem vídeo ainda abre (para mostrar o motivo)", () => {
+test("feed: novelinha escolhida bloqueada ou sem vídeo ainda abre (para mostrar o motivo)", () => {
   const plays = [P("a"), P("b", false), P("c", true, false)];
   assert.deepEqual(Array.from(buildReelFeed(plays, "b"), (p) => p.id), ["b", "a"]);
   assert.deepEqual(Array.from(buildReelFeed(plays, "c"), (p) => p.id), ["c", "a"]);
 });
 
-test("feed sem peça escolhida (#/reel) traz só as assistíveis; id desconhecido é ignorado", () => {
+test("feed sem novelinha escolhida (#/reel) traz só as assistíveis; id desconhecido é ignorado", () => {
   const plays = [P("a"), P("b", false), P("c")];
   assert.deepEqual(Array.from(buildReelFeed(plays, ""), (p) => p.id), ["a", "c"]);
   assert.deepEqual(Array.from(buildReelFeed(plays, "zzz"), (p) => p.id), ["a", "c"]);

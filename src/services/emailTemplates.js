@@ -32,7 +32,7 @@ function layout({ preheader, title, body, user, marketing }) {
     <tr><td bgcolor="#1B1417" style="border-top:4px solid ${CURTAIN};border-radius:6px;padding:34px 30px;font-family:Arial,Helvetica,sans-serif;color:#F4ECE3;font-size:16px;line-height:1.65;">
       ${body}
     </td></tr>
-    <tr><td align="center" style="padding:20px 10px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#8A7A72;">${footer}<br>Mini Drama &middot; teatro onde você estiver</td></tr>
+    <tr><td align="center" style="padding:20px 10px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.6;color:#8A7A72;">${footer}<br>Mini Drama &middot; novelinhas sem limite</td></tr>
   </table>
 </td></tr></table></body></html>`;
 }
@@ -45,25 +45,25 @@ function playCard(play) {
   return `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:10px 0;"><tr>
     ${img ? `<td width="84" valign="top"><img src="${esc(img)}" width="72" alt="" style="border-radius:3px;display:block;"></td>` : ""}
     <td valign="top" style="font-family:Arial,Helvetica,sans-serif;">
-      <a href="${siteUrl()}/#/peca/${esc(play.id)}" style="color:#F4ECE3;font-weight:bold;font-size:16px;text-decoration:none;">${esc(play.title)}</a>
+      <a href="${siteUrl()}/#/novelinha/${esc(play.id)}" style="color:#F4ECE3;font-weight:bold;font-size:16px;text-decoration:none;">${esc(play.title)}</a>
       <div style="color:#B9A9A0;font-size:13px;margin-top:3px;">${play.genre ? esc(play.genre) + " &middot; " : ""}${Math.floor(play.durationMinutes / 60)}h${String(play.durationMinutes % 60).padStart(2, "0")}</div>
     </td></tr></table>`;
 }
 
 // ---------------------------------------------------------------------------
 function welcome(user, cheapest) {
-  const body = h1(`Cortinas abertas, ${firstName(user)}! 🎭`) +
-    p(`Que alegria ter você na plateia do <b>Mini Drama</b>. Aqui você assiste a peças de teatro completas, de grupos de verdade, onde e quando quiser — no celular, no computador ou na TV.`) +
-    p(`Sua conta <b>Plateia</b> já está liberada, de graça. Dê uma olhada no catálogo e escolha a sua primeira peça de hoje.`) +
+  const body = h1(`Bem-vindo(a), ${firstName(user)}! 📺`) +
+    p(`Que alegria ter você no <b>Mini Drama</b>. Aqui você assiste novelinhas sem limite, onde e quando quiser — no celular, no computador ou na TV.`) +
+    p(`Sua conta <b>Plateia</b> já está liberada, de graça. Dê uma olhada no catálogo e escolha a sua primeira novelinha de hoje.`) +
     button("Começar a assistir", `${siteUrl()}/#/catalogo`) +
     (cheapest ? p(`<span style="color:#B9A9A0;font-size:14px;">Quer o catálogo completo? Os planos pagos começam em <b style="color:${GOLD};">${money(cheapest.price)}</b> por mês, e você assina quando quiser.</span>`) : "") +
     p(`<span style="color:#B9A9A0;font-size:14px;">Dica: instale o Mini Drama na tela inicial do celular — é só abrir o site e tocar em “Instalar app”.</span>`);
-  return { subject: `Bem-vindo(a) ao Mini Drama, ${(user.name || "").split(" ")[0] || ""}! 🎭`.replace(", !", "!"), html: layout({ preheader: "Sua conta Plateia já está liberada.", title: "Bem-vindo(a)", body, user, marketing: false }), text: `Bem-vindo(a) ao Mini Drama! Sua conta Plateia já está liberada. Comece a assistir: ${siteUrl()}/#/catalogo` };
+  return { subject: `Bem-vindo(a) ao Mini Drama, ${(user.name || "").split(" ")[0] || ""}! 📺`.replace(", !", "!"), html: layout({ preheader: "Sua conta Plateia já está liberada.", title: "Bem-vindo(a)", body, user, marketing: false }), text: `Bem-vindo(a) ao Mini Drama! Sua conta Plateia já está liberada. Comece a assistir: ${siteUrl()}/#/catalogo` };
 }
 
 function digest(user, count, plays) {
-  const title = count === 1 ? "Chegou 1 peça nova no Mini Drama 🎬" : `Chegaram ${count} peças novas no Mini Drama 🎬`;
-  const body = h1(count === 1 ? "Tem peça nova no palco!" : `${count} peças novas acabaram de estrear`) +
+  const title = count === 1 ? "Chegou 1 novelinha nova no Mini Drama 🎬" : `Chegaram ${count} novelinhas novas no Mini Drama 🎬`;
+  const body = h1(count === 1 ? "Tem novelinha nova no ar!" : `${count} novelinhas novas acabaram de estrear`) +
     p(`Oi, ${firstName(user)}! Desde o nosso último recado, o catálogo cresceu. Olha só o que chegou:`) +
     plays.slice(0, 4).map(playCard).join("") +
     (count > 4 ? p(`<span style="color:#B9A9A0;">…e mais ${count - 4} esperando por você.</span>`) : "") +
@@ -75,42 +75,42 @@ function expiry(user, daysLeft, planName, expiresAt) {
   const when = fmtDate(expiresAt);
   const subjects = {
     3: `Faltam 3 dias para o seu plano ${planName} vencer ⏳`,
-    2: `Só mais 2 dias de ${planName} — renove e não perca o fio da peça`,
+    2: `Só mais 2 dias de ${planName} — renove e não perca o fio da novelinha`,
     1: `Último aviso: seu plano ${planName} vence amanhã!`
   };
   const lead = {
     3: `Passando para avisar com carinho: seu plano <b>${esc(planName)}</b> vence em <b>${when}</b>, daqui a 3 dias.`,
-    2: `O tempo passa rápido no teatro! Seu plano <b>${esc(planName)}</b> vence em <b>${when}</b> — faltam só 2 dias.`,
+    2: `O tempo passa rápido! Seu plano <b>${esc(planName)}</b> vence em <b>${when}</b> — faltam só 2 dias.`,
     1: `A última chamada soou: seu plano <b>${esc(planName)}</b> vence <b>amanhã (${when})</b>.`
   };
-  const body = h1(daysLeft === 1 ? "Não deixe a cortina fechar 🎭" : "Seu plano está chegando ao fim") +
+  const body = h1(daysLeft === 1 ? "Não deixe a história parar 📺" : "Seu plano está chegando ao fim") +
     p(`${firstName(user)}, ${lead[daysLeft]}`) +
-    p(`Renovando agora, você mantém o acesso a todas as peças <b>sem interrupção</b> — e os 30 dias novos são <b>somados</b> aos dias que ainda sobrarem. Nada se perde.`) +
+    p(`Renovando agora, você mantém o acesso a todas as novelinhas <b>sem interrupção</b> — e os 30 dias novos são <b>somados</b> aos dias que ainda sobrarem. Nada se perde.`) +
     button("Renovar meu plano", `${siteUrl()}/#/planos`) +
     p(`<span style="color:#B9A9A0;font-size:14px;">O pagamento é por PIX e leva menos de um minuto.</span>`);
   return { subject: subjects[daysLeft], html: layout({ preheader: `Vence em ${when}. Renove em 1 minuto por PIX.`, title: subjects[daysLeft], body, user, marketing: false }), text: `Seu plano ${planName} vence em ${when}. Renove: ${siteUrl()}/#/planos` };
 }
 
 function expired(user, planName) {
-  const subject = `Seu plano ${planName} venceu — a plateia sente sua falta 💛`;
+  const subject = `Seu plano ${planName} venceu — suas novelinhas sentem sua falta 💛`;
   const body = h1("As luzes se apagaram… por enquanto") +
-    p(`${firstName(user)}, seu plano <b>${esc(planName)}</b> chegou ao fim. Você continua com a conta <b>Plateia</b> gratuita, mas as peças exclusivas ficaram trancadas.`) +
+    p(`${firstName(user)}, seu plano <b>${esc(planName)}</b> chegou ao fim. Você continua com a conta <b>Plateia</b> gratuita, mas as novelinhas exclusivas ficaram trancadas.`) +
     p(`Quer voltar para o seu lugar? Leva menos de um minuto, por PIX.`) +
     button("Reativar meu plano", `${siteUrl()}/#/planos`);
-  return { subject, html: layout({ preheader: "Volte para o seu lugar na plateia.", title: subject, body, user, marketing: false }), text: `Seu plano ${planName} venceu. Reative: ${siteUrl()}/#/planos` };
+  return { subject, html: layout({ preheader: "Volte para as suas novelinhas.", title: subject, body, user, marketing: false }), text: `Seu plano ${planName} venceu. Reative: ${siteUrl()}/#/planos` };
 }
 
 function missYou(user, plays) {
-  const subject = `${(user.name || "").split(" ")[0] || "Oi"}, sentimos a sua falta 💔🎭`;
+  const subject = `${(user.name || "").split(" ")[0] || "Oi"}, sentimos a sua falta 💔📺`;
   const body = h1("Sua poltrona está esperando") +
-    p(`Faz um tempinho que você não aparece por aqui, ${firstName(user)}. Enquanto isso, o palco não parou — olha o que está em cartaz:`) +
+    p(`Faz um tempinho que você não aparece por aqui, ${firstName(user)}. Enquanto isso, as novelinhas não pararam — olha o que está em destaque:`) +
     plays.slice(0, 3).map(playCard).join("") +
     button("Voltar para o Mini Drama", `${siteUrl()}/#/home`);
-  return { subject, html: layout({ preheader: "Tem peça boa esperando por você.", title: subject, body, user, marketing: true }), text: `Sentimos sua falta! Volte: ${siteUrl()}/#/home` };
+  return { subject, html: layout({ preheader: "Tem novelinha boa esperando por você.", title: subject, body, user, marketing: true }), text: `Sentimos sua falta! Volte: ${siteUrl()}/#/home` };
 }
 
 function featured(user, play, canWatch, planName) {
-  const subject = `🎭 Em cartaz agora: ${play.title}`;
+  const subject = `📺 Em destaque agora: ${play.title}`;
   const img = abs(play.backdropUrl || play.posterUrl);
   const body = (img ? `<img src="${esc(img)}" width="540" alt="" style="width:100%;max-width:540px;border-radius:4px;display:block;margin:0 0 20px;">` : "") +
     h1(esc(play.title)) +
@@ -118,14 +118,14 @@ function featured(user, play, canWatch, planName) {
     p(`${firstName(user)}, uma nova obra acabou de subir para o destaque do Mini Drama:`) +
     p(esc((play.synopsis || "").slice(0, 220)) + ((play.synopsis || "").length > 220 ? "…" : "")) +
     (canWatch
-      ? button("Assistir agora", `${siteUrl()}/#/peca/${esc(play.id)}`)
-      : button(`Desbloquear com o plano ${esc(planName)}`, `${siteUrl()}/#/planos`) + p(`<span style="color:#B9A9A0;font-size:14px;">Esta peça faz parte do plano ${esc(planName)}. Assine por PIX em menos de um minuto.</span>`));
-  return { subject, html: layout({ preheader: "Nova obra no banner principal — vem ver.", title: subject, body, user, marketing: true }), text: `${play.title} está em cartaz. Veja: ${siteUrl()}/#/peca/${play.id}` };
+      ? button("Assistir agora", `${siteUrl()}/#/novelinha/${esc(play.id)}`)
+      : button(`Desbloquear com o plano ${esc(planName)}`, `${siteUrl()}/#/planos`) + p(`<span style="color:#B9A9A0;font-size:14px;">Esta novelinha faz parte do plano ${esc(planName)}. Assine por PIX em menos de um minuto.</span>`));
+  return { subject, html: layout({ preheader: "Nova obra no banner principal — vem ver.", title: subject, body, user, marketing: true }), text: `${play.title} está em cartaz. Veja: ${siteUrl()}/#/novelinha/${play.id}` };
 }
 
 function payment(user, planName, amount, validUntil) {
   const subject = `Pagamento confirmado ✅ — seu plano ${planName} está ativo`;
-  const body = h1("Tudo certo, o espetáculo é seu! 🎉") +
+  const body = h1("Tudo certo, as novelinhas são suas! 🎉") +
     p(`${firstName(user)}, recebemos o seu pagamento de <b>${money(amount)}</b>. O plano <b>${esc(planName)}</b> já está liberado e vale até <b>${fmtDate(validUntil)}</b>.`) +
     button("Assistir agora", `${siteUrl()}/#/catalogo`) +
     p(`<span style="color:#B9A9A0;font-size:14px;">Guarde este e-mail como comprovante. Qualquer dúvida, é só responder.</span>`);

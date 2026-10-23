@@ -12,10 +12,10 @@ const ok = (name, fn) => { try { fn(); passed++; console.log("  ✔", name); } c
 
 const PLAYS = [
   { id: "p1", title: "Só Camarote", requiresPlan: "camarote", canWatch: false, hasVideo: true, durationMinutes: 90, releaseYear: 2025, synopsis: "Sinopse 1", genreLabels: ["Drama"], director: "D", cast: "C" },
-  { id: "p2", title: "Peça HLS", requiresPlan: "balcao", canWatch: true, hasVideo: true, durationMinutes: 95, releaseYear: 2025, synopsis: ".", genreLabels: [] },
-  { id: "p3", title: "Peça MP4", requiresPlan: "plateia", canWatch: true, hasVideo: true, durationMinutes: 80, releaseYear: 2024, synopsis: "Sinopse 3", genreLabels: ["Comédia"] },
+  { id: "p2", title: "Novelinha HLS", requiresPlan: "balcao", canWatch: true, hasVideo: true, durationMinutes: 95, releaseYear: 2025, synopsis: ".", genreLabels: [] },
+  { id: "p3", title: "Novelinha MP4", requiresPlan: "plateia", canWatch: true, hasVideo: true, durationMinutes: 80, releaseYear: 2024, synopsis: "Sinopse 3", genreLabels: ["Comédia"] },
   { id: "p4", title: "Sem vídeo", requiresPlan: "plateia", canWatch: true, hasVideo: false, durationMinutes: 70, releaseYear: 2024, synopsis: "x", genreLabels: [] },
-  { id: "p5", title: "Peça YouTube", requiresPlan: "plateia", canWatch: true, hasVideo: true, durationMinutes: 75, releaseYear: 2023, synopsis: "Sinopse 5", genreLabels: [] },
+  { id: "p5", title: "Novelinha YouTube", requiresPlan: "plateia", canWatch: true, hasVideo: true, durationMinutes: 75, releaseYear: 2023, synopsis: "Sinopse 5", genreLabels: [] },
 ];
 const VIDEO = { p2: "https://cdn.x/g/playlist.m3u8", p3: "https://cdn.x/v.mp4", p5: "https://youtu.be/abcdefghijk" };
 
@@ -59,7 +59,7 @@ async function makeEnv(opts = {}) {
         const m = path.match(/^\/plays\/(\w+)$/);
         if (m) {
           if (opts.failDetail === m[1]) return res({ error: "Servidor fora do ar." }, 500);
-          const p = PLAYS.find(x => x.id === m[1]); if (!p) return res({ error: "Peça não encontrada." }, 404);
+          const p = PLAYS.find(x => x.id === m[1]); if (!p) return res({ error: "Novelinha não encontrada." }, 404);
           return res({ play: { ...p, videoUrl: p.canWatch ? (VIDEO[p.id] || "") : "" }, canWatch: p.canWatch, resume: m[1] === "p2" && opts.resume ? { position: 120, duration: 5700 } : null });
         }
         if (path.startsWith("/me/progress/")) return res({ ok: true });
@@ -89,7 +89,7 @@ const ids = (w) => slides(w).map(s => s.dataset.id || "(fim)");
   ok("HLS: hls.js criado com a posição salva (120s) e Plyr montado só nela", () => { assert.equal(e.hlss.length, 1); assert.equal(e.hlss[0].c.startPosition, 120); assert.equal(e.hlss[0].src, VIDEO.p2); assert.equal(e.plyrs.length, 1); });
   ok("Plyr recebe teclas desligadas (o reel trata o teclado) e textos em pt-BR", () => { assert.equal(e.plyrs[0].o.keyboard.focused, false); assert.equal(e.plyrs[0].o.i18n.play, "Reproduzir"); });
   ok("começa tocando", () => assert.equal(e.plyrs[0].paused, false));
-  ok("contador mostra 1 / 3 e URL acompanha a peça", () => { assert.equal(e.w.document.getElementById("reel-count").textContent, "1 / 3"); assert.equal(e.w.location.hash, "#/reel/p2"); });
+  ok("contador mostra 1 / 3 e URL acompanha a novelinha", () => { assert.equal(e.w.document.getElementById("reel-count").textContent, "1 / 3"); assert.equal(e.w.location.hash, "#/reel/p2"); });
   ok("pré-carrega só o TEXTO do próximo (/plays/p3), sem montar player", () => { assert.ok(e.calls.some(c => c.path === "/plays/p3")); assert.equal(e.plyrs.length, 1); });
   ok("sinopse '.' (importada em lote) não aparece", () => assert.equal(slides(e.w)[0].querySelector(".reel-syn"), null));
 
@@ -106,18 +106,18 @@ const ids = (w) => slides(w).map(s => s.dataset.id || "(fim)");
 
   console.log("\nB) Teclado e ações");
   e.w.fire(0); await tick(150);
-  ok("voltar à peça 1 retoma de onde parou (600s salvos), não dos 120s do servidor", () => assert.equal(e.hlss[e.hlss.length - 1].c.startPosition, 600));
+  ok("voltar à novelinha 1 retoma de onde parou (600s salvos), não dos 120s do servidor", () => assert.equal(e.hlss[e.hlss.length - 1].c.startPosition, 600));
   const key = (k) => e.w.document.dispatchEvent(new e.w.KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true }));
   key("ArrowDown"); ok("↓ rola para a próxima tela", () => assert.equal(e.w.__scrolled, "1"));
   key("ArrowUp"); ok("↑ rola para a anterior", () => assert.equal(e.w.__scrolled, "0"));
   key("m"); ok("M alterna o som e sincroniza o botão", () => { const b = e.w.document.querySelector('.reel-slide[data-i="0"] [data-act="sound"]'); assert.equal(b.getAttribute("aria-pressed"), "false"); });
-  key("i"); ok("I abre a ficha da peça; Esc fecha a ficha sem sair do reel", () => { const sh = e.w.document.getElementById("reel-sheet"); assert.ok(sh.classList.contains("open")); key("Escape"); assert.ok(!sh.classList.contains("open")); assert.ok(e.w.location.hash.startsWith("#/reel/")); });
+  key("i"); ok("I abre a ficha da novelinha; Esc fecha a ficha sem sair do reel", () => { const sh = e.w.document.getElementById("reel-sheet"); assert.ok(sh.classList.contains("open")); key("Escape"); assert.ok(!sh.classList.contains("open")); assert.ok(e.w.location.hash.startsWith("#/reel/")); });
   e.w.document.querySelector('.reel-slide[data-i="0"] [data-act="info"]').click();
-  ok("ficha mostra título escapado e link para a página da peça", () => assert.ok(e.w.document.querySelector("#reel-sheet a[href='#/peca/p2']")));
+  ok("ficha mostra título escapado e link para a página da novelinha", () => assert.ok(e.w.document.querySelector("#reel-sheet a[href='#/novelinha/p2']")));
 
   const last = e.plyrs[e.plyrs.length - 1];
   const nCalls = e.calls.length; last.currentTime = 5400; last.emit("ended"); await tick(20);
-  ok("fim do vídeo: avança sozinho para a próxima peça e marca como terminada (posição = duração)", () => {
+  ok("fim do vídeo: avança sozinho para a próxima novelinha e marca como terminada (posição = duração)", () => {
     assert.equal(e.w.__scrolled, "1");
     const put = e.calls.slice(nCalls).find(c => c.method === "PUT"); assert.deepEqual(JSON.parse(put.body), { position: 5400, duration: 5400 });
   });
@@ -133,14 +133,14 @@ const ids = (w) => slides(w).map(s => s.dataset.id || "(fim)");
   ok("teclado do reel deixa de responder depois de sair", () => assert.equal(e.calls.length, before));
   e.w.close();
 
-  console.log("\nD) Começa por peça BLOQUEADA");
+  console.log("\nD) Começa por novelinha BLOQUEADA");
   e = await makeEnv();
   await open(e, "p1");
   ok("feed: bloqueada primeiro, depois as liberadas", () => assert.deepEqual(ids(e.w), ["p1", "p2", "p3", "p5", "(fim)"]));
   ok("mostra painel 'Conteúdo do plano Camarote' com botão para os planos", () => { const s = slides(e.w)[0]; assert.match(s.querySelector(".reel-panel").textContent, /plano Camarote/); assert.ok(s.querySelector('a[href="#/planos"]')); });
   e.w.fire(0); await tick(120);
-  ok("NÃO pede o link do vídeo da peça bloqueada nem cria player", () => { assert.ok(!e.calls.some(c => c.path === "/plays/p1")); assert.equal(e.plyrs.length, 0); });
-  ok("peça bloqueada não tem botão de som", () => assert.equal(slides(e.w)[0].querySelector('[data-act="sound"]'), null));
+  ok("NÃO pede o link do vídeo da novelinha bloqueada nem cria player", () => { assert.ok(!e.calls.some(c => c.path === "/plays/p1")); assert.equal(e.plyrs.length, 0); });
+  ok("novelinha bloqueada não tem botão de som", () => assert.equal(slides(e.w)[0].querySelector('[data-act="sound"]'), null));
   e.w.close();
 
   console.log("\nE) Navegador barra autoplay com som");
@@ -162,12 +162,12 @@ const ids = (w) => slides(w).map(s => s.dataset.id || "(fim)");
   e.w.close();
   e = await makeEnv({ listOverride: [] });
   await open(e, "p3"); await tick(100);
-  ok("peça fora da lista é buscada sozinha (/plays/p3) e abre", () => { assert.ok(e.calls.some(c => c.path === "/plays/p3")); assert.deepEqual(ids(e.w), ["p3"]); });
-  ok("feed de 1 peça não tem tela de fim nem dica de deslizar", () => { assert.equal(e.w.document.getElementById("reel-hint"), null); });
+  ok("novelinha fora da lista é buscada sozinha (/plays/p3) e abre", () => { assert.ok(e.calls.some(c => c.path === "/plays/p3")); assert.deepEqual(ids(e.w), ["p3"]); });
+  ok("feed de 1 novelinha não tem tela de fim nem dica de deslizar", () => { assert.equal(e.w.document.getElementById("reel-hint"), null); });
   e.w.close();
 
   console.log("\nH) Título malicioso não injeta HTML");
-  e = await makeEnv({ listOverride: [{ ...PLAYS[2], title: '<img src=x onerror="window.__pwn=1">Peça "X"', synopsis: "<script>window.__pwn=2</script>texto longo", cast: "<b>x</b>" }] });
+  e = await makeEnv({ listOverride: [{ ...PLAYS[2], title: '<img src=x onerror="window.__pwn=1">Novelinha "X"', synopsis: "<script>window.__pwn=2</script>texto longo", cast: "<b>x</b>" }] });
   await open(e, "p3"); e.w.document.querySelector('[data-act="info"]').click(); await tick(50);
   ok("nem a tela, nem a ficha interpretam o HTML do título/sinopse/elenco", () => {
     assert.equal(e.w.document.querySelectorAll(".reel img[src='x']").length, 0);
@@ -219,7 +219,7 @@ const ids = (w) => slides(w).map(s => s.dataset.id || "(fim)");
   key("Escape"); await tick(40);
   ok("Esc sai da tela cheia por CSS SEM sair do reel", () => { assert.ok(!e.w.document.querySelector(".is-fs")); assert.ok(e.w.document.getElementById("reel")); });
   fsBtn(e).click(); await tick(30); e.w.fire(1); await tick(150);
-  ok("trocar de peça limpa a tela cheia por CSS (não fica preso)", () => { assert.ok(!e.w.document.querySelector(".is-fs")); assert.ok(!e.w.document.getElementById("reel").classList.contains("fs-css")); });
+  ok("trocar de novelinha limpa a tela cheia por CSS (não fica preso)", () => { assert.ok(!e.w.document.querySelector(".is-fs")); assert.ok(!e.w.document.getElementById("reel").classList.contains("fs-css")); });
   e.w.close();
 
   e = await startReel({ fs: "native" });

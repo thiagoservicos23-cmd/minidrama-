@@ -2,7 +2,7 @@
   "name": "mini-drama",
   "version": "1.0.0",
   "private": true,
-  "description": "Mini Drama — plataforma de streaming de peças teatrais (projeto acadêmico Teatro + Tecnologia)",
+  "description": "Mini Drama — plataforma de streaming de novelinhas",
   "main": "src/index.js",
   "scripts": {
     "dev": "node src/index.js",
