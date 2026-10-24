@@ -51,6 +51,9 @@ input,select,textarea{font-family:inherit;}
 @media (max-width:640px){.site-header{padding:14px 16px;}}
 .brand{display:flex; align-items:baseline; gap:6px; font-family:var(--font-display); font-weight:700; font-size:23px; letter-spacing:.2px; flex-shrink:0;}
 .brand .dot{width:7px; height:7px; border-radius:50%; background:var(--curtain-2); margin-left:1px;}
+.header-actions{display:flex; align-items:center; gap:10px; flex-shrink:0; margin-left:auto;}
+.icon-btn{background:none; border:1px solid var(--line); color:var(--ink); border-radius:50%; width:36px; height:36px; display:flex; align-items:center; justify-content:center;}
+.icon-btn:hover{border-color:var(--gold);}
 .btn{border:none; border-radius:var(--radius); padding:10px 20px; font-size:14px; font-weight:600; letter-spacing:.2px; transition:transform .12s ease, opacity .15s;}
 .btn:active{transform:scale(0.97);}
 .btn:disabled{opacity:.5; cursor:default;}
@@ -62,6 +65,7 @@ input,select,textarea{font-family:inherit;}
 .btn-danger:hover{background:rgba(196,69,60,.1);}
 .btn-block{width:100%;}
 .btn-sm{padding:7px 14px; font-size:13px;}
+.avatar-btn{width:36px; height:36px; border-radius:50%; background:var(--curtain); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:14px; border:1px solid var(--line);}
 
 .hero{position:relative; height:74vh; min-height:460px; max-height:720px; overflow:hidden;}
 .hero-slide{position:absolute; inset:0; opacity:0; transition:opacity .9s ease; background-size:cover; background-position:center 20%;}
@@ -296,6 +300,8 @@ body.reel-open{overflow:hidden;}
 .reel-sheet-plan{color:var(--ink-faint); font-size:13px; margin:0 0 16px;}
 
 /* ===== Formato app: barra inferior, pesquisa, continuar assistindo, minha lista ===== */
+.btn-sub{display:inline-flex; align-items:center; padding:8px 16px; border-radius:20px; background:linear-gradient(180deg, var(--gold-soft), var(--gold)); color:#1a1208; font-size:13px; font-weight:700; letter-spacing:.2px; white-space:nowrap;}
+.btn-sub:hover{filter:brightness(1.08);}
 .card-art{position:relative;}
 .card-heart{position:absolute; top:8px; right:8px; width:34px; height:34px; padding:0; border:none; border-radius:50%; background:rgba(9,6,7,.62); backdrop-filter:blur(4px); color:var(--ink); display:grid; place-items:center; transition:transform .12s, color .15s;}
 .card-heart svg{width:17px; height:17px;}
@@ -365,14 +371,6 @@ body.reel-open{overflow:hidden;}
 .fnav-ind{position:absolute; z-index:0; top:4px; bottom:4px; left:0; width:0; border-radius:999px; background:rgba(201,162,75,.15); border:1px solid rgba(201,162,75,.3); transition:transform .4s cubic-bezier(.3,1.35,.5,1), width .4s cubic-bezier(.3,1.35,.5,1), opacity .2s; pointer-events:none;}
 @media (min-width:640px){ .fnav-item{font-size:11.5px; flex-direction:row; justify-content:center; gap:7px; padding:11px 6px;} .fnav-item svg{width:19px; height:19px;} }
 @media (prefers-reduced-motion:reduce){ .fnav-ind{transition:opacity .2s;} }
-.fnav-item.cta{color:var(--gold);}
-.fnav-item.cta.active{color:var(--gold-soft);}
-.fnav-avatar{width:22px; height:22px; border-radius:50%; background:var(--curtain); color:#fff; display:grid; place-items:center; font-size:9.5px; font-weight:700; letter-spacing:.2px; border:1px solid var(--line); flex-shrink:0;}
-.fnav-item.active .fnav-avatar{border-color:var(--gold);}
-/* 7 ou mais itens (conta sem plano pago, administrador): letras e ícones menores no celular e barra mais larga no computador */
-.fnav.dense .fnav-item{font-size:9.5px; padding:7px 0;}
-.fnav.dense .fnav-item svg{width:19px; height:19px;}
-@media (min-width:640px){ .fnav.dense{max-width:46rem;} .fnav.dense .fnav-item{font-size:11.5px; padding:11px 4px; gap:6px;} .fnav.dense .fnav-item svg{width:18px; height:18px;} }
 
 /* ===== Fase 2: filtros do catálogo e tela Surpresa ===== */
 .catalog-bar{display:flex; align-items:center; gap:10px; margin-bottom:22px;}
@@ -550,6 +548,7 @@ td.strong{color:var(--ink); font-weight:600;}
 .sk-title{height:22px; width:160px; margin:34px 0 16px;}
 .wake-hint{text-align:center; color:var(--ink-muted); font-size:13.5px; padding:14px 20px; display:none;}
 .wake-hint.show{display:block;}
+.avatar-sk{width:36px; height:36px; border-radius:50%;}
 
 /* ---------- instalar app ---------- */
 .install-banner{position:fixed; left:12px; right:12px; bottom:calc(98px + env(safe-area-inset-bottom,0px)); z-index:250; max-width:460px; margin:0 auto; background:var(--bg-elev); border:1px solid var(--gold); border-radius:var(--radius-lg); box-shadow:var(--shadow-deep); padding:14px 16px; display:flex; align-items:center; gap:14px; animation:fade-up .4s ease both;}
@@ -619,8 +618,6 @@ const ICO = {
   shuffle: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>`,
   sliders: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>`,
   settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
-  crown: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.562 3.266a.5.5 0 0 1 .876 0L15.39 8.87a1 1 0 0 0 1.516.294L21.183 5.5a.5.5 0 0 1 .798.519l-2.834 10.246a1 1 0 0 1-.956.734H5.81a1 1 0 0 1-.957-.734L2.02 6.02a.5.5 0 0 1 .798-.519l4.276 3.664a1 1 0 0 0 1.516-.294z"/><path d="M5 21h14"/></svg>`,
-  userPlus: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>`,
 };
 
 /* --------------------------- ESTADO LOCAL (cache do que veio da API) ------- */
@@ -830,9 +827,21 @@ async function refreshUsers(){ const r = await api("/users"); DB.users = r.users
 function PublicShell(innerHtml){
   const user = currentUser();
   const hash = location.hash || "#/home";
+  const initials = user ? user.name.split(" ").map(w=>w[0]).slice(0,2).join("").toUpperCase() : "";
   return `
   <header class="site-header" id="site-header">
     <a href="#/home" class="brand">${SITE_NAME}<span class="dot"></span></a>
+    <div class="header-actions">
+      <a href="#/buscar" class="icon-btn" title="Buscar" aria-label="Buscar">${ICO.search}</a>
+      ${user && !hasPaidPlan(user) ? `<a href="#/planos" class="btn-sub">Assinar</a>` : ``}
+      ${user ? `
+        <button class="icon-btn" title="Conta" onclick="go('#/conta')">${ICO.bell}</button>
+        <a href="#/conta" class="avatar-btn" title="${esc(user.name)}">${esc(initials)}</a>
+      ` : (getToken() ? `<span class="sk avatar-sk"></span>` : `
+        <a href="#/login" class="btn btn-ghost btn-sm">Entrar</a>
+        <a href="#/cadastro" class="btn btn-gold btn-sm">Criar conta</a>
+      `)}
+    </div>
   </header>
   <main>${innerHtml}</main>
   <footer class="site-footer">
@@ -851,27 +860,17 @@ function PublicShell(innerHtml){
 }
 let fnavLast = null;      // onde o indicador estava na tela anterior: a nova tela começa ali e desliza até a aba atual
 function FloatingNav(user, hash){
-  const paid = hasPaidPlan(user), waiting = !user && !!getToken();                    // waiting: tem login guardado, mas a conta ainda não carregou
-  const initials = user ? esc(user.name.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase()) : "";
-  const it = (href, label, icon, on, extra = {}) => ({ href, label, icon, on, ...extra });
   const items = [
-    it("#/home", "Início", ICO.home, hash === "#/home" || hash === "#/" || hash === ""),
-    it("#/catalogo", "Catálogo", ICO.grid, hash.startsWith("#/catalogo")),
-    it("#/buscar", "Buscar", ICO.search, hash.startsWith("#/buscar")),                // a lupa que ficava no topo
-    it("#/surpresa", "Surpresa", ICO.shuffle, hash === "#/surpresa"),
-    ...(user ? [it("#/minha-lista", "Lista", ICO.heart, hash === "#/minha-lista", { aria: "Minha lista" })] : []),
-    ...(user && !paid ? [it("#/planos", "Assinar", ICO.crown, hash === "#/planos", { cta: true })] : []),   // o botão "Assinar" que ficava no topo
-    ...(user ? [it("#/conta", "Conta", `<span class="fnav-avatar" aria-hidden="true">${initials}</span>`, hash === "#/conta", { aria: "Conta de " + user.name })]
-      : waiting ? [{ loading: true, label: "Conta" }]
-      : [it("#/login", "Entrar", ICO.user, false), it("#/cadastro", "Criar conta", ICO.userPlus, false, { cta: true })]),
-    ...(user && user.role === "admin" ? [it("#/admin", "Admin", ICO.settings, false)] : [])
+    { href: "#/home", label: "Início", icon: ICO.home, on: hash === "#/home" || hash === "#/" || hash === "" },
+    { href: "#/catalogo", label: "Catálogo", icon: ICO.grid, on: hash.startsWith("#/catalogo") },
+    { href: "#/surpresa", label: "Surpresa", icon: ICO.shuffle, on: hash === "#/surpresa" },
+    { href: "#/minha-lista", label: "Minha lista", icon: ICO.heart, on: hash === "#/minha-lista" },
+    user ? { href: "#/conta", label: "Conta", icon: ICO.user, on: hash === "#/conta" } : { href: "#/login", label: "Entrar", icon: ICO.user, on: false },
+    ...(user && user.role === "admin" ? [{ href: "#/admin", label: "Admin", icon: ICO.settings, on: false }] : [])
   ];
   const ind = fnavLast ? `style="width:${fnavLast.w}px; transform:translateX(${fnavLast.x}px);"` : `style="opacity:0;"`;
-  const row = (x) => x.loading
-    ? `<span class="fnav-item" aria-busy="true"><span class="sk" style="width:22px; height:22px; border-radius:50%;"></span><span>${x.label}</span></span>`
-    : `<a class="fnav-item ${x.on ? "active" : ""} ${x.cta ? "cta" : ""}" href="${x.href}" ${x.on ? 'aria-current="page"' : ""} ${x.aria ? `aria-label="${esc(x.aria)}" title="${esc(x.aria)}"` : ""}>${x.icon}<span>${x.label}</span></a>`;
-  return `<nav class="fnav ${items.length >= 7 ? "dense" : ""}" aria-label="Navegação principal"><div class="fnav-bar" id="fnav-bar">
-    ${items.map(row).join("")}
+  return `<nav class="fnav" aria-label="Navegação principal"><div class="fnav-bar" id="fnav-bar">
+    ${items.map(it => `<a class="fnav-item ${it.on ? "active" : ""}" href="${it.href}" ${it.on ? 'aria-current="page"' : ""}>${it.icon}<span>${it.label}</span></a>`).join("")}
     <span class="fnav-ind" id="fnav-ind" ${ind} aria-hidden="true"></span></div></nav>`;
 }
 function placeFnavIndicator(){
@@ -1073,7 +1072,7 @@ function attachSearchEvents(q0){
 }
 
 /* --------------------------- FASE 2: filtros do catálogo + Surpresa ------------------------------------ */
-const APP_VERSION = "2026.10.23-barra";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
+const APP_VERSION = "2026.10.23-novelinhas";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
 const SORT_LABELS = { "": "Padrão", recent: "Mais recentes", title: "Título (A–Z)", year: "Ano (mais novo)", longest: "Mais longas", shortest: "Mais curtas" };
 let catalogFilters = { sort: "", year: "", plan: "" };
 let catalogFacets = null;
