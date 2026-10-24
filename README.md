@@ -153,7 +153,10 @@ Não há “desfazer” automático (depois de juntar, o site não sabe quais er
 - **Balão de instalar o app:** é reavaliado quando o navegador libera a instalação (antes só decidia uma vez, aos 6 s). Funciona no Android (botão), no iPhone com Safari **ou Chrome** (passo a passo do Compartilhar) e em celulares sem aviso nativo (passo a passo do menu). Some por 3 dias ao fechar, nunca aparece em app já instalado nem por cima do player, e o link "Instalar o app" do rodapé sempre funciona.
 - **"Em alta"** no topo do catálogo (`GET /api/plays/trending`): ranking dos últimos 30 dias por atividade (quem começou a assistir vale 2, quem salvou na lista vale 1). Com pouca atividade completa com os destaques e as novelinhas mais novas. Some quando há gênero ou filtro escolhido.
 - **Login, cadastro e recuperação de senha** no novo visual (cartão de vidro, campos arredondados, botões em pílula, capas reais das novelinhas embaixo) e com proteção contra clique duplo. O desenho veio de um componente React/Tailwind; como o site é HTML/JS puro, ele foi **portado** para o CSS do projeto.
-- **Barra de navegação flutuante** embaixo, em todas as telas públicas, com indicador que desliza até a aba ativa (Início, Catálogo, Surpresa, Minha lista, Conta e, para o administrador, Admin). O menu do topo, o hambúrguer e a gaveta foram removidos.
+- **Barra de navegação flutuante** embaixo, em todas as telas públicas, com indicador que desliza até a aba ativa. **Todos os botões que ficavam no topo moram nela**: Início, Catálogo,
+  **Buscar** (a lupa), Surpresa, Lista (minha lista), **Assinar** (dourado, só para quem não tem plano pago ativo), **Conta** (mostra as iniciais da pessoa) e, para o administrador, Admin.
+  Visitantes veem **Entrar** e **Criar conta** no lugar de Lista/Assinar/Conta. Com 7 ou mais itens a barra entra no modo "denso" (letras menores no celular, mais larga no computador).
+  O topo ficou só com a marca; o menu, o hambúrguer, a gaveta, a lupa, o sino e o avatar foram removidos.
 - **`memory.md`** guarda o contexto do projeto para retomar o trabalho e o **`CLAUDE.md`** manda o Claude Code lê-lo primeiro e atualizá-lo ao final.
 - Testes de fumaça novos: `tests/smoke/mobile.smoke.js` (login e balão de instalar); ampliados `storyreel`, `app` e `phase2`.
 
