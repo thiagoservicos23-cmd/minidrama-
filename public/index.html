@@ -212,66 +212,82 @@ body.reel-open{overflow:hidden;}
 .reel-scroller::-webkit-scrollbar{display:none;}
 @media (prefers-reduced-motion:no-preference){ .reel-scroller{scroll-behavior:smooth;} }
 
-.reel-slide{position:relative; height:100vh; height:100dvh; scroll-snap-align:start; scroll-snap-stop:always; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#000; content-visibility:auto; contain-intrinsic-size:100vw 100vh;}
-.reel-bg{position:absolute; inset:-40px; background-size:cover; background-position:center; filter:blur(34px) brightness(.5) saturate(1.15);}
-.reel-slide::before{content:""; position:absolute; inset:0; z-index:1; pointer-events:none; background:radial-gradient(120% 85% at 50% 50%, transparent 42%, rgba(122,31,46,.42) 100%);}
+.reel-slide{position:relative; height:100vh; height:100dvh; width:100vw; scroll-snap-align:start; scroll-snap-stop:always; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#000; content-visibility:auto; contain-intrinsic-size:100vw 100vh;}
+.reel-bg{display:none !important;}
+.reel-slide::before{display:none !important;}
 
-.reel-stage{position:relative; z-index:2; width:min(100vw, calc(100vh * 16 / 9)); width:min(100vw, calc(100dvh * 16 / 9)); aspect-ratio:16/9; background:#000; overflow:hidden; box-shadow:0 24px 60px rgba(0,0,0,.6);}
-.reel-slide.is-tall .reel-stage{width:min(100vw, calc(100vh * 9 / 16)); width:min(100vw, calc(100dvh * 9 / 16)); height:100%; aspect-ratio:auto;}
-.reel-slide.is-panel .reel-stage{width:100%; height:100%; aspect-ratio:auto; background:transparent; box-shadow:none;}
-.reel-cover{position:absolute; inset:0; width:100%; height:100%; object-fit:cover;}
+/* Vertical Video Feed Player (Short Drama Player 9:16) - tela inteira mobile, centralizado vertical no desktop */
+.reel-stage{
+  position:relative; z-index:2;
+  width:100%; height:100vh; height:100dvh;
+  max-width:min(100vw, calc(100dvh * 9 / 16));
+  aspect-ratio:9/16; margin:0 auto;
+  background:#000; overflow:hidden;
+  box-shadow:0 0 60px rgba(0,0,0,.92);
+  display:flex; align-items:center; justify-content:center;
+}
+@media (max-width:600px){
+  .reel-stage{
+    max-width:100vw !important; width:100vw !important;
+    aspect-ratio:auto !important; box-shadow:none;
+  }
+}
+.reel-slide.is-tall .reel-stage{width:100%; height:100%;}
+.reel-slide.is-panel .reel-stage{width:100%; height:100%; background:transparent; box-shadow:none;}
+.reel-cover{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; background:#000; z-index:2; transition:opacity .2s ease;}
 .reel-stage.is-live .reel-cover{display:none;}
-.reel-player{position:absolute; inset:0;}
-.reel-player .plyr{height:100%; width:100%; background:transparent; font-family:var(--font-body);
-  --plyr-color-main:#C9A24B; --plyr-control-radius:3px; --plyr-video-control-color:#F4ECE3; --plyr-font-weight-regular:500;
-  --plyr-menu-background:#1B1417; --plyr-menu-color:#F4ECE3; --plyr-tooltip-background:#1B1417; --plyr-tooltip-color:#F4ECE3;}
-.reel-player .plyr__video-wrapper{height:100%; background:transparent;}
-.reel-player video{width:100%; height:100%; object-fit:contain; background:transparent;}
+.reel-stage::after{
+  content:""; position:absolute; inset:auto 0 0 0; height:260px;
+  background:linear-gradient(0deg, rgba(0,0,0,.92) 0%, rgba(0,0,0,.45) 60%, transparent 100%);
+  z-index:3; pointer-events:none;
+}
+.reel-player{position:absolute; inset:0; z-index:1; background:#000;}
+.reel-player .plyr{height:100% !important; width:100% !important; max-width:100% !important; min-height:100% !important; background:transparent !important; font-family:var(--font-body);
+  --plyr-color-main:#C9A24B; --plyr-control-radius:3px; --plyr-video-control-color:#F4ECE3; --plyr-font-weight-regular:500;}
+.reel-player .plyr__video-wrapper{height:100% !important; width:100% !important; padding-bottom:0 !important; background:transparent !important;}
+.reel-player video, .reel-player .plyr video{width:100% !important; height:100% !important; object-fit:cover !important; background:#000 !important;}
 .reel-player iframe{border:0;}
-.reel-loading{position:absolute; left:50%; top:50%; width:34px; height:34px; margin:-17px 0 0 -17px; border-radius:50%; border:2px solid rgba(244,236,227,.25); border-top-color:var(--gold); animation:reel-spin .9s linear infinite; z-index:3; pointer-events:none;}
+.reel-loading{position:absolute; left:50%; top:50%; width:34px; height:34px; margin:-17px 0 0 -17px; border-radius:50%; border:2px solid rgba(244,236,227,.25); border-top-color:var(--gold); animation:reel-spin .9s linear infinite; z-index:6; pointer-events:none;}
 @keyframes reel-spin{to{transform:rotate(360deg);}}
 @media (prefers-reduced-motion:reduce){ .reel-loading{animation-duration:2.4s;} }
 
-.reel-panel{position:absolute; inset:0; z-index:4; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center; padding:20px; background:rgba(18,13,15,.74); backdrop-filter:blur(4px);}
+.reel-panel{position:absolute; inset:0; z-index:8; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center; padding:20px; background:rgba(18,13,15,.85); backdrop-filter:blur(4px);}
 .reel-panel svg{color:var(--gold);}
 .reel-panel h3{font-family:var(--font-display); font-size:clamp(17px,4.6vw,24px); margin:6px 0 0;}
 .reel-panel p{color:var(--ink-muted); font-size:13.5px; line-height:1.55; margin:0; max-width:36ch;}
 .reel-panel-actions{display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:10px;}
 
-.reel-top{position:absolute; z-index:10; top:0; left:0; right:0; display:flex; align-items:center; justify-content:space-between; padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 30px; background:linear-gradient(180deg, rgba(0,0,0,.62), transparent); pointer-events:none;}
+.reel-top{position:absolute; z-index:10; top:0; left:0; right:0; display:flex; align-items:center; justify-content:space-between; padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 20px; background:linear-gradient(180deg, rgba(0,0,0,.65), transparent); pointer-events:none;}
 .reel-top > *{pointer-events:auto;}
-.reel-count{font-size:13px; font-weight:600; color:var(--ink); background:rgba(18,13,15,.55); border:1px solid rgba(244,236,227,.18); padding:7px 13px; border-radius:20px; backdrop-filter:blur(6px); font-variant-numeric:tabular-nums;}
-.reel-btn{width:44px; height:44px; flex-shrink:0; border-radius:50%; border:1px solid rgba(244,236,227,.22); background:rgba(18,13,15,.55); color:var(--ink); display:grid; place-items:center; backdrop-filter:blur(6px); cursor:pointer; transition:border-color .15s, background .15s;}
+.reel-count{font-size:13px; font-weight:600; color:var(--ink); background:rgba(18,13,15,.65); border:1px solid rgba(244,236,227,.18); padding:6px 12px; border-radius:20px; backdrop-filter:blur(6px); font-variant-numeric:tabular-nums;}
+.reel-btn{width:42px; height:42px; flex-shrink:0; border-radius:50%; border:1px solid rgba(244,236,227,.22); background:rgba(18,13,15,.65); color:var(--ink); display:grid; place-items:center; backdrop-filter:blur(6px); cursor:pointer; transition:border-color .15s, background .15s;}
 .reel-btn:hover{border-color:var(--gold);}
 .reel-btn:focus-visible, .reel a:focus-visible{outline:2px solid var(--gold); outline-offset:2px;}
 .reel-btn[aria-pressed="true"]{color:var(--gold-soft); border-color:var(--gold);}
 
-.reel-info{position:absolute; z-index:5; left:0; right:76px; max-width:560px; padding:0 16px; bottom:calc(env(safe-area-inset-bottom,0px) + 28px); text-shadow:0 1px 14px rgba(0,0,0,.75); pointer-events:none; transition:opacity .4s;}
-.reel-title{font-family:var(--font-display); font-weight:700; font-size:clamp(20px,5vw,28px); line-height:1.15; margin:0 0 6px;}
-.reel-meta{display:flex; gap:12px; flex-wrap:wrap; font-size:13px; color:var(--ink-muted); margin:0 0 8px;}
-.reel-meta span{display:inline-flex; align-items:center; gap:5px;}
-.reel-syn{font-size:13.5px; line-height:1.55; color:rgba(244,236,227,.9); margin:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
-.reel-rail{position:absolute; z-index:6; right:12px; bottom:calc(env(safe-area-inset-bottom,0px) + 28px); display:flex; flex-direction:column; gap:12px; transition:opacity .4s;}
-.reel-slide.is-tall .reel-info, .reel-slide.is-tall .reel-rail{bottom:calc(env(safe-area-inset-bottom,0px) + 92px);}
-/* Depois que o vídeo começa, título/sinopse saem de cima da imagem (ficam no botão de detalhes). */
-.reel-stage.is-live ~ .reel-info{opacity:0; visibility:hidden; pointer-events:none;}
-/* Tela cheia por CSS (reserva quando o navegador não oferece a nativa): o palco cobre a tela e o resto some. */
+.reel-top-bar{position:absolute; top:calc(env(safe-area-inset-top,0px) + 14px); left:14px; right:14px; z-index:10; display:flex; align-items:center; justify-content:space-between; pointer-events:none;}
+.reel-top-bar > *{pointer-events:auto;}
+.reel-badge-group{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+.reel-lang-badge{font-size:11px; font-weight:700; color:#fff; background:linear-gradient(135deg, #b91c1c, #ea580c); padding:3px 8px; border-radius:4px; box-shadow:0 2px 6px rgba(0,0,0,0.4);}
+
+.reel-info{position:absolute; z-index:5; left:14px; right:74px; bottom:calc(env(safe-area-inset-bottom,0px) + 16px); text-shadow:0 1px 12px rgba(0,0,0,.85); pointer-events:auto; transition:opacity .3s;}
+.reel-title{font-family:var(--font-display); font-weight:700; font-size:clamp(16px,4.5vw,22px); line-height:1.2; margin:0 0 4px;}
+.reel-meta{display:flex; gap:10px; flex-wrap:wrap; font-size:12px; color:var(--ink-muted); margin:0 0 6px;}
+.reel-meta span{display:inline-flex; align-items:center; gap:4px;}
+.reel-syn{font-size:12.5px; line-height:1.45; color:rgba(244,236,227,.9); margin:0; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
+
+.reel-rail{position:absolute; z-index:6; right:10px; bottom:calc(env(safe-area-inset-bottom,0px) + 20px); display:flex; flex-direction:column; gap:12px; align-items:center; pointer-events:auto; transition:opacity .3s;}
+.reel-slide.is-tall .reel-info, .reel-slide.is-tall .reel-rail{bottom:calc(env(safe-area-inset-bottom,0px) + 20px);}
+
+/* Tela cheia por CSS */
 .reel-slide.is-fs{content-visibility:visible; contain:none; overflow:visible; z-index:300;}
 .reel-slide.is-fs .reel-stage{position:fixed; inset:0; width:100vw; height:100vh; height:100dvh; max-width:none; aspect-ratio:auto; z-index:300; box-shadow:none; background:#000;}
 .reel-slide.is-fs .reel-info, .reel-slide.is-fs .reel-rail, .reel-slide.is-fs::before{display:none;}
 .reel.fs-css .reel-top, .reel.fs-css .reel-nav, .reel.fs-css .reel-hint{display:none;}
 @media (hover:hover) and (pointer:fine){ .reel-btn-fs{display:none;} }
 
-/* Tela larga: o título sobe para o canto e some junto com os controles, para não cobrir a novelinha. */
-@media (min-aspect-ratio:1/1){
-  .reel-info{bottom:auto; top:72px; right:96px;}
-  .reel-rail{bottom:auto; top:50%; transform:translateY(-50%);}
-  .reel.ui-idle .reel-info, .reel.ui-idle .reel-rail{opacity:0; pointer-events:none;}
-  .reel-slide.is-tall .reel-info{top:auto; bottom:calc(env(safe-area-inset-bottom,0px) + 92px);}
-  .reel-slide.is-tall .reel-rail{top:auto; transform:none; bottom:calc(env(safe-area-inset-bottom,0px) + 92px);}
-}
-.reel-nav{position:absolute; z-index:7; right:18px; top:50%; transform:translateY(-50%); display:none; flex-direction:column; gap:10px;}
-@media (hover:hover) and (pointer:fine){ .reel-nav{display:flex;} .reel-rail{right:76px;} }
+.reel-nav{position:fixed; z-index:50; right:max(16px, calc(50vw - 340px)); top:50%; transform:translateY(-50%); display:none; flex-direction:column; gap:12px;}
+@media (hover:hover) and (pointer:fine){ .reel-nav{display:flex;} }
 .reel-btn:disabled{opacity:.35; cursor:default;}
 
 .reel-end{flex-direction:column; gap:14px; text-align:center; padding:24px;}
@@ -742,7 +758,7 @@ window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", boot);
 
 /* ---- cache local: a 2ª visita em diante abre NA HORA, mesmo com o servidor dormindo ---- */
-const CACHE_KEY = "minidrama_cache_v10";
+const CACHE_KEY = "minidrama_cache_v11";
 function loadCache(){
   try{ ["minidrama_cache_v2","minidrama_cache_v3","minidrama_cache_v4","minidrama_cache_v5","minidrama_cache_v6"].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)); if(c && Date.now() - c.t < 14*86400000) return c; }catch(e){}
@@ -1153,7 +1169,7 @@ function attachSearchEvents(q0){
 }
 
 /* --------------------------- FASE 2: filtros do catálogo + Surpresa ------------------------------------ */
-const APP_VERSION = "2026.10.26-vorta-player-fix";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
+const APP_VERSION = "2026.10.26-vorta-fast-reel";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
 const SORT_LABELS = { "": "Padrão", recent: "Mais recentes", title: "Título (A–Z)", year: "Ano (mais novo)", longest: "Mais longas", shortest: "Mais curtas" };
 let catalogFilters = { sort: "", year: "", plan: "" };
 let catalogFacets = null;
@@ -1794,37 +1810,39 @@ function reelSlideHtml(p, i){
   const displayTitle = p.dramaTitle ? `${esc(p.dramaTitle)} <span style="color:var(--gold-soft); font-size:0.85em; font-weight:700;">(EP ${curEp})</span>` : esc(p.title);
 
   return `<section class="reel-slide ${panel ? "is-panel" : ""}" data-i="${i}" data-id="${esc(p.id)}" data-chid="${esc(p.chapterId || "")}" aria-label="${esc(p.title)}">
-    <div class="reel-bg" style="background-image:url('${bg}')"></div>
     <div class="reel-stage" id="reel-stage-${i}">
-      <img class="reel-cover" src="${bg}" alt="">
+      <img class="reel-cover" src="${bg}" alt="" loading="${i === 0 ? 'eager' : 'lazy'}">
       ${panel ? `<div class="reel-panel">${reelPanelHtml(panel, p)}</div>` : ""}
-    </div>
-    <div class="reel-top-bar">
-      <div class="reel-badge-group">
-        ${isVorta ? `<span class="card-badge card-badge-plat" style="position:static;">📺 ${esc(p.platformName || "FreeReels")}</span>` : ""}
-        <span class="reel-lang-badge">${isDub ? "🎙️ Dublado PT" : "📝 Legendado PT"}</span>
-        <span class="reel-ep-badge" style="background:rgba(201,162,75,0.25); border:1px solid var(--gold); color:var(--gold-soft); font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px;">EP ${curEp} / ${totalEps}</span>
+
+      <div class="reel-top-bar">
+        <div class="reel-badge-group">
+          ${isVorta ? `<span class="card-badge card-badge-plat" style="position:static;">📺 ${esc(p.platformName || "FreeReels")}</span>` : ""}
+          <span class="reel-lang-badge">${isDub ? "🎙️ Dublado PT" : "📝 Legendado PT"}</span>
+          <span class="reel-ep-badge" style="background:rgba(201,162,75,0.25); border:1px solid var(--gold); color:var(--gold-soft); font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px;">EP ${curEp} / ${totalEps}</span>
+        </div>
       </div>
-    </div>
-    <div class="reel-info">
-      <div class="reel-ep-bar" id="reel-ep-bar-${i}">
-        <button type="button" class="reel-ep-nav-btn" data-act="prev-ep" aria-label="Episódio anterior">⏮ Ant</button>
-        <button type="button" class="reel-ep-picker-btn" data-act="open-ep-sheet" aria-label="Escolher episódio">
-          📺 EP <span class="current-ep-num">${curEp}</span> / ${totalEps} ▾
+
+      <div class="reel-info">
+        <div class="reel-ep-bar" id="reel-ep-bar-${i}">
+          <button type="button" class="reel-ep-nav-btn" data-act="prev-ep" aria-label="Episódio anterior">⏮ Ant</button>
+          <button type="button" class="reel-ep-picker-btn" data-act="open-ep-sheet" aria-label="Escolher episódio">
+            📺 EP <span class="current-ep-num">${curEp}</span> / ${totalEps} ▾
+          </button>
+          <button type="button" class="reel-ep-nav-btn" data-act="next-ep" aria-label="Próximo episódio">Próx ⏭</button>
+        </div>
+        <h2 class="reel-title">${displayTitle}</h2>
+        <p class="reel-meta">${reelMetaHtml(p)}</p>
+        ${syn.length > 2 ? `<p class="reel-syn">${esc(syn)}</p>` : ""}
+      </div>
+
+      <div class="reel-rail">
+        ${watchable ? `<button class="reel-btn" data-act="sound" aria-label="Ativar ou silenciar o som" aria-pressed="false">${REEL_ICO.volume}</button><button class="reel-btn reel-btn-fs" data-act="fs" aria-label="Tela cheia">${REEL_ICO.expand}</button>` : ""}
+        <button class="reel-btn" data-act="open-ep-sheet" aria-label="Episódios" title="Episódios (${totalEps})">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
         </button>
-        <button type="button" class="reel-ep-nav-btn" data-act="next-ep" aria-label="Próximo episódio">Próx ⏭</button>
+        <button class="reel-btn" data-act="info" aria-label="Detalhes da novelinha">${REEL_ICO.info}</button>
+        <button class="reel-btn" data-act="share" aria-label="Compartilhar">${REEL_ICO.share}</button>
       </div>
-      <h2 class="reel-title">${displayTitle}</h2>
-      <p class="reel-meta">${reelMetaHtml(p)}</p>
-      ${syn.length > 2 ? `<p class="reel-syn">${esc(syn)}</p>` : ""}
-    </div>
-    <div class="reel-rail">
-      ${watchable ? `<button class="reel-btn" data-act="sound" aria-label="Ativar ou silenciar o som" aria-pressed="false">${REEL_ICO.volume}</button><button class="reel-btn reel-btn-fs" data-act="fs" aria-label="Tela cheia">${REEL_ICO.expand}</button>` : ""}
-      <button class="reel-btn" data-act="open-ep-sheet" aria-label="Episódios" title="Episódios (${totalEps})">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-      </button>
-      <button class="reel-btn" data-act="info" aria-label="Detalhes da novelinha">${REEL_ICO.info}</button>
-      <button class="reel-btn" data-act="share" aria-label="Compartilhar">${REEL_ICO.share}</button>
     </div>
   </section>`;
 }
@@ -1867,12 +1885,12 @@ function reelSave(r, id, ctl, force, finished, chapterId){
 /* ---- player (Plyr + hls.js; se o Plyr não carregar, cai para os controles do navegador) ---- */
 async function createReelPlayer(stage, url, opts){
   opts = opts || {};
-  const host = document.createElement("div"); host.className = "reel-player"; stage.appendChild(host);
+  const host = document.createElement("div"); host.className = "reel-player"; stage.prepend(host);
   const yt = isYoutube(url) ? ytId(url) : null;
   const hlsUrl = !yt && isHls(url);
   let el, hls = null;
   if(yt) host.innerHTML = `<div class="plyr__video-embed" data-plyr-provider="youtube" data-plyr-embed-id="${esc(yt)}"></div>`;
-  else host.innerHTML = `<video playsinline preload="metadata" crossorigin="anonymous"></video>`;
+  else host.innerHTML = `<video playsinline preload="auto" crossorigin="anonymous" style="width:100%;height:100%;object-fit:cover;"></video>`;
   el = host.firstElementChild;
 
   let playUrl = url;
@@ -1892,27 +1910,34 @@ async function createReelPlayer(stage, url, opts){
     el.appendChild(track);
   }
 
-  const Plyr_ = await waitFor(() => window.Plyr, 3500);
-  if(yt && !Plyr_){                                    // sem Plyr, o YouTube volta ao iframe simples
-    host.innerHTML = `<iframe src="${esc(embedYoutube(url))}" allow="autoplay; fullscreen" allowfullscreen style="width:100%;height:100%"></iframe>`;
-    const nop = () => {};
-    return { kind: "iframe", paused: true, time: 0, duration: 0, muted: false, play: () => Promise.resolve(), pause: nop, toggle: nop, seekBy: nop, seekTo: nop, fullscreen: nop, on: nop, destroy: () => host.remove() };
-  }
   if(hlsUrl){
-    await waitFor(() => window.Hls, 4500);
-    if(window.Hls && Hls.isSupported()){
-      hls = new Hls({ startPosition: opts.resume > 5 ? opts.resume : -1 });
+    const Hls_ = window.Hls || (await waitFor(() => window.Hls, 3000));
+    if(Hls_ && Hls_.isSupported()){
+      hls = new Hls_({
+        startPosition: opts.resume > 5 ? opts.resume : -1,
+        maxBufferLength: 15,
+        maxMaxBufferLength: 30,
+        enableWorker: true,
+        lowLatencyMode: true
+      });
       let retries = 0;
-      hls.on(Hls.Events.ERROR, (_, data) => {
+      hls.on(Hls_.Events.ERROR, (_, data) => {
         if(!data || !data.fatal) return;
-        if(data.type === Hls.ErrorTypes.NETWORK_ERROR && retries++ < 2) hls.startLoad();
-        else if(data.type === Hls.ErrorTypes.MEDIA_ERROR && retries++ < 2) hls.recoverMediaError();
+        if(data.type === Hls_.ErrorTypes.NETWORK_ERROR && retries++ < 2) hls.startLoad();
+        else if(data.type === Hls_.ErrorTypes.MEDIA_ERROR && retries++ < 2) hls.recoverMediaError();
         else opts.onFatal && opts.onFatal("O vídeo não carregou. Confira sua conexão e tente de novo.");
       });
       hls.loadSource(playUrl); hls.attachMedia(el);
     } else if(el.canPlayType("application/vnd.apple.mpegurl")){ el.src = playUrl; }
     else { host.remove(); throw new Error("Este navegador não consegue tocar este vídeo."); }
   } else if(!yt){ el.src = playUrl; }
+
+  const Plyr_ = window.Plyr || (await waitFor(() => window.Plyr, 2000));
+  if(yt && !Plyr_){                                    // sem Plyr, o YouTube volta ao iframe simples
+    host.innerHTML = `<iframe src="${esc(embedYoutube(url))}" allow="autoplay; fullscreen" allowfullscreen style="width:100%;height:100%"></iframe>`;
+    const nop = () => {};
+    return { kind: "iframe", paused: true, time: 0, duration: 0, muted: false, play: () => Promise.resolve(), pause: nop, toggle: nop, seekBy: nop, seekTo: nop, fullscreen: nop, on: nop, destroy: () => host.remove() };
+  }
 
   let player = null;
   if(Plyr_){
@@ -2356,9 +2381,19 @@ async function openReel(startId, seq){
     setTimeout(() => { const h = document.getElementById("reel-hint"); if(h) h.classList.add("gone"); }, 4500);
   }
 
+  const initialDetails = new Map();
+  const dPromise = Promise.resolve(d);
+  initialDetails.set(cleanStartId, dPromise);
+  if(chapterId) initialDetails.set(cleanStartId + ":" + chapterId, dPromise);
+  if(play && play.id){
+    initialDetails.set(play.id, dPromise);
+    if(chapterId) initialDetails.set(play.id + ":" + chapterId, dPromise);
+    if(play.chapterId) initialDetails.set(play.id + ":" + play.chapterId, dPromise);
+  }
+
   const r = reel = {
     items, root, scroller: document.getElementById("reel-scroller"), sheet: document.getElementById("reel-sheet"),
-    last: items.length > 1 ? items.length : 0, active: -1, token: 0, ctl: null, ctlIndex: -1, muted: false, details: new Map(), lastPos: new Map(), lastSave: 0, idleT: 0, io: null,
+    last: items.length > 1 ? items.length : 0, active: -1, token: 0, ctl: null, ctlIndex: -1, muted: false, details: initialDetails, lastPos: new Map(), lastSave: 0, idleT: 0, io: null,
     onKey: reelOnKey, fsCss: false,
     onFs: () => { if(!reelNativeFs()) reelUnlock(); },
     onVis: () => { if(document.hidden && r.ctl){ const p = r.items[r.ctlIndex]; if(p) reelSave(r, p.id, r.ctl, true); } },

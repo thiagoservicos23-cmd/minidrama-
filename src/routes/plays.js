@@ -393,22 +393,35 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
       const parts = req.params.id.includes(":") ? req.params.id.split(":") : req.params.id.split("_");
       const category = parts[1] || "freereels";
       const vortaId = parts.slice(2).join(":");
-      const detail = await vortaApi.getDetail(category, vortaId, "pt");
+      const reqChapterId = req.query.chapterId;
+      let detail, vid = null;
+      if (reqChapterId) {
+        [detail, vid] = await Promise.all([
+          vortaApi.getDetail(category, vortaId, "pt"),
+          vortaApi.getVideo(category, vortaId, reqChapterId, "pt").catch(() => null)
+        ]);
+      } else {
+        detail = await vortaApi.getDetail(category, vortaId, "pt");
+      }
       const formatted = vortaApi.formatVortaPlay(detail.data, category);
       const chapters = (detail.data && detail.data.chapters) || [];
-      const chapterId = req.query.chapterId || (chapters[0] && chapters[0].id) || 1;
+      const chapterId = reqChapterId || (chapters[0] && chapters[0].id) || 1;
       let videoUrl = "";
       let subtitles = [];
-      try {
-        const vid = await vortaApi.getVideo(category, vortaId, chapterId, "pt");
-        const streams = (vid.data && vid.data.streams) || [];
+      if (!vid) {
+        try {
+          vid = await vortaApi.getVideo(category, vortaId, chapterId, "pt");
+        } catch (err) {}
+      }
+      if (vid && vid.data) {
+        const streams = vid.data.streams || [];
         const h264 = streams.find((s) => s.url && s.url.includes("h264"));
         videoUrl = (h264 && h264.url) || (streams[0] && streams[0].url) || "";
-        subtitles = (vid.data && vid.data.subtitles) || [];
+        subtitles = vid.data.subtitles || [];
         const ptSub = subtitles.find((s) => s.languageCode === "pt" || (s.language && s.language.toLowerCase().includes("portugu")));
         formatted.subtitleUrl = ptSub ? `/api/vorta/subtitles?url=${encodeURIComponent(ptSub.url)}` : "";
         formatted.hasSubtitles = Boolean(ptSub || subtitles.length > 0);
-      } catch (err) {}
+      }
       if (!videoUrl) videoUrl = vortaApi.getDefaultStream();
       const proxiedUrl = videoUrl && videoUrl.startsWith("http") ? `/api/vorta/stream?url=${encodeURIComponent(videoUrl)}` : videoUrl;
       formatted.videoUrl = proxiedUrl;
