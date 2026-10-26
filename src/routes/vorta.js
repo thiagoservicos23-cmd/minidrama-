@@ -1,5 +1,6 @@
 const express = require("express");
 const https = require("https");
+const http = require("http");
 const vortaApi = require("../services/vortaApi");
 const prisma = require("../prismaClient");
 const { attachUserIfPresent, requireAuth, requireAdmin } = require("../middleware/auth");
@@ -40,6 +41,79 @@ router.get("/subtitles", (req, res) => {
     });
   } catch (e) {
     res.status(500).send("Erro ao processar legenda.");
+  }
+});
+
+// Proxy universal de streams HLS (.m3u8 e segmentos .ts/.mp4) com suporte a CORS para navegadores
+router.options("/stream", (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "*");
+  res.setHeader("Access-Control-Expose-Headers", "Content-Length, Content-Range");
+  res.sendStatus(200);
+});
+
+router.get("/stream", (req, res) => {
+  const targetUrl = req.query.url;
+  if (!targetUrl) return res.status(400).send("URL de stream não fornecida.");
+
+  try {
+    const u = new URL(targetUrl);
+    const options = {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "*/*"
+      }
+    };
+    if (req.headers.range) options.headers["Range"] = req.headers.range;
+
+    const client = u.protocol === "https:" ? https : http;
+    client.get(targetUrl, options, (remoteRes) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "Range, Content-Type");
+      res.setHeader("Access-Control-Expose-Headers", "Content-Length, Content-Range");
+
+      const isM3u8 = targetUrl.includes(".m3u8") || (remoteRes.headers["content-type"] || "").includes("mpegurl");
+
+      if (isM3u8) {
+        res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
+        res.setHeader("Cache-Control", "no-cache");
+        let body = "";
+        remoteRes.on("data", (chunk) => { body += chunk; });
+        remoteRes.on("end", () => {
+          const lines = body.split("\n");
+          const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf("/") + 1);
+          const rewritten = lines.map((line) => {
+            const trimmed = line.trim();
+            if (!trimmed) return line;
+            if (line.includes('URI="')) {
+              return line.replace(/URI="([^"]+)"/g, (m, uri) => {
+                const absUri = uri.startsWith("http") ? uri : (new URL(uri, baseUrl)).href;
+                return `URI="/api/vorta/stream?url=${encodeURIComponent(absUri)}"`;
+              });
+            }
+            if (!trimmed.startsWith("#")) {
+              const absUrl = trimmed.startsWith("http") ? trimmed : (new URL(trimmed, baseUrl)).href;
+              return `/api/vorta/stream?url=${encodeURIComponent(absUrl)}`;
+            }
+            return line;
+          }).join("\n");
+          res.send(rewritten);
+        });
+      } else {
+        res.status(remoteRes.statusCode);
+        if (remoteRes.headers["content-type"]) res.setHeader("Content-Type", remoteRes.headers["content-type"]);
+        if (remoteRes.headers["content-length"]) res.setHeader("Content-Length", remoteRes.headers["content-length"]);
+        if (remoteRes.headers["content-range"]) res.setHeader("Content-Range", remoteRes.headers["content-range"]);
+        res.setHeader("Cache-Control", "public, max-age=86400");
+        remoteRes.pipe(res);
+      }
+    }).on("error", (err) => {
+      res.status(502).send("Erro no proxy de stream: " + err.message);
+    });
+  } catch (e) {
+    res.status(400).send("URL de stream inválida.");
   }
 });
 
@@ -310,12 +384,14 @@ router.get("/video", safe(async (req, res) => {
   const rawSubs = data.subtitles || [];
   const ptSub = rawSubs.find((s) => s.languageCode === "pt" || (s.language && s.language.toLowerCase().includes("portugu")));
   const subtitleUrl = ptSub ? `/api/vorta/subtitles?url=${encodeURIComponent(ptSub.url)}` : "";
+  const proxiedStreamUrl = streamUrl && streamUrl.startsWith("http") ? `/api/vorta/stream?url=${encodeURIComponent(streamUrl)}` : streamUrl;
 
   res.json({
     success: true,
     platform: raw.platform || category,
     chapterId,
-    videoUrl: streamUrl,
+    videoUrl: proxiedStreamUrl,
+    directVideoUrl: streamUrl,
     subtitleUrl,
     subtitles: rawSubs,
     hasSubtitles: Boolean(ptSub || rawSubs.length > 0),

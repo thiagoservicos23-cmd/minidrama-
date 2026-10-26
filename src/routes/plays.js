@@ -410,7 +410,9 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
         formatted.hasSubtitles = Boolean(ptSub || subtitles.length > 0);
       } catch (err) {}
       if (!videoUrl) videoUrl = vortaApi.getDefaultStream();
-      formatted.videoUrl = videoUrl;
+      const proxiedUrl = videoUrl && videoUrl.startsWith("http") ? `/api/vorta/stream?url=${encodeURIComponent(videoUrl)}` : videoUrl;
+      formatted.videoUrl = proxiedUrl;
+      formatted.directVideoUrl = videoUrl;
       formatted.subtitles = subtitles;
       formatted.chaptersList = chapters;
       formatted.chapterId = chapterId;
@@ -432,6 +434,9 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
     if (!payload.videoUrl) {
       const vortaApi = require("../services/vortaApi");
       payload.videoUrl = vortaApi.getDefaultStream();
+    }
+    if (payload.videoUrl && payload.videoUrl.startsWith("http")) {
+      payload.videoUrl = `/api/vorta/stream?url=${encodeURIComponent(payload.videoUrl)}`;
     }
     payload.hasVideo = true;
   }

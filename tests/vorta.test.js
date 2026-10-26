@@ -156,3 +156,29 @@ test("/api/vorta/track accepts analytics payload", async () => {
   });
   assert.equal(res.status, 200);
 });
+
+test("/api/vorta/stream rejects requests without url or with invalid protocol", async () => {
+  const resEmpty = await get("/vorta/stream");
+  assert.equal(resEmpty.status, 400);
+
+  const resInvalid = await get("/vorta/stream?url=" + encodeURIComponent("ftp://example.com/video.mp4"));
+  assert.equal(resInvalid.status, 400);
+});
+
+test("/api/vorta/stream injects CORS headers and responds to OPTIONS", async () => {
+  const u = new URL(base + "/vorta/stream");
+  const optionsRes = await new Promise((resolve, reject) => {
+    const req = http.request({
+      hostname: u.hostname,
+      port: u.port,
+      path: u.pathname,
+      method: "OPTIONS"
+    }, (res) => {
+      resolve({ status: res.statusCode, headers: res.headers });
+    });
+    req.on("error", reject);
+    req.end();
+  });
+  assert.equal(optionsRes.status, 200);
+  assert.equal(optionsRes.headers["access-control-allow-origin"], "*");
+});
