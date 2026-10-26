@@ -135,6 +135,18 @@ test("/api/vorta/home returns drama items formatted for Mini Drama", async () =>
   }
 });
 
+test("/api/vorta/catalog returns paginated unified catalog with platforms and dubladas", async () => {
+  const res = await get("/vorta/catalog?platform=all&pageSize=10");
+  assert.equal(res.status, 200);
+  assert.equal(res.body.success, true);
+  assert.ok(res.body.total >= 400);
+  assert.ok(res.body.counts.all >= 400);
+  assert.ok(res.body.counts.dubladas > 0);
+  assert.ok(res.body.counts.legendadas > 0);
+  assert.ok(Array.isArray(res.body.plays));
+  assert.equal(res.body.plays.length, 10);
+});
+
 test("/api/vorta/track accepts analytics payload", async () => {
   const res = await post("/vorta/track", {
     deviceId: "test-device-123",

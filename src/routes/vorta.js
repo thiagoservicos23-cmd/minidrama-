@@ -131,6 +131,86 @@ router.get("/feed", safe(async (req, res) => {
   });
 }));
 
+// Catálogo unificado com 510+ novelinhas, suporte a Dubladas, Legendadas, Plataformas e Filtros
+router.get("/catalog", safe(async (req, res) => {
+  const lang = req.query.lang || "pt";
+  const platform = (req.query.platform || req.query.category || "all").toLowerCase();
+  const genre = req.query.genre || "";
+  const search = (req.query.search || req.query.q || "").trim().toLowerCase();
+  const sort = req.query.sort || "recent";
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize, 10) || 24));
+
+  const allPlays = await vortaApi.getAllCuratedPlays(lang);
+
+  const dubladasTotal = allPlays.filter((p) => p.isDublado).length;
+  const legendadasTotal = allPlays.filter((p) => !p.isDublado).length;
+  const frTotal = allPlays.filter((p) => p.platform === "freereels").length;
+  const smTotal = allPlays.filter((p) => p.platform === "shortmax").length;
+  const msTotal = allPlays.filter((p) => p.platform === "meloshort").length;
+
+  let filtered = allPlays.slice();
+
+  if (platform === "dubladas") {
+    filtered = filtered.filter((p) => p.isDublado);
+  } else if (platform === "legendadas") {
+    filtered = filtered.filter((p) => !p.isDublado);
+  } else if (["freereels", "shortmax", "meloshort"].includes(platform)) {
+    filtered = filtered.filter((p) => p.platform === platform);
+  } else if (platform === "local") {
+    const dbRows = await prisma.play.findMany({ select: PLAY_LIST_SELECT });
+    filtered = dbRows.map((p) => publicPlay(p));
+  }
+
+  if (genre && !["novos", "todos", "Todos"].includes(genre)) {
+    filtered = filtered.filter((p) => {
+      const gList = (p.genreLabels || []).concat((p.genres || []).map((g) => g.genre || g.label || g));
+      return gList.some((g) => String(g).toLowerCase().includes(genre.toLowerCase()) || genre.toLowerCase().includes(String(g).toLowerCase()));
+    });
+  }
+
+  if (search) {
+    filtered = filtered.filter((p) => {
+      const t = (p.title || "").toLowerCase();
+      const s = (p.synopsis || "").toLowerCase();
+      const c = (p.cast || "").toLowerCase();
+      return t.includes(search) || s.includes(search) || c.includes(search);
+    });
+  }
+
+  if (sort === "title") {
+    filtered.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+  } else if (sort === "longest") {
+    filtered.sort((a, b) => (b.durationMinutes || b.chapters || 0) - (a.durationMinutes || a.chapters || 0));
+  } else if (sort === "shortest") {
+    filtered.sort((a, b) => (a.durationMinutes || a.chapters || 0) - (b.durationMinutes || b.chapters || 0));
+  }
+
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const skip = (page - 1) * pageSize;
+  const paged = filtered.slice(skip, skip + pageSize);
+
+  res.json({
+    success: true,
+    platform,
+    genre,
+    total,
+    page,
+    pageSize,
+    totalPages,
+    counts: {
+      all: allPlays.length,
+      dubladas: dubladasTotal,
+      legendadas: legendadasTotal,
+      freereels: frTotal,
+      shortmax: smTotal,
+      meloshort: msTotal
+    },
+    plays: paged
+  });
+}));
+
 // Home feed
 router.get("/home", safe(async (req, res) => {
   const category = req.query.category || req.query.category_p || "freereels";
@@ -225,7 +305,7 @@ router.get("/video", safe(async (req, res) => {
   const streams = data.streams || [];
   const h264Stream = streams.find((s) => s.url && s.url.includes("h264"));
   const primaryStream = h264Stream || streams[0] || null;
-  const streamUrl = primaryStream ? primaryStream.url : "";
+  const streamUrl = (primaryStream && primaryStream.url) || vortaApi.getDefaultStream();
 
   const rawSubs = data.subtitles || [];
   const ptSub = rawSubs.find((s) => s.languageCode === "pt" || (s.language && s.language.toLowerCase().includes("portugu")));

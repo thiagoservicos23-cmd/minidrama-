@@ -600,6 +600,14 @@ td.strong{color:var(--ink); font-weight:600;}
 .category-chip{background:var(--bg-elev-2); border:1px solid var(--line); color:var(--ink); padding:7px 15px; border-radius:24px; font-size:12.5px; font-weight:600; white-space:nowrap; cursor:pointer; transition:all .18s; display:inline-flex; align-items:center; gap:6px;}
 .category-chip:hover{border-color:var(--gold); color:var(--gold-soft); background:rgba(201,162,75,0.12);}
 .category-chip.active{background:var(--gold); color:#241708; border-color:var(--gold); box-shadow:0 2px 10px rgba(201,162,75,0.3);}
+.quickbar-pill{background:var(--bg-elev-2); border:1px solid var(--line); color:var(--ink); padding:8px 18px; border-radius:24px; font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; transition:all .18s; display:inline-flex; align-items:center; gap:6px;}
+.quickbar-pill:hover{border-color:var(--gold); color:var(--gold-soft); background:rgba(201,162,75,0.12);}
+.quickbar-pill.active{background:var(--gold); color:#241708; border-color:var(--gold); box-shadow:0 2px 10px rgba(201,162,75,0.3);}
+.quickbar-pill.pill-dub{border-color:rgba(234,88,12,0.4); color:#FB923C;}
+.quickbar-pill.pill-dub:hover{background:rgba(234,88,12,0.15); border-color:#EA580C;}
+.quickbar-pill.pill-sub{border-color:rgba(56,189,248,0.4); color:#38BDF8;}
+.quickbar-pill.pill-sub:hover{background:rgba(2,132,199,0.15); border-color:#0284C7;}
+.quickbar-pill.pill-plat{border-color:rgba(201,162,75,0.3); color:var(--gold-soft);}
 .card-badge-dub{background:linear-gradient(135deg, #A82020, #D97706); color:#fff; font-weight:800; letter-spacing:0.3px; box-shadow:0 2px 8px rgba(0,0,0,0.4);}
 .card-ep-pill{display:inline-block; background:rgba(201,162,75,0.16); color:var(--gold-soft); border-radius:4px; padding:1px 6px; font-size:11px; font-weight:700;}
 
@@ -720,9 +728,9 @@ window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", boot);
 
 /* ---- cache local: a 2ª visita em diante abre NA HORA, mesmo com o servidor dormindo ---- */
-const CACHE_KEY = "minidrama_cache_v5";
+const CACHE_KEY = "minidrama_cache_v6";
 function loadCache(){
-  try{ localStorage.removeItem("minidrama_cache_v2"); localStorage.removeItem("minidrama_cache_v3"); localStorage.removeItem("minidrama_cache_v4"); }catch(e){}
+  try{ localStorage.removeItem("minidrama_cache_v2"); localStorage.removeItem("minidrama_cache_v3"); localStorage.removeItem("minidrama_cache_v4"); localStorage.removeItem("minidrama_cache_v5"); }catch(e){}
   try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)); if(c && Date.now() - c.t < 14*86400000) return c; }catch(e){}
   return null;
 }
@@ -732,15 +740,28 @@ function saveCache(){
 
 // Busca catálogo, planos e (se logado) os dados do usuário. Só desloga em 401/403 — falha de rede não desloga ninguém.
 async function loadFresh(){
-  const [homeRes, plansRes, vortaHome] = await Promise.all([
+  const [homeRes, plansRes, vortaFeed] = await Promise.all([
     api("/plays/feed/home"),
     api("/plans"),
-    api("/vorta/home?category=freereels&lang=pt").catch(() => null)
+    api("/vorta/feed?lang=pt").catch(() => null)
   ]);
-  DB.home = homeRes; DB.plans = plansRes.plans; DB.playsTotal = homeRes.total;
-  DB.vortaHome = (vortaHome && vortaHome.plays) || [];
+  DB.home = homeRes; DB.plans = plansRes.plans;
+  DB.vortaFeed = vortaFeed || { banners: [], dubladas: [], legendadas: [], channels: {}, counts: {}, total: 510 };
+  DB.vortaHome = (vortaFeed && vortaFeed.channels && vortaFeed.channels.freereels) || [];
   const seen = new Set();
-  DB.plays = [...homeRes.featured, ...homeRes.novos, ...homeRes.genres.flatMap(g => g.plays), ...(DB.vortaHome || [])].filter(p => !seen.has(p.id) && seen.add(p.id));
+  const allPlays = [
+    ...(vortaFeed && vortaFeed.banners ? vortaFeed.banners : []),
+    ...(vortaFeed && vortaFeed.dubladas ? vortaFeed.dubladas : []),
+    ...(vortaFeed && vortaFeed.legendadas ? vortaFeed.legendadas : []),
+    ...(vortaFeed && vortaFeed.channels && vortaFeed.channels.freereels ? vortaFeed.channels.freereels : []),
+    ...(vortaFeed && vortaFeed.channels && vortaFeed.channels.shortmax ? vortaFeed.channels.shortmax : []),
+    ...(vortaFeed && vortaFeed.channels && vortaFeed.channels.meloshort ? vortaFeed.channels.meloshort : []),
+    ...((homeRes && homeRes.featured) || []),
+    ...((homeRes && homeRes.novos) || []),
+    ...((homeRes && homeRes.genres) ? homeRes.genres.flatMap(g => g.plays) : [])
+  ];
+  DB.plays = allPlays.filter(p => p && p.id && !seen.has(p.id) && seen.add(p.id));
+  DB.playsTotal = (vortaFeed && vortaFeed.total) ? Math.max(vortaFeed.total, DB.plays.length) : (homeRes.total || DB.plays.length);
   if(getToken()){
     try{ DB.me = (await api("/auth/me")).user; }
     catch(e){ if(e.httpError && (e.status === 401 || e.status === 403)){ clearToken(); DB.me = null; } }
@@ -1407,81 +1428,135 @@ function startConversionTimer(){
 
 /* --------------------------- HOME PAGE ---------------------------------- */
 let heroIndex = 0, heroTimer = null;
+let catalogPlatform = "all";
+let catalogGenre = "todos";
+let catalogPage = 1;
+let catalogMeta = { total: 0, totalPages: 1 };
+
+function setCatalogPlatform(p, g){
+  catalogPlatform = p || "all";
+  catalogGenre = g || "todos";
+  catalogPage = 1;
+}
+
+function setCatalogGenre(g){
+  if(String(g).startsWith("vorta:")){
+    const parts = String(g).split(":");
+    catalogPlatform = parts[1] || "all";
+    catalogGenre = "todos";
+  } else {
+    catalogPlatform = "all";
+    catalogGenre = g;
+  }
+  catalogPage = 1;
+}
+
 function HomePage(){
   const home = DB.home || { featured: [], genres: [] };
-  const featured = home.featured || [];
+  const feed = DB.vortaFeed || { banners: [], dubladas: [], legendadas: [], channels: {}, counts: {}, total: 510 };
+  const featured = (feed.banners && feed.banners.length) ? feed.banners : (home.featured || []);
+  const counts = feed.counts || {};
+  const totalDramas = feed.total || 510;
+  const dubCount = feed.dubladasCount || (feed.dubladas ? feed.dubladas.length : 40);
+  const legCount = feed.legendadasCount || (feed.legendadas ? feed.legendadas.length : 470);
+
   const hero = featured.length ? `
   <section class="hero" id="hero">
     ${featured.map((p,i)=>`
       <div class="hero-slide ${i===0?'active':''}" data-i="${i}" data-bg="${esc(p.backdropUrl)}" ${i===0?`style="background-image:url('${esc(p.backdropUrl)}')"`:''}>
         <div class="hero-content reveal">
-          <div class="hero-eyebrow"><span class="dot"></span> Em destaque na plataforma</div>
+          <div class="hero-eyebrow"><span class="dot"></span> ${p.isDublado ? "🎙️ Novelinha Dublada em Destaque" : "Em destaque na plataforma"}</div>
           <h1 class="hero-title">${esc(p.title)}</h1>
-          <div class="hero-meta"><span>${ICO.clock} ${fmtDuration(p.durationMinutes)}</span>${p.genre ? `<span>${esc(p.genre)}</span>` : ""}<span>${p.releaseYear}</span></div>
+          <div class="hero-meta"><span>${ICO.clock} ${p.chapters ? p.chapters + " eps" : fmtDuration(p.durationMinutes)}</span>${p.genre ? `<span>${esc(p.genre)}</span>` : ""}<span>${p.releaseYear}</span></div>
           <p class="hero-desc">${esc(p.synopsis)}</p>
           <div class="hero-actions">
-            <a href="#/${p.canWatch && p.hasVideo ? "reel" : "novelinha"}/${p.id}" class="btn btn-gold">${ICO.play} Assistir agora</a>
-            <a href="#/novelinha/${p.id}" class="btn btn-ghost">${ICO.info} Mais detalhes</a>
+            <a href="#/reel/${esc(p.id)}" class="btn btn-gold">${ICO.play} Assistir agora</a>
+            <a href="#/novelinha/${esc(p.id)}" class="btn btn-ghost">${ICO.info} Mais detalhes</a>
           </div>
         </div>
       </div>`).join("")}
     <div class="hero-dots">${featured.map((_,i)=>`<button class="${i===0?'active':''}" onclick="setHero(${i})"></button>`).join("")}</div>
   </section>` : `<div style="height:84px;"></div>`;
+
+  const quickbar = `
+  <div class="category-quickbar" style="margin:20px 0 14px; display:flex; gap:10px; overflow-x:auto; padding-bottom:8px; -webkit-overflow-scrolling:touch;">
+    <button type="button" class="quickbar-pill active" onclick="setCatalogPlatform('all'); go('#/catalogo');">✨ Todas as Novelinhas (${totalDramas})</button>
+    <button type="button" class="quickbar-pill pill-dub" onclick="setCatalogPlatform('dubladas'); go('#/catalogo');">🎙️ Dubladas em PT-BR (${dubCount})</button>
+    <button type="button" class="quickbar-pill pill-sub" onclick="setCatalogPlatform('legendadas'); go('#/catalogo');">📝 Legendadas em PT-BR (${legCount})</button>
+    <button type="button" class="quickbar-pill pill-plat" onclick="setCatalogPlatform('freereels'); go('#/catalogo');">🎬 Canal FreeReels (${counts.freereels || 381})</button>
+    <button type="button" class="quickbar-pill pill-plat" onclick="setCatalogPlatform('meloshort'); go('#/catalogo');">💖 Canal MeloShort (${counts.meloshort || 70})</button>
+    <button type="button" class="quickbar-pill pill-plat" onclick="setCatalogPlatform('shortmax'); go('#/catalogo');">⚡ Canal ShortMax (${counts.shortmax || 30})</button>
+  </div>`;
+
   const sections = [];
-  if((home.novos || []).length) sections.push(PlayRow("Novos Na Plataforma", "novos", home.novos, home.total));
-  (home.genres || []).forEach(g => sections.push(PlayRow(g.label, g.id, g.plays, g.total)));
-  if((DB.vortaHome || []).length) sections.push(PlayRow("🔥 Novelinhas FreeReels (API Vorta)", "vorta:freereels", DB.vortaHome, DB.vortaHome.length));
+  if((feed.dubladas || []).length) {
+    sections.push(PlayRow("🎙️ Novelinhas Dubladas em Português", "vorta:dubladas", feed.dubladas, dubCount));
+  }
+  if((feed.legendadas || []).length) {
+    sections.push(PlayRow("📝 Novelinhas Legendadas em Português", "vorta:legendadas", feed.legendadas.slice(0, 20), legCount));
+  }
+  if(feed.channels && (feed.channels.freereels || []).length) {
+    sections.push(PlayRow("🎬 Canal FreeReels (Micro-Séries)", "vorta:freereels", feed.channels.freereels.slice(0, 20), counts.freereels || 381));
+  }
+  if(feed.channels && (feed.channels.meloshort || []).length) {
+    sections.push(PlayRow("💖 Canal MeloShort", "vorta:meloshort", feed.channels.meloshort.slice(0, 20), counts.meloshort || 70));
+  }
+  if(feed.channels && (feed.channels.shortmax || []).length) {
+    sections.push(PlayRow("⚡ Canal ShortMax", "vorta:shortmax", feed.channels.shortmax.slice(0, 20), counts.shortmax || 30));
+  }
+  (home.genres || []).forEach(g => {
+    if(g.plays && g.plays.length) sections.push(PlayRow(g.label, g.id, g.plays, g.total));
+  });
+
   const rows = sections.join("");
   return `${hero}
-  <div class="container">${currentUser() ? `<div id="cw-slot"></div>` : ""}${rows || `<p style="color:var(--ink-muted); text-align:center; padding:60px 0;">As primeiras novelinhas estão chegando. Volte em breve! 📺</p>`}</div>`;
+  <div class="container">${quickbar}${currentUser() ? `<div id="cw-slot"></div>` : ""}${rows || `<p style="color:var(--ink-muted); text-align:center; padding:60px 0;">Carregando novelinhas...</p>`}</div>`;
 }
-let catalogPlatform = "";
-function setCatalogGenre(g){
-  if(String(g).startsWith("vorta:")){
-    catalogPlatform = String(g).split(":")[1] || "freereels";
-    catalogGenre = "novos";
-  } else {
-    catalogPlatform = "";
-    catalogGenre = g;
-  }
-  catalogPage = 1;
-}
+
 function PlayRow(title, genreId, plays, total){
+  const countDisplay = total || (plays ? plays.length : 0);
   return `<div class="section-row">
-    <div class="section-row-head"><h2 class="section-title">${esc(title)}</h2><a href="#/catalogo" class="section-link" data-genre="${esc(genreId)}" onclick="setCatalogGenre(this.dataset.genre)">Ver tudo${total > plays.length ? ` (${total})` : ""}</a></div>
+    <div class="section-row-head"><h2 class="section-title">${esc(title)}</h2><a href="#/catalogo" class="section-link" data-genre="${esc(genreId)}" onclick="setCatalogGenre(this.dataset.genre)">Ver tudo${countDisplay ? ` (${countDisplay})` : ""}</a></div>
     ${RailWrap(plays.map(p=>PlayCard(p)).join(""))}</div>`;
 }
+
 function PlayCard(p){
   const saved = inMyList(p.id);
   const isVorta = p.isVorta || String(p.id).startsWith("vorta:");
-  const badgeText = isVorta ? (p.platformName || "FreeReels") : (planLevel(p.requiresPlan)>0 ? (planById(p.requiresPlan)?.name || '') : '');
-  const badgeClass = isVorta ? 'card-badge card-badge-vorta' : (planLevel(p.requiresPlan)>0 ? 'card-badge' : '');
-  return `<a class="card" href="#/${p.canWatch && p.hasVideo ? "reel" : "novelinha"}/${p.id}">
+  const isDub = p.isDublado || /dublado/i.test(p.title);
+  const badgeText = isDub ? "🎙️ Dublado" : (isVorta ? (p.platformName || "FreeReels") : (planLevel(p.requiresPlan)>0 ? (planById(p.requiresPlan)?.name || '') : ''));
+  const badgeClass = isDub ? 'card-badge card-badge-dub' : (isVorta ? 'card-badge card-badge-plat' : (planLevel(p.requiresPlan)>0 ? 'card-badge' : ''));
+  const launchHref = `#/reel/${esc(p.id)}${p.chapterId ? `?chapterId=${esc(p.chapterId)}` : ''}`;
+  return `<a class="card" href="${launchHref}">
     <div class="card-art">
       <img class="card-poster" src="${esc(p.posterUrl)}" alt="${esc(p.title)}" loading="lazy">
       ${badgeText ? `<span class="${badgeClass}">${esc(badgeText)}</span>` : ``}
+      ${p.chapters ? `<span class="card-ep-pill">${p.chapters} eps</span>` : ``}
       <button type="button" class="card-heart" data-heart="${esc(p.id)}" aria-pressed="${saved}" aria-label="${saved ? "Remover da minha lista" : "Adicionar à minha lista"}">${ICO.heart}</button>
       ${!p.canWatch ? `<span class="card-lock">${ICO.lock}</span>` : ``}
     </div>
     <div class="card-body"><p class="card-title">${esc(p.title)}</p>
     <div class="card-sub"><span>${esc(p.genre || (p.genreLabels && p.genreLabels[0]) || "")}</span><span>${p.chapters ? p.chapters + " eps" : fmtDuration(p.durationMinutes)}</span></div></div></a>`;
 }
+
 function loadHeroBg(i){
   const el = qsa(".hero-slide")[i];
   if(el && !el.style.backgroundImage && el.dataset.bg) el.style.backgroundImage = `url('${el.dataset.bg}')`;
 }
+
 function setHero(i){
   heroIndex = i;
   loadHeroBg(i); loadHeroBg(i+1);
   qsa(".hero-slide").forEach((el,idx)=>el.classList.toggle("active", idx===i));
   qsa(".hero-dots button").forEach((el,idx)=>el.classList.toggle("active", idx===i));
 }
+
 function attachHomeEvents(){
   const slides = qsa(".hero-slide");
   if(heroTimer) clearInterval(heroTimer);
   if(slides.length>1) heroTimer = setInterval(()=>{ setHero((heroIndex+1) % slides.length); }, 6500);
-  if(currentUser()){ fillContinue(); loadMine().then(() => { fillContinue(); syncHearts(); }); }   // progresso e lista sempre atualizados ao voltar para a home
-  if(!homeIsFromToday()) refreshInBackground();                      // abriu a home depois da virada do dia: busca a ordem nova
+  if(currentUser()){ fillContinue(); loadMine().then(() => { fillContinue(); syncHearts(); }); }
+  if(!homeIsFromToday()) refreshInBackground();
 }
 
 /* --------------------------- CATALOG PAGE -------------------------------- */
@@ -1501,53 +1576,67 @@ function PaginationControls(meta, gotoFnName){
 
 async function CatalogPage(){
   let r, tr = null;
-  const showTrending = !catalogPlatform && catalogPage === 1 && catalogGenre === "novos" && activeFilterCount() === 0;
+  const feed = DB.vortaFeed || { total: 510, dubladasCount: 40, legendadasCount: 470, counts: {} };
+  const counts = feed.counts || {};
+  const dubCount = feed.dubladasCount || 40;
+  const legCount = feed.legendadasCount || 470;
+  const totalCount = feed.total || 510;
 
-  if (catalogPlatform) {
+  if (catalogPlatform === "local") {
+    r = await api(`/plays?${catalogQuery()}`).catch(() => ({ plays: [], total: 0, totalPages: 1 }));
+  } else {
     try {
-      const v = await api(`/vorta/discover?category=${encodeURIComponent(catalogPlatform)}&page=${catalogPage}&lang=pt`);
-      r = {
-        plays: v.plays || [],
-        total: v.total || (v.plays ? v.plays.length : 0),
-        page: catalogPage,
-        pageSize: 20,
-        totalPages: Math.max(1, Math.ceil((v.total || 1) / 20))
-      };
-    } catch (e) {
+      const q = new URLSearchParams();
+      q.set("platform", catalogPlatform || "all");
+      if (catalogGenre && catalogGenre !== "novos" && catalogGenre !== "todos") q.set("genre", catalogGenre);
+      if (catalogFilters && catalogFilters.sort) q.set("sort", catalogFilters.sort);
+      q.set("page", String(catalogPage));
+      q.set("pageSize", "24");
+      r = await api(`/vorta/catalog?${q.toString()}`);
+    } catch(e) {
       r = { plays: [], total: 0, page: 1, totalPages: 1 };
     }
-  } else {
-    [r, tr] = await Promise.all([
-      api(`/plays?${catalogQuery()}`),
-      showTrending ? api("/plays/trending?limit=12").catch(() => null) : Promise.resolve(null)
-    ]);
   }
   catalogMeta = r;
-  const trending = tr && tr.plays && tr.plays.length
-    ? `<div class="section-row" id="trending-row"><div class="section-row-head"><h2 class="section-title">Em alta</h2></div>${RailWrap(tr.plays.map(p => PlayCard(p)).join(""))}</div>
-       <h2 class="section-title" style="margin:6px 0 14px;">Todas as novelinhas</h2>` : "";
-  const genres = [{ id:"novos", label:"Novos Na Plataforma" }, ...genreList()];
-  const n = activeFilterCount();
+
+  const genres = [
+    { id: "todos", label: "✨ Todos os Gêneros" },
+    { id: "dublados", label: "🎙️ Dublados" },
+    { id: "romance", label: "💖 Romance" },
+    { id: "vinganca", label: "⚔️ Vingança" },
+    { id: "identidade-escondida", label: "🎭 Identidade Escondida" },
+    { id: "homem-lobo-e-vampiro", label: "🐺 Lobos & Vampiros" },
+    { id: "amor-a-primeira-vista", label: "👀 Amor à 1ª Vista" },
+    { id: "bebes-e-gravidezes", label: "👶 Bebês & Herdeiros" },
+    { id: "relacionamento-tabu", label: "🔥 Proibido / Tabu" },
+    { id: "ia", label: "🤖 IA" },
+    { id: "animes", label: "🏮 Animes" },
+    { id: "bl-gl", label: "🌈 BL & GL" }
+  ];
+
   return `<div class="container" style="padding-top:36px;">
-    <h1 class="page-title" style="margin-bottom:18px;">Catálogo completo</h1>
+    <h1 class="page-title" style="margin-bottom:18px;">Catálogo completo (${r.total || 0} novelinhas)</h1>
     <div class="platform-selector" id="platform-selector">
-      <button type="button" class="platform-btn ${!catalogPlatform?'active':''}" data-platform="">Catálogo Local</button>
-      <button type="button" class="platform-btn ${catalogPlatform==='freereels'?'active':''}" data-platform="freereels">FreeReels</button>
-      <button type="button" class="platform-btn ${catalogPlatform==='shortmax'?'active':''}" data-platform="shortmax">ShortMax</button>
-      <button type="button" class="platform-btn ${catalogPlatform==='meloshort'?'active':''}" data-platform="meloshort">MeloShort</button>
+      <button type="button" class="platform-btn ${catalogPlatform==='all'?'active':''}" data-platform="all">✨ Todas (${totalCount})</button>
+      <button type="button" class="platform-btn ${catalogPlatform==='dubladas'?'active':''}" data-platform="dubladas">🎙️ Dubladas (${dubCount})</button>
+      <button type="button" class="platform-btn ${catalogPlatform==='legendadas'?'active':''}" data-platform="legendadas">📝 Legendadas (${legCount})</button>
+      <button type="button" class="platform-btn ${catalogPlatform==='freereels'?'active':''}" data-platform="freereels">🎬 FreeReels (${counts.freereels || 381})</button>
+      <button type="button" class="platform-btn ${catalogPlatform==='meloshort'?'active':''}" data-platform="meloshort">💖 MeloShort (${counts.meloshort || 70})</button>
+      <button type="button" class="platform-btn ${catalogPlatform==='shortmax'?'active':''}" data-platform="shortmax">⚡ ShortMax (${counts.shortmax || 30})</button>
+      <button type="button" class="platform-btn ${catalogPlatform==='local'?'active':''}" data-platform="local">🏛️ Catálogo Local (84)</button>
     </div>
-    ${trending}
-    ${catalogPlatform ? `<div style="margin:8px 0 16px; color:var(--gold-soft); font-size:13px; display:flex; align-items:center; gap:8px;"><span class="vorta-badge">API Vorta</span> Novelinhas de <b>${esc(catalogPlatform.toUpperCase())}</b> via API Drama V2</div>` : `
+
     <div class="catalog-bar">
       <div class="genre-filters" id="genre-filters">${genres.map(g=>`<button class="chip ${g.id===catalogGenre?'active':''}" data-genre="${esc(g.id)}">${esc(g.label)}</button>`).join("")}</div>
-      <button type="button" class="btn btn-ghost btn-filters" id="open-filters" aria-haspopup="dialog">${ICO.sliders} Filtros${n ? `<span class="chip-count" aria-label="${n} filtro${n === 1 ? "" : "s"} ativo${n === 1 ? "" : "s"}">${n}</span>` : ""}</button>
-    </div>`}
+    </div>
+
     <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:18px; margin-bottom:24px;">
-      ${r.plays.length ? r.plays.map(p=>PlayCard(p)).join("") : `<div class="catalog-empty"><p>Nenhuma novelinha encontrada${n ? " com esses filtros" : " nesse catálogo"}.</p>${n ? `<button type="button" class="catalog-clear" data-fclear-inline>Limpar filtros</button>` : ""}</div>`}
+      ${(r.plays || []).length ? r.plays.map(p=>PlayCard(p)).join("") : `<div class="catalog-empty"><p>Nenhuma novelinha encontrada nesta categoria.</p></div>`}
     </div>
     ${PaginationControls(catalogMeta, "goToCatalogPage")}
   </div>`;
 }
+
 async function goToCatalogPage(n){
   const seq = renderSeq;
   catalogPage = Math.max(1, n);

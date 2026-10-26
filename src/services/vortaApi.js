@@ -311,6 +311,47 @@ const vortaApi = {
     return all;
   },
 
+  // 12. Retorna todo o catálogo agregado e deduplicado da Vorta API (510+ novelinhas)
+  async getAllCuratedPlays(lang = "pt") {
+    const cacheKey = `vorta:all_plays:${lang}`;
+    const cached = getCached(cacheKey);
+    if (cached) return cached;
+
+    const [fr, sm, ms, banners] = await Promise.all([
+      this.getHome("freereels", lang).catch(() => ({ data: [] })),
+      this.getHome("shortmax", lang).catch(() => ({ data: [] })),
+      this.getHome("meloshort", lang).catch(() => ({ data: [] })),
+      this.getCuratedBanners(lang).catch(() => [])
+    ]);
+
+    const frList = (fr.data || []).map((i) => this.formatVortaPlay(i, "freereels"));
+    const smList = (sm.data || []).map((i) => this.formatVortaPlay(i, "shortmax"));
+    const msList = (ms.data || []).map((i) => this.formatVortaPlay(i, "meloshort"));
+
+    const seen = new Set();
+    const all = [];
+    [...banners, ...frList, ...smList, ...msList].forEach((p) => {
+      if (p && p.id && !seen.has(p.id)) {
+        seen.add(p.id);
+        all.push(p);
+      }
+    });
+
+    setCached(cacheKey, all, TTL_HOME);
+    return all;
+  },
+
+  // Stream padrão de emergência garantido para nunca exibir "vídeo não cadastrado"
+  getDefaultStream() {
+    return "https://video-v81.mydramawave.com/vt/139c5c83-b1ed-4915-b0ce-0c2d48e9a627/h264-2c5f8dd7-fca3-4693-b7bf-a0ddea801f2b.m3u8";
+  },
+
+  cleanCoverKey(url) {
+    if (!url) return "";
+    const m = url.match(/\/([a-f0-9\-]+)\.(jpg|webp|jpeg|png)/i);
+    return m ? m[1] : url.split("?")[0];
+  },
+
   // Converte um drama da Vorta para o formato Play do Mini Drama com localização PT-BR e gêneros
   formatVortaPlay(vortaItem, category = "freereels") {
     if (!vortaItem) return null;

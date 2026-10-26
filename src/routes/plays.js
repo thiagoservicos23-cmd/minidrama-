@@ -409,10 +409,13 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
         formatted.subtitleUrl = ptSub ? `/api/vorta/subtitles?url=${encodeURIComponent(ptSub.url)}` : "";
         formatted.hasSubtitles = Boolean(ptSub || subtitles.length > 0);
       } catch (err) {}
+      if (!videoUrl) videoUrl = vortaApi.getDefaultStream();
       formatted.videoUrl = videoUrl;
       formatted.subtitles = subtitles;
       formatted.chaptersList = chapters;
       formatted.chapterId = chapterId;
+      formatted.canWatch = true;
+      formatted.hasVideo = true;
       return res.json({ play: formatted, canWatch: true, resume: null });
     } catch (e) {
       return res.status(404).json({ error: "Novelinha não encontrada." });
@@ -425,36 +428,12 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
   const payload = publicPlay(play);
   if (!canWatch) {
     payload.videoUrl = "";
-  } else if (!payload.videoUrl) {
-    const isVortaSource = Boolean(
-      (play.posterUrl && (play.posterUrl.includes("mydramawave.com") || play.posterUrl.includes("shorttv.live") || play.posterUrl.includes("meloshort.com"))) ||
-      ["FreeReels", "ShortMax", "MeloShort"].includes(play.director)
-    );
-    if (isVortaSource) {
-      try {
-        const vortaApi = require("../services/vortaApi");
-        const category = (play.director || "").toLowerCase().includes("shortmax") ? "shortmax" : (play.director || "").toLowerCase().includes("meloshort") ? "meloshort" : "freereels";
-        const s = await vortaApi.search(category, play.title, "pt");
-        const found = (s.data || [])[0];
-        if (found) {
-          const detail = await vortaApi.getDetail(category, found.id, "pt");
-          const chapters = (detail.data && detail.data.chapters) || [];
-          const chapterId = req.query.chapterId || (chapters[0] && chapters[0].id) || 1;
-          payload.chaptersList = chapters;
-          payload.chapterId = chapterId;
-          const vid = await vortaApi.getVideo(category, found.id, chapterId, "pt");
-          const streams = (vid.data && vid.data.streams) || [];
-          const h264 = streams.find((x) => x.url && x.url.includes("h264"));
-          payload.videoUrl = (h264 && h264.url) || (streams[0] && streams[0].url) || "";
-          const rawSubs = (vid.data && vid.data.subtitles) || [];
-          const ptSub2 = rawSubs.find((s) => s.languageCode === "pt" || (s.language && s.language.toLowerCase().includes("portugu")));
-          payload.subtitleUrl = ptSub2 ? `/api/vorta/subtitles?url=${encodeURIComponent(ptSub2.url)}` : "";
-          payload.hasSubtitles = Boolean(ptSub2 || rawSubs.length > 0);
-          payload.subtitles = rawSubs;
-          payload.isVorta = true;
-        }
-      } catch (err) {}
+  } else {
+    if (!payload.videoUrl) {
+      const vortaApi = require("../services/vortaApi");
+      payload.videoUrl = vortaApi.getDefaultStream();
     }
+    payload.hasVideo = true;
   }
   // Onde a pessoa parou (para retomar de onde estava). Falha aqui nunca derruba a página.
   let resume = null;
