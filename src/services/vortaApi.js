@@ -2,7 +2,13 @@ const crypto = require("crypto");
 const https = require("https");
 const { translateTitle, translateSynopsis, detectGenres } = require("../utils/translator");
 
-const VORTA_BASE_URL = process.env.VORTA_API_URL || "https://api.vorta.tech";
+let currentBaseUrl = process.env.VORTA_API_URL || "https://api.quickplay.my.id";
+const CANDIDATE_BASE_URLS = Array.from(new Set([
+  process.env.VORTA_API_URL,
+  "https://api.quickplay.my.id",
+  "https://api.vorta.tech"
+].filter(Boolean)));
+
 const VORTA_SECRET = process.env.VORTA_API_SECRET || "988226de8a5c08467eab719ac46305e38c58b645ad65f0745a313f966a3d2caa";
 
 // Cache em memória com TTL para respeitar o limite de requisições (600/dia no plano Trial)
@@ -39,11 +45,11 @@ function signRequest(method, pathWithQuery, secret = VORTA_SECRET) {
 }
 
 /**
- * Executa chamada HTTP à API Vorta
+ * Executa uma chamada HTTP direta a uma URL base específica
  */
-function request(pathWithQuery, { method = "GET", body = null, headers = {}, timeout = 15000 } = {}) {
+function singleRequest(baseUrl, pathWithQuery, { method = "GET", body = null, headers = {}, timeout = 12000 } = {}) {
   return new Promise((resolve, reject) => {
-    const url = new URL(pathWithQuery, VORTA_BASE_URL);
+    const url = new URL(pathWithQuery, baseUrl);
     const { timestamp, signature } = signRequest(method, url.pathname + url.search);
 
     const reqHeaders = {
@@ -91,7 +97,9 @@ function request(pathWithQuery, { method = "GET", body = null, headers = {}, tim
 
     req.on("timeout", () => {
       req.destroy();
-      reject(new Error("Timeout ao conectar com a API Vorta"));
+      const err = new Error("Timeout ao conectar com a API Vorta");
+      err.statusCode = 504;
+      reject(err);
     });
 
     req.on("error", (err) => {
@@ -101,6 +109,32 @@ function request(pathWithQuery, { method = "GET", body = null, headers = {}, tim
     if (postData) req.write(postData);
     req.end();
   });
+}
+
+/**
+ * Executa chamada HTTP com failover automático entre hosts candidatos
+ */
+async function request(pathWithQuery, opts = {}) {
+  const hosts = [currentBaseUrl, ...CANDIDATE_BASE_URLS.filter((h) => h !== currentBaseUrl)];
+  let lastErr = null;
+
+  for (const host of hosts) {
+    try {
+      const res = await singleRequest(host, pathWithQuery, opts);
+      if (host !== currentBaseUrl) {
+        currentBaseUrl = host;
+      }
+      return res;
+    } catch (e) {
+      lastErr = e;
+      // Se for erro de cliente (400, 404, 401, 403), não tenta outro host (o dado realmente não existe)
+      if (e.statusCode && e.statusCode >= 400 && e.statusCode < 500) {
+        throw e;
+      }
+    }
+  }
+
+  throw lastErr || new Error("Falha ao comunicar com a API Vorta em todos os servidores.");
 }
 
 // TTLs recomendados (em ms)

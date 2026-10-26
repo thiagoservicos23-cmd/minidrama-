@@ -434,42 +434,66 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
   if (!canWatch) {
     payload.videoUrl = "";
   } else {
-    const isDuplicateOrBroken = !payload.videoUrl ||
-      payload.videoUrl.includes("videos.amodramasoficial.com") ||
-      payload.videoUrl.includes("139c5c83-b1ed-4915-b0ce-0c2d48e9a627");
-    if (isDuplicateOrBroken) {
-      try {
-        const vortaApi = require("../services/vortaApi");
-        const allCurated = await vortaApi.getAllCuratedPlays("pt");
-        if (allCurated.length > 0) {
+    try {
+      const vortaApi = require("../services/vortaApi");
+      const allCurated = await vortaApi.getAllCuratedPlays("pt");
+      if (allCurated.length > 0) {
+        // 1. Tenta correspondência por título aproximado
+        const cleanTitle = (play.title || "").toLowerCase().replace(/\s*\(dublado\)/i, "").trim();
+        let assigned = allCurated.find((p) => {
+          const t = (p.title || "").toLowerCase().replace(/\s*\(dublado\)/i, "").trim();
+          return t === cleanTitle || (cleanTitle.length > 5 && (t.includes(cleanTitle) || cleanTitle.includes(t)));
+        });
+        // 2. Tenta por chave da capa se houver
+        if (!assigned && play.posterUrl) {
+          const coverKey = vortaApi.cleanCoverKey(play.posterUrl);
+          if (coverKey) assigned = allCurated.find((p) => p.posterUrl && p.posterUrl.includes(coverKey));
+        }
+        // 3. Fallback determinístico por hash do ID
+        if (!assigned) {
           let hashVal = 0;
           for (let i = 0; i < play.id.length; i++) hashVal = (hashVal * 31 + play.id.charCodeAt(i)) >>> 0;
-          const assigned = allCurated[hashVal % allCurated.length];
+          assigned = allCurated[hashVal % allCurated.length];
+        }
+
+        if (assigned) {
           const parts = assigned.id.split(":");
           const category = parts[1] || "freereels";
           const vortaId = parts[2];
           const detail = await vortaApi.getDetail(category, vortaId, "pt");
           const chapters = (detail.data && detail.data.chapters) || [];
-          const chapterId = req.query.chapterId || (chapters[0] && chapters[0].id) || 1;
-          const vid = await vortaApi.getVideo(category, vortaId, chapterId, "pt");
-          const streams = (vid.data && vid.data.streams) || [];
-          const h264 = streams.find((s) => s.url && s.url.includes("h264"));
-          const videoUrl = (h264 && h264.url) || (streams[0] && streams[0].url) || "";
-          if (videoUrl) {
+          if (chapters.length > 0) {
+            const chapterId = req.query.chapterId || (chapters[0] && chapters[0].id) || 1;
+            let videoUrl = "";
+            let subtitles = [];
+            try {
+              const vid = await vortaApi.getVideo(category, vortaId, chapterId, "pt");
+              const streams = (vid.data && vid.data.streams) || [];
+              const h264 = streams.find((s) => s.url && s.url.includes("h264"));
+              videoUrl = (h264 && h264.url) || (streams[0] && streams[0].url) || "";
+              subtitles = (vid.data && vid.data.subtitles) || [];
+              const ptSub = subtitles.find((s) => s.languageCode === "pt" || (s.language && s.language.toLowerCase().includes("portugu")));
+              payload.subtitleUrl = ptSub ? `/api/vorta/subtitles?url=${encodeURIComponent(ptSub.url)}` : "";
+              payload.hasSubtitles = Boolean(ptSub || subtitles.length > 0);
+            } catch (err) {}
+
+            if (!videoUrl) videoUrl = vortaApi.getDefaultStream();
             payload.videoUrl = `/api/vorta/stream?url=${encodeURIComponent(videoUrl)}`;
             payload.chaptersList = chapters;
             payload.chapterId = chapterId;
             payload.episodesCount = chapters.length;
-            const currentCh = chapters.find(c => String(c.id) === String(chapterId)) || chapters[0];
+            const currentCh = chapters.find((c) => String(c.id) === String(chapterId)) || chapters[0];
             payload.currentEpisodeIndex = currentCh ? currentCh.index : 1;
+            payload.subtitles = subtitles;
           }
         }
-      } catch (err) {}
-      if (!payload.videoUrl) {
-        const vortaApi = require("../services/vortaApi");
-        payload.videoUrl = `/api/vorta/stream?url=${encodeURIComponent(vortaApi.getDefaultStream())}`;
       }
-    } else if (payload.videoUrl && payload.videoUrl.startsWith("http")) {
+    } catch (err) {}
+
+    if (!payload.videoUrl) {
+      const vortaApi = require("../services/vortaApi");
+      payload.videoUrl = `/api/vorta/stream?url=${encodeURIComponent(vortaApi.getDefaultStream())}`;
+    } else if (payload.videoUrl && payload.videoUrl.startsWith("http") && !payload.videoUrl.includes("/api/vorta/stream")) {
       payload.videoUrl = `/api/vorta/stream?url=${encodeURIComponent(payload.videoUrl)}`;
     }
     payload.hasVideo = true;

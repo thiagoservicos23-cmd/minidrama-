@@ -742,7 +742,7 @@ window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", boot);
 
 /* ---- cache local: a 2ª visita em diante abre NA HORA, mesmo com o servidor dormindo ---- */
-const CACHE_KEY = "minidrama_cache_v9";
+const CACHE_KEY = "minidrama_cache_v10";
 function loadCache(){
   try{ ["minidrama_cache_v2","minidrama_cache_v3","minidrama_cache_v4","minidrama_cache_v5","minidrama_cache_v6"].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)); if(c && Date.now() - c.t < 14*86400000) return c; }catch(e){}
@@ -1153,7 +1153,7 @@ function attachSearchEvents(q0){
 }
 
 /* --------------------------- FASE 2: filtros do catálogo + Surpresa ------------------------------------ */
-const APP_VERSION = "2026.10.26-vorta";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
+const APP_VERSION = "2026.10.26-vorta-player-fix";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
 const SORT_LABELS = { "": "Padrão", recent: "Mais recentes", title: "Título (A–Z)", year: "Ano (mais novo)", longest: "Mais longas", shortest: "Mais curtas" };
 let catalogFilters = { sort: "", year: "", plan: "" };
 let catalogFacets = null;
@@ -1848,11 +1848,12 @@ function reelDetail(id, chapterId){
   return r.details.get(key);
 }
 // Salva onde a pessoa parou (servidor: PUT /api/me/progress/:id). Só para quem está logada.
-function reelSave(r, id, ctl, force, finished){
+function reelSave(r, id, ctl, force, finished, chapterId){
   if(!r || !ctl || !currentUser()) return;
   const dur = Math.floor(ctl.duration || 0), pos = finished ? dur : Math.floor(ctl.time || 0);
   if(!(dur >= 60) || !Number.isFinite(pos) || pos < 0) return;
-  r.lastPos.set(id, pos / dur >= 0.95 ? 0 : pos);
+  const posKey = id + (chapterId ? ":" + chapterId : "");
+  r.lastPos.set(posKey, pos / dur >= 0.95 ? 0 : pos);
   const now = Date.now();
   if(!force && now - r.lastSave < 15000) return;
   r.lastSave = now;
@@ -1988,7 +1989,8 @@ async function reelMount(i){
   const url = d.play && d.play.videoUrl;
   if(!d.canWatch){ reelShowPanel(i, "locked"); return; }
   if(!url){ reelShowPanel(i, "novideo"); return; }
-  const resume = r.lastPos.has(p.id) ? r.lastPos.get(p.id) : ((d.resume && d.resume.position) || 0);
+  const posKey = p.id + (p.chapterId ? ":" + p.chapterId : "");
+  const resume = r.lastPos.has(posKey) ? r.lastPos.get(posKey) : ((d.resume && d.resume.position) || 0);
   let ctl;
   const subUrl = (d && d.play && d.play.subtitleUrl) || p.subtitleUrl || "";
   try{ ctl = await createReelPlayer(stage, url, { resume, muted: r.muted, subtitleUrl: subUrl, onFatal: (m) => { if(!stale()) reelShowPanel(i, m); } }); }
@@ -2013,10 +2015,10 @@ async function reelMount(i){
       }).catch(() => {});
     }
   });
-  ctl.on("pause", () => { reelSave(r, p.id, ctl, true); reelPoke(); });
-  ctl.on("timeupdate", () => reelSave(r, p.id, ctl, false));
+  ctl.on("pause", () => { reelSave(r, p.id, ctl, true, false, p.chapterId); reelPoke(); });
+  ctl.on("timeupdate", () => reelSave(r, p.id, ctl, false, false, p.chapterId));
   ctl.on("volumechange", () => { r.muted = ctl.muted; reelSyncSound(); });
-  ctl.on("ended", () => { reelSave(r, p.id, ctl, true, true); reelNextChapter(); });
+  ctl.on("ended", () => { reelSave(r, p.id, ctl, true, true, p.chapterId); reelNextChapter(); });
   ctl.on("error", () => { if(!stale() && ctl.kind !== "youtube") reelShowPanel(i, "O vídeo não carregou. Confira sua conexão e tente de novo."); });
   reelSyncSound();
 
@@ -2033,7 +2035,7 @@ function reelUnmount(i){
   const r = reel; if(!r) return;
   r.token++;
   if(r.ctl && r.ctlIndex === i){
-    const p = r.items[i]; if(p) reelSave(r, p.id, r.ctl, true);
+    const p = r.items[i]; if(p) reelSave(r, p.id, r.ctl, true, false, p.chapterId);
     r.ctl.destroy(); r.ctl = null; r.ctlIndex = -1;
   }
   const stage = reelStageEl(i), slide = reelSlideEl(i);
@@ -2198,7 +2200,7 @@ function reelSwitchChapter(chapterId){
 
 function reelNextChapter(){
   const r = reel; if(!r) return;
-  if(r.active < r.items.length - 1){
+  if(r.active < r.last){
     reelGo(r.active + 1);
   }
 }
@@ -2265,7 +2267,7 @@ function reelTeardown(){
   const r = reel; if(!r) return;
   reel = null;                                          // primeiro: assim qualquer resposta que chegar atrasada se descarta sozinha
   clearTimeout(r.idleT);
-  try{ if(r.ctl){ const p = r.items[r.ctlIndex]; if(p) reelSave(r, p.id, r.ctl, true); r.ctl.destroy(); } }catch(e){}
+  try{ if(r.ctl){ const p = r.items[r.ctlIndex]; if(p) reelSave(r, p.id, r.ctl, true, false, p.chapterId); r.ctl.destroy(); } }catch(e){}
   if(r.io) r.io.disconnect();
   document.removeEventListener("keydown", r.onKey);
   document.removeEventListener("fullscreenchange", r.onFs); document.removeEventListener("webkitfullscreenchange", r.onFs);
@@ -2304,45 +2306,39 @@ async function openReel(startId, seq){
   if(seq !== renderSeq) return;
 
   const play = d.play;
-  const chapters = (play && play.chaptersList) || [];
+  const chapters = (play && play.chaptersList && play.chaptersList.length > 0)
+    ? play.chaptersList
+    : [{ id: (play && play.chapterId) || "1", index: 1 }];
   let items = [];
   let startActive = 0;
 
-  if(chapters.length > 1){
-    // Todos os episódios desta novelinha viram slides verticais no StoryReel
-    items = chapters.map((ch, idx) => ({
-      id: play.id,
-      chapterId: ch.id,
-      episodeIndex: ch.index || idx + 1,
-      title: `${play.title} — EP ${ch.index || idx + 1}`,
-      dramaTitle: play.title,
-      posterUrl: play.posterUrl,
-      backdropUrl: play.backdropUrl,
-      synopsis: play.synopsis,
-      genreLabels: play.genreLabels,
-      durationMinutes: play.durationMinutes,
-      canWatch: d.canWatch,
-      hasVideo: true,
-      chaptersList: chapters,
-      episodesCount: chapters.length,
-      isVorta: play.isVorta,
-      platformName: play.platformName,
-      isDublado: play.isDublado
-    }));
+  // Todos os episódios desta novelinha viram slides verticais no StoryReel (sem misturar com outras novelinhas)
+  items = chapters.map((ch, idx) => ({
+    id: play.id,
+    chapterId: ch.id,
+    episodeIndex: ch.index || idx + 1,
+    title: `${play.title} — EP ${ch.index || idx + 1}`,
+    dramaTitle: play.title,
+    posterUrl: play.posterUrl,
+    backdropUrl: play.backdropUrl,
+    synopsis: play.synopsis,
+    genreLabels: play.genreLabels,
+    durationMinutes: play.durationMinutes,
+    canWatch: d.canWatch,
+    hasVideo: true,
+    chaptersList: chapters,
+    episodesCount: chapters.length,
+    isVorta: play.isVorta,
+    platformName: play.platformName,
+    isDublado: play.isDublado
+  }));
 
-    if(chapterId){
-      const foundIdx = chapters.findIndex(c => String(c.id) === String(chapterId));
-      if(foundIdx >= 0) startActive = foundIdx;
-    } else if(play.chapterId){
-      const foundIdx = chapters.findIndex(c => String(c.id) === String(play.chapterId));
-      if(foundIdx >= 0) startActive = foundIdx;
-    }
-  } else {
-    // Novelinha de episódio único / curta independente: monta com as outras novelinhas
-    const itm = Object.assign({}, play, { canWatch: d.canWatch, hasVideo: !!play.videoUrl, videoUrl: undefined, chaptersList: chapters, episodesCount: 1 });
-    let others = (DB.plays && DB.plays.length) ? DB.plays : (await api("/plays?page=1&pageSize=30")).plays || [];
-    items = buildReelFeed([itm, ...others], cleanStartId);
-    startActive = 0;
+  if(chapterId){
+    const foundIdx = chapters.findIndex(c => String(c.id) === String(chapterId));
+    if(foundIdx >= 0) startActive = foundIdx;
+  } else if(play.chapterId){
+    const foundIdx = chapters.findIndex(c => String(c.id) === String(play.chapterId));
+    if(foundIdx >= 0) startActive = foundIdx;
   }
 
   if(!items.length){ toast("Ainda não há episódios para você assistir."); go("#/home"); return; }
