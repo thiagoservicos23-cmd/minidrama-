@@ -602,6 +602,11 @@ td.strong{color:var(--ink); font-weight:600;}
 .category-chip.active{background:var(--gold); color:#241708; border-color:var(--gold); box-shadow:0 2px 10px rgba(201,162,75,0.3);}
 .card-badge-dub{background:linear-gradient(135deg, #A82020, #D97706); color:#fff; font-weight:800; letter-spacing:0.3px; box-shadow:0 2px 8px rgba(0,0,0,0.4);}
 .card-ep-pill{display:inline-block; background:rgba(201,162,75,0.16); color:var(--gold-soft); border-radius:4px; padding:1px 6px; font-size:11px; font-weight:700;}
+
+.card-badge-dub{background:linear-gradient(135deg, #B91C1C, #EA580C) !important; color:#fff !important; font-weight:800; font-size:10px; letter-spacing:.4px; top:8px; left:8px; position:absolute; z-index:2; padding:3px 7px; border-radius:4px; box-shadow:0 2px 6px rgba(0,0,0,0.5);}
+.card-badge-sub{background:linear-gradient(135deg, #1E40AF, #0284C7) !important; color:#fff !important; font-weight:800; font-size:10px; letter-spacing:.4px; top:8px; left:8px; position:absolute; z-index:2; padding:3px 7px; border-radius:4px; box-shadow:0 2px 6px rgba(0,0,0,0.5);}
+.card-badge-plat{background:rgba(18,13,15,0.85); backdrop-filter:blur(4px); color:var(--gold-soft); border:1px solid rgba(201,162,75,0.3); font-weight:700; font-size:10px; text-transform:uppercase; top:8px; right:38px; position:absolute; z-index:2; padding:2px 6px; border-radius:3px;}
+.reel-sub-badge{display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; color:#38BDF8; background:rgba(2,132,199,0.2); border:1px solid rgba(2,132,199,0.4); padding:2px 8px; border-radius:4px;}
 </style>
 </head>
 <body>
@@ -1835,7 +1840,8 @@ async function reelMount(i){
   if(!url){ reelShowPanel(i, "novideo"); return; }
   const resume = r.lastPos.has(p.id) ? r.lastPos.get(p.id) : ((d.resume && d.resume.position) || 0);
   let ctl;
-  try{ ctl = await createReelPlayer(stage, url, { resume, muted: r.muted, onFatal: (m) => { if(!stale()) reelShowPanel(i, m); } }); }
+  const subUrl = (d && d.play && d.play.subtitleUrl) || p.subtitleUrl || "";
+  try{ ctl = await createReelPlayer(stage, url, { resume, muted: r.muted, subtitleUrl: subUrl, onFatal: (m) => { if(!stale()) reelShowPanel(i, m); } }); }
   catch(e){ if(!stale()) reelShowPanel(i, e.message || "Não foi possível reproduzir."); return; }
   if(stale()){ ctl.destroy(); return; }
   r.ctl = ctl; r.ctlIndex = i; r.lastSave = Date.now();

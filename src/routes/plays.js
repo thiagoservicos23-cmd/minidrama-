@@ -405,6 +405,9 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
         const h264 = streams.find((s) => s.url && s.url.includes("h264"));
         videoUrl = (h264 && h264.url) || (streams[0] && streams[0].url) || "";
         subtitles = (vid.data && vid.data.subtitles) || [];
+        const ptSub = subtitles.find((s) => s.languageCode === "pt" || (s.language && s.language.toLowerCase().includes("portugu")));
+        formatted.subtitleUrl = ptSub ? `/api/vorta/subtitles?url=${encodeURIComponent(ptSub.url)}` : "";
+        formatted.hasSubtitles = Boolean(ptSub || subtitles.length > 0);
       } catch (err) {}
       formatted.videoUrl = videoUrl;
       formatted.subtitles = subtitles;
@@ -443,7 +446,11 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
           const streams = (vid.data && vid.data.streams) || [];
           const h264 = streams.find((x) => x.url && x.url.includes("h264"));
           payload.videoUrl = (h264 && h264.url) || (streams[0] && streams[0].url) || "";
-          payload.subtitles = (vid.data && vid.data.subtitles) || [];
+          const rawSubs = (vid.data && vid.data.subtitles) || [];
+          const ptSub2 = rawSubs.find((s) => s.languageCode === "pt" || (s.language && s.language.toLowerCase().includes("portugu")));
+          payload.subtitleUrl = ptSub2 ? `/api/vorta/subtitles?url=${encodeURIComponent(ptSub2.url)}` : "";
+          payload.hasSubtitles = Boolean(ptSub2 || rawSubs.length > 0);
+          payload.subtitles = rawSubs;
           payload.isVorta = true;
         }
       } catch (err) {}

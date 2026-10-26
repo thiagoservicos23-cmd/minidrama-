@@ -360,7 +360,11 @@ const vortaApi = {
       genre: genreLabels[0] || "Dublados",
       canWatch: true,
       hasVideo: true,
-      isDublado: detectedGenreIds.includes("dublados") || /dublado/i.test(ptTitle)
+      isDublado: detectedGenreIds.includes("dublados") || /dublado/i.test(ptTitle),
+      isLegendado: !detectedGenreIds.includes("dublados") && !/dublado/i.test(ptTitle),
+      audio: (detectedGenreIds.includes("dublados") || /dublado/i.test(ptTitle)) ? "Dublado em Português" : "Original com Legendas em Português",
+      hasSubtitles: true,
+      legendas: "Português (PT-BR)"
     };
   }
 };

@@ -1,4 +1,5 @@
 const express = require("express");
+const https = require("https");
 const vortaApi = require("../services/vortaApi");
 const prisma = require("../prismaClient");
 const { attachUserIfPresent, requireAuth, requireAdmin } = require("../middleware/auth");
@@ -13,6 +14,32 @@ const safe = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).cat
     res.status(e.statusCode || 500).json({
       error: e.message || "Não foi possível carregar os dados da API Vorta."
     });
+  }
+});
+
+// Proxy e conversão de legendas SRT para WebVTT (compatível com Plyr e todos os navegadores)
+router.get("/subtitles", (req, res) => {
+  const subUrl = req.query.url;
+  if (!subUrl) return res.status(400).send("URL de legenda não fornecida.");
+  try {
+    https.get(subUrl, (remoteRes) => {
+      let data = "";
+      remoteRes.on("data", (chunk) => { data += chunk; });
+      remoteRes.on("end", () => {
+        const vtt = "WEBVTT\n\n" + data.trim()
+          .replace(/\r\n/g, "\n")
+          .replace(/\r/g, "\n")
+          .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");
+        res.setHeader("Content-Type", "text/vtt; charset=utf-8");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Cache-Control", "public, max-age=86400");
+        res.send(vtt);
+      });
+    }).on("error", (err) => {
+      res.status(502).send("Erro ao buscar legenda: " + err.message);
+    });
+  } catch (e) {
+    res.status(500).send("Erro ao processar legenda.");
   }
 });
 
@@ -59,22 +86,47 @@ router.get("/banner", safe(async (req, res) => {
   });
 }));
 
-// Multi-channel Feed para a Home e Catálogo
+// Multi-channel Feed completo com Plataformas, Dubladas e Legendadas
 router.get("/feed", safe(async (req, res) => {
   const lang = req.query.lang || "pt";
-  const [freereels, shortmax, meloshort, banners] = await Promise.all([
-    vortaApi.getBanner("freereels", lang).catch(() => ({ data: [] })),
-    vortaApi.getBanner("shortmax", lang).catch(() => ({ data: [] })),
-    vortaApi.getBanner("meloshort", lang).catch(() => ({ data: [] })),
+  const [categories, freereelsHome, shortmaxHome, meloshortHome, banners] = await Promise.all([
+    vortaApi.getCategories().catch(() => ({ data: [] })),
+    vortaApi.getHome("freereels", lang).catch(() => ({ data: [] })),
+    vortaApi.getHome("shortmax", lang).catch(() => ({ data: [] })),
+    vortaApi.getHome("meloshort", lang).catch(() => ({ data: [] })),
     vortaApi.getCuratedBanners(lang).catch(() => [])
   ]);
+
+  const frList = (freereelsHome.data || []).map((i) => vortaApi.formatVortaPlay(i, "freereels"));
+  const smList = (shortmaxHome.data || []).map((i) => vortaApi.formatVortaPlay(i, "shortmax"));
+  const msList = (meloshortHome.data || []).map((i) => vortaApi.formatVortaPlay(i, "meloshort"));
+
+  const allItems = [...banners, ...frList, ...smList, ...msList];
+  const seen = new Set();
+  const deduped = [];
+  allItems.forEach((p) => {
+    if (p && p.id && !seen.has(p.id)) {
+      seen.add(p.id);
+      deduped.push(p);
+    }
+  });
+
+  const dubladas = deduped.filter((p) => p.isDublado);
+  const legendadas = deduped.filter((p) => !p.isDublado);
+
   res.json({
     success: true,
+    platforms: categories.data || [],
     banners,
+    total: deduped.length,
+    dubladasCount: dubladas.length,
+    legendadasCount: legendadas.length,
+    dubladas: dubladas.slice(0, 30),
+    legendadas: legendadas.slice(0, 30),
     channels: {
-      freereels: (freereels.data || []).map((i) => vortaApi.formatVortaPlay(i, "freereels")),
-      shortmax: (shortmax.data || []).map((i) => vortaApi.formatVortaPlay(i, "shortmax")),
-      meloshort: (meloshort.data || []).map((i) => vortaApi.formatVortaPlay(i, "meloshort"))
+      freereels: frList.slice(0, 30),
+      shortmax: smList.slice(0, 30),
+      meloshort: msList.slice(0, 30)
     }
   });
 }));
@@ -140,7 +192,7 @@ router.get("/detail", safe(async (req, res) => {
   });
 }));
 
-// Vídeo de um capítulo específico
+// Vídeo de um capítulo específico com detecção e link de legendas em português
 router.get("/video", safe(async (req, res) => {
   let { category, id, chapterId, lang } = req.query;
   category = category || req.query.category_p;
@@ -175,13 +227,18 @@ router.get("/video", safe(async (req, res) => {
   const primaryStream = h264Stream || streams[0] || null;
   const streamUrl = primaryStream ? primaryStream.url : "";
 
+  const rawSubs = data.subtitles || [];
+  const ptSub = rawSubs.find((s) => s.languageCode === "pt" || (s.language && s.language.toLowerCase().includes("portugu")));
+  const subtitleUrl = ptSub ? `/api/vorta/subtitles?url=${encodeURIComponent(ptSub.url)}` : "";
+
   res.json({
     success: true,
     platform: raw.platform || category,
     chapterId,
     videoUrl: streamUrl,
-    streams: streams,
-    subtitles: data.subtitles || [],
+    subtitleUrl,
+    subtitles: rawSubs,
+    hasSubtitles: Boolean(ptSub || rawSubs.length > 0),
     episode_index: data.episode_index || 1,
     total_episodes: data.total_episodes || 0,
     next_video_id: data.next_video_id,
