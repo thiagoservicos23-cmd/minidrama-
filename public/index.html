@@ -728,9 +728,9 @@ window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", boot);
 
 /* ---- cache local: a 2ª visita em diante abre NA HORA, mesmo com o servidor dormindo ---- */
-const CACHE_KEY = "minidrama_cache_v6";
+const CACHE_KEY = "minidrama_cache_v7";
 function loadCache(){
-  try{ localStorage.removeItem("minidrama_cache_v2"); localStorage.removeItem("minidrama_cache_v3"); localStorage.removeItem("minidrama_cache_v4"); localStorage.removeItem("minidrama_cache_v5"); }catch(e){}
+  try{ ["minidrama_cache_v2","minidrama_cache_v3","minidrama_cache_v4","minidrama_cache_v5","minidrama_cache_v6"].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)); if(c && Date.now() - c.t < 14*86400000) return c; }catch(e){}
   return null;
 }
@@ -1560,9 +1560,6 @@ function attachHomeEvents(){
 }
 
 /* --------------------------- CATALOG PAGE -------------------------------- */
-let catalogGenre = "novos";
-let catalogPage = 1;
-let catalogMeta = { total: 0, totalPages: 1 };
 
 function PaginationControls(meta, gotoFnName){
   if(!meta || meta.totalPages <= 1) return "";
