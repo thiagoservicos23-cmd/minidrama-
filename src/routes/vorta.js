@@ -1,0 +1,258 @@
+const express = require("express");
+const vortaApi = require("../services/vortaApi");
+const prisma = require("../prismaClient");
+const { attachUserIfPresent, requireAuth, requireAdmin } = require("../middleware/auth");
+const { PLAY_LIST_SELECT, publicPlay } = require("../utils/images");
+
+const router = express.Router();
+
+const safe = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch((e) => {
+  console.error("[vorta]", req.method, req.path, e && e.message);
+  if (!res.headersSent) {
+    res.status(e.statusCode || 500).json({
+      error: e.message || "Não foi possível carregar os dados da API Vorta."
+    });
+  }
+});
+
+// Status & Plan info
+router.get("/status", safe(async (req, res) => {
+  const [status, plan, categories] = await Promise.all([
+    vortaApi.getKeyStatus(),
+    vortaApi.getKeyPlan(),
+    vortaApi.getCategories().catch(() => ({ data: [] }))
+  ]);
+  res.json({
+    status: status.status || "active",
+    plan: plan.plan || "trial",
+    limit: plan.limit || "600/day",
+    platforms: categories.data || []
+  });
+}));
+
+// Categorias / Plataformas
+router.get("/categories", safe(async (req, res) => {
+  const data = await vortaApi.getCategories();
+  res.json(data);
+}));
+
+// Idiomas
+router.get("/languages", safe(async (req, res) => {
+  const category = req.query.category || req.query.category_p || "freereels";
+  const data = await vortaApi.getLanguages(category);
+  res.json(data);
+}));
+
+// Banner
+router.get("/banner", safe(async (req, res) => {
+  const category = req.query.category || req.query.category_p || "freereels";
+  const lang = req.query.lang || "pt";
+  const data = await vortaApi.getBanner(category, lang);
+  const formatted = (data.data || []).map((item) => vortaApi.formatVortaPlay(item, category));
+  res.json({
+    success: true,
+    platform: data.platform || category,
+    total: formatted.length,
+    raw: data.data || [],
+    plays: formatted
+  });
+}));
+
+// Home feed
+router.get("/home", safe(async (req, res) => {
+  const category = req.query.category || req.query.category_p || "freereels";
+  const lang = req.query.lang || "pt";
+  const data = await vortaApi.getHome(category, lang);
+  const formatted = (data.data || []).map((item) => vortaApi.formatVortaPlay(item, category));
+  res.json({
+    success: true,
+    platform: data.platform || category,
+    total: data.total || formatted.length,
+    raw: data.data || [],
+    plays: formatted
+  });
+}));
+
+// Discover paginado
+router.get("/discover", safe(async (req, res) => {
+  const category = req.query.category || req.query.category_p || "freereels";
+  const lang = req.query.lang || "pt";
+  const page = parseInt(req.query.page, 10) || 1;
+  const data = await vortaApi.getDiscover(category, lang, page);
+  const formatted = (data.data || []).map((item) => vortaApi.formatVortaPlay(item, category));
+  res.json({
+    success: true,
+    platform: data.platform || category,
+    page,
+    total: data.total || formatted.length,
+    cached: data.cached || false,
+    plays: formatted
+  });
+}));
+
+// Detalhe de uma novelinha com lista de capítulos
+router.get("/detail", safe(async (req, res) => {
+  let { category, id, lang } = req.query;
+  category = category || req.query.category_p;
+
+  // Se o id vier no formato vorta:freereels:ID
+  if (id && id.startsWith("vorta:")) {
+    const parts = id.split(":");
+    category = parts[1] || category;
+    id = parts[2] || id;
+  }
+  category = category || "freereels";
+  lang = lang || "pt";
+
+  if (!id) return res.status(400).json({ error: "Informe o ID da novelinha." });
+
+  const raw = await vortaApi.getDetail(category, id, lang);
+  const item = raw.data || {};
+  const formatted = vortaApi.formatVortaPlay(item, category);
+
+  res.json({
+    success: true,
+    platform: raw.platform || category,
+    play: formatted,
+    chapters: item.chapters || [],
+    total_episodes: item.total_episodes || (item.chapters ? item.chapters.length : 0),
+    data: item
+  });
+}));
+
+// Vídeo de um capítulo específico
+router.get("/video", safe(async (req, res) => {
+  let { category, id, chapterId, lang } = req.query;
+  category = category || req.query.category_p;
+
+  if (id && id.startsWith("vorta:")) {
+    const parts = id.split(":");
+    category = parts[1] || category;
+    id = parts[2] || id;
+  }
+  category = category || "freereels";
+  lang = lang || "pt";
+
+  if (!id) return res.status(400).json({ error: "Informe o ID da novelinha." });
+  if (chapterId === undefined || chapterId === null || chapterId === "") {
+    // Se não informou chapterId, tenta buscar o primeiro capítulo pelo detalhe
+    try {
+      const detail = await vortaApi.getDetail(category, id, lang);
+      if (detail.data && detail.data.chapters && detail.data.chapters.length > 0) {
+        chapterId = detail.data.chapters[0].id;
+      } else {
+        chapterId = 1;
+      }
+    } catch (e) {
+      chapterId = 1;
+    }
+  }
+
+  const raw = await vortaApi.getVideo(category, id, chapterId, lang);
+  const data = raw.data || {};
+
+  // Encontra a melhor stream HLS (dá preferência para h264 por compatibilidade universal)
+  const streams = data.streams || [];
+  const h264Stream = streams.find((s) => s.url && s.url.includes("h264"));
+  const primaryStream = h264Stream || streams[0] || null;
+  const streamUrl = primaryStream ? primaryStream.url : "";
+
+  res.json({
+    success: true,
+    platform: raw.platform || category,
+    chapterId,
+    videoUrl: streamUrl,
+    streams: streams,
+    subtitles: data.subtitles || [],
+    episode_index: data.episode_index || 1,
+    total_episodes: data.total_episodes || 0,
+    next_video_id: data.next_video_id,
+    prev_video_id: data.prev_video_id,
+    title: data.title || `Capítulo ${data.episode_index || 1}`,
+    duration: data.duration || 0,
+    is_free: data.is_free !== false,
+    raw: data
+  });
+}));
+
+// Pesquisa
+router.get("/search", safe(async (req, res) => {
+  const category = req.query.category || req.query.category_p || "freereels";
+  const q = req.query.q || req.query.search || "";
+  const lang = req.query.lang || "pt";
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+
+  const data = await vortaApi.search(category, q, lang, page, limit);
+  const formatted = (data.data || []).map((item) => vortaApi.formatVortaPlay(item, category));
+
+  res.json({
+    success: true,
+    platform: data.platform || category,
+    total: data.total || formatted.length,
+    plays: formatted,
+    page,
+    raw: data.data || []
+  });
+}));
+
+// Analytics Track
+router.post("/track", safe(async (req, res) => {
+  const body = req.body || {};
+  const headers = {
+    deviceId: req.headers.deviceid || body.deviceId,
+    deviceModel: req.headers.devicemodel || body.deviceModel,
+    osVersion: req.headers.osversion || body.osVersion,
+    appVersion: req.headers.appversion || body.appVersion
+  };
+  const result = await vortaApi.track(body, headers);
+  res.json(result);
+}));
+
+// Importar / Sincronizar dramas da Vorta para o banco de dados PostgreSQL do Mini Drama
+router.post("/sync", requireAuth, requireAdmin, safe(async (req, res) => {
+  const category = req.body.category || "freereels";
+  const lang = req.body.lang || "pt";
+  const limit = Math.min(parseInt(req.body.limit, 10) || 20, 100);
+
+  const home = await vortaApi.getHome(category, lang);
+  const items = (home.data || []).slice(0, limit);
+
+  let imported = 0;
+  for (const item of items) {
+    if (!item.title) continue;
+    const chaptersNum = parseInt(item.chapters || item.total_episodes || 0, 10);
+    const duration = chaptersNum > 0 ? chaptersNum * 2 : 60;
+
+    // Verifica se já existe novelinha com este título
+    const existing = await prisma.play.findFirst({ where: { title: item.title } });
+    if (!existing) {
+      await prisma.play.create({
+        data: {
+          title: item.title,
+          synopsis: item.synopsis || "",
+          director: item.author || "Vorta Studios",
+          cast: (item.genres || []).slice(0, 4).join(", "),
+          durationMinutes: Math.max(duration, 60),
+          releaseYear: new Date().getFullYear(),
+          posterUrl: item.cover || "",
+          backdropUrl: item.cover || "",
+          videoUrl: "", // Vídeo sob demanda via Vorta API
+          requiresPlan: "plateia",
+          featured: false
+        }
+      });
+      imported++;
+    }
+  }
+
+  res.json({
+    success: true,
+    category,
+    scanned: items.length,
+    imported,
+    message: `${imported} novelinhas importadas com sucesso.`
+  });
+}));
+
+module.exports = router;

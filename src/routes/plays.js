@@ -387,6 +387,35 @@ router.post("/bulk-delete", requireAuth, requireAdmin, async (req, res) => {
 
 // Detalhe de uma novelinha. Só devolve a URL real do vídeo se o visitante tiver direito.
 router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
+  if (req.params.id && (req.params.id.startsWith("vorta:") || req.params.id.startsWith("vorta_"))) {
+    try {
+      const vortaApi = require("../services/vortaApi");
+      const parts = req.params.id.includes(":") ? req.params.id.split(":") : req.params.id.split("_");
+      const category = parts[1] || "freereels";
+      const vortaId = parts.slice(2).join(":");
+      const detail = await vortaApi.getDetail(category, vortaId, "pt");
+      const formatted = vortaApi.formatVortaPlay(detail.data, category);
+      const chapters = (detail.data && detail.data.chapters) || [];
+      const chapterId = req.query.chapterId || (chapters[0] && chapters[0].id) || 1;
+      let videoUrl = "";
+      let subtitles = [];
+      try {
+        const vid = await vortaApi.getVideo(category, vortaId, chapterId, "pt");
+        const streams = (vid.data && vid.data.streams) || [];
+        const h264 = streams.find((s) => s.url && s.url.includes("h264"));
+        videoUrl = (h264 && h264.url) || (streams[0] && streams[0].url) || "";
+        subtitles = (vid.data && vid.data.subtitles) || [];
+      } catch (err) {}
+      formatted.videoUrl = videoUrl;
+      formatted.subtitles = subtitles;
+      formatted.chaptersList = chapters;
+      formatted.chapterId = chapterId;
+      return res.json({ play: formatted, canWatch: true, resume: null });
+    } catch (e) {
+      return res.status(404).json({ error: "Novelinha não encontrada." });
+    }
+  }
+
   const play = await prisma.play.findUnique({ where: { id: req.params.id }, select: PLAY_LIST_SELECT });
   if (!play) return res.status(404).json({ error: "Novelinha não encontrada." });
   const canWatch = await userCanWatch(req.user, play);
