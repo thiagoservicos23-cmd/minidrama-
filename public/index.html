@@ -742,7 +742,7 @@ window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", boot);
 
 /* ---- cache local: a 2ª visita em diante abre NA HORA, mesmo com o servidor dormindo ---- */
-const CACHE_KEY = "minidrama_cache_v7";
+const CACHE_KEY = "minidrama_cache_v8";
 function loadCache(){
   try{ ["minidrama_cache_v2","minidrama_cache_v3","minidrama_cache_v4","minidrama_cache_v5","minidrama_cache_v6"].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)); if(c && Date.now() - c.t < 14*86400000) return c; }catch(e){}
@@ -1671,7 +1671,7 @@ function attachCatalogEvents(){
 /* --------------------------- PLAY DETAIL --------------------------------- */
 function isYoutube(url){ return /youtube\.com|youtu\.be/.test(url||""); }
 function embedYoutube(url){ const m = url.match(/(?:v=|youtu\.be\/)([\w-]{6,})/); return m ? `https://www.youtube.com/embed/${m[1]}` : url; }
-function isHls(url){ return /\.m3u8(\?|$)/i.test(url||""); }
+function isHls(url){ if(!url) return false; try{ return /\.m3u8/i.test(decodeURIComponent(url)); }catch(e){ return /\.m3u8/i.test(url); } }
 
 // Lê a duração de um arquivo de vídeo local (em minutos), sem precisar subir nada.
 function detectVideoDuration(file){
@@ -1787,19 +1787,39 @@ function reelSlideHtml(p, i){
   const watchable = p.canWatch && p.hasVideo;
   const panel = !p.canWatch ? "locked" : (!p.hasVideo ? "novideo" : "");
   const syn = String(p.synopsis || "").trim();
+  const isVorta = p.isVorta || String(p.id).startsWith("vorta:");
+  const isDub = p.isDublado || /dublado/i.test(p.title);
+  const curEp = p.currentEpisodeIndex || 1;
+  const totalEps = p.episodesCount || p.chapters || 1;
   return `<section class="reel-slide ${panel ? "is-panel" : ""}" data-i="${i}" data-id="${esc(p.id)}" aria-label="${esc(p.title)}">
     <div class="reel-bg" style="background-image:url('${bg}')"></div>
     <div class="reel-stage" id="reel-stage-${i}">
       <img class="reel-cover" src="${bg}" alt="">
       ${panel ? `<div class="reel-panel">${reelPanelHtml(panel, p)}</div>` : ""}
     </div>
+    <div class="reel-top-bar">
+      <div class="reel-badge-group">
+        ${isVorta ? `<span class="card-badge card-badge-plat" style="position:static;">📺 ${esc(p.platformName || "FreeReels")}</span>` : ""}
+        <span class="reel-lang-badge">${isDub ? "🎙️ Dublado PT" : "📝 Legendado PT"}</span>
+      </div>
+    </div>
     <div class="reel-info">
+      <div class="reel-ep-bar" id="reel-ep-bar-${i}">
+        <button type="button" class="reel-ep-nav-btn" data-act="prev-ep" aria-label="Episódio anterior">⏮ Ant</button>
+        <button type="button" class="reel-ep-picker-btn" data-act="open-ep-sheet" aria-label="Escolher episódio">
+          📺 EP <span class="current-ep-num">${curEp}</span> / ${totalEps} ▾
+        </button>
+        <button type="button" class="reel-ep-nav-btn" data-act="next-ep" aria-label="Próximo episódio">Próx ⏭</button>
+      </div>
       <h2 class="reel-title">${esc(p.title)}</h2>
       <p class="reel-meta">${reelMetaHtml(p)}</p>
       ${syn.length > 2 ? `<p class="reel-syn">${esc(syn)}</p>` : ""}
     </div>
     <div class="reel-rail">
       ${watchable ? `<button class="reel-btn" data-act="sound" aria-label="Ativar ou silenciar o som" aria-pressed="false">${REEL_ICO.volume}</button><button class="reel-btn reel-btn-fs" data-act="fs" aria-label="Tela cheia">${REEL_ICO.expand}</button>` : ""}
+      <button class="reel-btn" data-act="open-ep-sheet" aria-label="Episódios" title="Episódios">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+      </button>
       <button class="reel-btn" data-act="info" aria-label="Detalhes da novelinha">${REEL_ICO.info}</button>
       <button class="reel-btn" data-act="share" aria-label="Compartilhar">${REEL_ICO.share}</button>
     </div>
@@ -1842,13 +1862,31 @@ function reelSave(r, id, ctl, force, finished){
 
 /* ---- player (Plyr + hls.js; se o Plyr não carregar, cai para os controles do navegador) ---- */
 async function createReelPlayer(stage, url, opts){
+  opts = opts || {};
   const host = document.createElement("div"); host.className = "reel-player"; stage.appendChild(host);
   const yt = isYoutube(url) ? ytId(url) : null;
   const hlsUrl = !yt && isHls(url);
   let el, hls = null;
   if(yt) host.innerHTML = `<div class="plyr__video-embed" data-plyr-provider="youtube" data-plyr-embed-id="${esc(yt)}"></div>`;
-  else host.innerHTML = `<video playsinline preload="metadata"></video>`;
+  else host.innerHTML = `<video playsinline preload="metadata" crossorigin="anonymous"></video>`;
   el = host.firstElementChild;
+
+  let playUrl = url;
+  if(url && url.startsWith("http") && !yt && !url.includes("/api/vorta/stream")){
+    playUrl = `/api/vorta/stream?url=${encodeURIComponent(url)}`;
+  }
+
+  if(opts.subtitleUrl){
+    const track = document.createElement("track");
+    track.kind = "subtitles";
+    track.label = "Português";
+    track.srclang = "pt";
+    track.src = opts.subtitleUrl.startsWith("http") && !opts.subtitleUrl.includes("/api/vorta/subtitles")
+      ? `/api/vorta/subtitles?url=${encodeURIComponent(opts.subtitleUrl)}`
+      : opts.subtitleUrl;
+    track.default = true;
+    el.appendChild(track);
+  }
 
   const Plyr_ = await waitFor(() => window.Plyr, 3500);
   if(yt && !Plyr_){                                    // sem Plyr, o YouTube volta ao iframe simples
@@ -1935,6 +1973,15 @@ async function reelMount(i){
   try{ d = await reelDetail(p.id, p.chapterId); }
   catch(e){ if(!stale()) reelShowPanel(i, e.message || "Não consegui carregar este vídeo."); return; }
   if(stale()) return;
+  p.chaptersList = (d.play && d.play.chaptersList) || p.chaptersList || [];
+  p.currentEpisodeIndex = (d.play && d.play.currentEpisodeIndex) || p.currentEpisodeIndex || 1;
+  p.episodesCount = (d.play && d.play.episodesCount) || (p.chaptersList && p.chaptersList.length) || p.chapters || 1;
+  if(d.play && d.play.chapterId) p.chapterId = d.play.chapterId;
+  const epBarEl = slide.querySelector("#reel-ep-bar-" + i);
+  if(epBarEl){
+    const pickerBtn = epBarEl.querySelector(".reel-ep-picker-btn");
+    if(pickerBtn) pickerBtn.innerHTML = `📺 EP <span class="current-ep-num">${p.currentEpisodeIndex}</span> / ${p.episodesCount} ▾`;
+  }
   const url = d.play && d.play.videoUrl;
   if(!d.canWatch){ reelShowPanel(i, "locked"); return; }
   if(!url){ reelShowPanel(i, "novideo"); return; }
@@ -2166,6 +2213,14 @@ function reelOnClick(e){
     case "down": reelGo(r.active + 1); break;
     case "top": reelGo(0); break;
     case "retry": { const i = r.active; reelUnmount(i); const s = reelSlideEl(i); if(s) s.classList.remove("is-panel"); reelMount(i); break; }
+    case "open-ep-sheet": reelOpenEpisodesSheet(); break;
+    case "next-ep": reelNextChapter(); break;
+    case "prev-ep": reelPrevChapter(); break;
+    case "selectep": {
+      const chId = b.dataset.chid;
+      if(chId) reelSwitchChapter(chId);
+      break;
+    }
   }
 }
 function reelOnKey(e){
