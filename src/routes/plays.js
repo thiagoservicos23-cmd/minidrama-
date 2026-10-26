@@ -420,7 +420,35 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
   if (!play) return res.status(404).json({ error: "Novelinha não encontrada." });
   const canWatch = await userCanWatch(req.user, play);
   const payload = publicPlay(play);
-  if (!canWatch) payload.videoUrl = "";
+  if (!canWatch) {
+    payload.videoUrl = "";
+  } else if (!payload.videoUrl) {
+    const isVortaSource = Boolean(
+      (play.posterUrl && (play.posterUrl.includes("mydramawave.com") || play.posterUrl.includes("shorttv.live") || play.posterUrl.includes("meloshort.com"))) ||
+      ["FreeReels", "ShortMax", "MeloShort"].includes(play.director)
+    );
+    if (isVortaSource) {
+      try {
+        const vortaApi = require("../services/vortaApi");
+        const category = (play.director || "").toLowerCase().includes("shortmax") ? "shortmax" : (play.director || "").toLowerCase().includes("meloshort") ? "meloshort" : "freereels";
+        const s = await vortaApi.search(category, play.title, "pt");
+        const found = (s.data || [])[0];
+        if (found) {
+          const detail = await vortaApi.getDetail(category, found.id, "pt");
+          const chapters = (detail.data && detail.data.chapters) || [];
+          const chapterId = req.query.chapterId || (chapters[0] && chapters[0].id) || 1;
+          payload.chaptersList = chapters;
+          payload.chapterId = chapterId;
+          const vid = await vortaApi.getVideo(category, found.id, chapterId, "pt");
+          const streams = (vid.data && vid.data.streams) || [];
+          const h264 = streams.find((x) => x.url && x.url.includes("h264"));
+          payload.videoUrl = (h264 && h264.url) || (streams[0] && streams[0].url) || "";
+          payload.subtitles = (vid.data && vid.data.subtitles) || [];
+          payload.isVorta = true;
+        }
+      } catch (err) {}
+    }
+  }
   // Onde a pessoa parou (para retomar de onde estava). Falha aqui nunca derruba a página.
   let resume = null;
   if (req.user && canWatch) {

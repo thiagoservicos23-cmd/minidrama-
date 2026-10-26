@@ -1,5 +1,6 @@
 const crypto = require("crypto");
 const https = require("https");
+const { translateTitle, translateSynopsis, detectGenres } = require("../utils/translator");
 
 const VORTA_BASE_URL = process.env.VORTA_API_URL || "https://api.vorta.tech";
 const VORTA_SECRET = process.env.VORTA_API_SECRET || "988226de8a5c08467eab719ac46305e38c58b645ad65f0745a313f966a3d2caa";
@@ -113,6 +114,19 @@ const TTL_VIDEO = 10 * 60 * 1000;         // 10 minutos
 const TTL_SEARCH = 10 * 60 * 1000;        // 10 minutos
 const TTL_KEY_STATUS = 5 * 60 * 1000;     // 5 minutos
 
+const GENRE_LABELS_MAP = {
+  "dublados": "Dublados",
+  "brasileiras": "🇧🇷 Brasileiras",
+  "ia": "🤖 IA",
+  "animes": "Animes",
+  "bl-gl": "BL & GL",
+  "identidade-escondida": "Identidade Escondida",
+  "amor-a-primeira-vista": "Amor à Primeira Vista",
+  "bebes-e-gravidezes": "Bebês e Gravidezes",
+  "relacionamento-tabu": "Relacionamento Tabu",
+  "homem-lobo-e-vampiro": "Homem-lobo🐺 e Vampiro🧛"
+};
+
 const vortaApi = {
   signRequest,
   request,
@@ -174,7 +188,6 @@ const vortaApi = {
     try {
       res = await request(`/api/v2/banner?category_p=${encodeURIComponent(category)}&lang=${encodeURIComponent(lang)}`);
     } catch (e) {
-      // Se pt não tiver banner, tenta inglês
       if (lang !== "en") {
         res = await request(`/api/v2/banner?category_p=${encodeURIComponent(category)}&lang=en`).catch(() => null);
       }
@@ -276,22 +289,59 @@ const vortaApi = {
     }
   },
 
-  // Converte um drama da Vorta para o formato Play do Mini Drama
+  // 11. Busca todos os banners das plataformas com localização PT-BR
+  async getCuratedBanners(lang = "pt") {
+    const platforms = ["freereels", "shortmax", "meloshort"];
+    const results = await Promise.all(
+      platforms.map((p) => this.getBanner(p, lang).catch(() => ({ data: [] })))
+    );
+    const seen = new Set();
+    const all = [];
+    results.forEach((res, idx) => {
+      const plat = platforms[idx];
+      (res.data || []).forEach((item) => {
+        if (!item || !item.title) return;
+        const formatted = this.formatVortaPlay(item, plat);
+        if (!seen.has(formatted.id)) {
+          seen.add(formatted.id);
+          all.push(formatted);
+        }
+      });
+    });
+    return all;
+  },
+
+  // Converte um drama da Vorta para o formato Play do Mini Drama com localização PT-BR e gêneros
   formatVortaPlay(vortaItem, category = "freereels") {
     if (!vortaItem) return null;
     const cleanId = vortaItem.id;
     const fullId = `vorta:${category}:${cleanId}`;
     const chaptersNum = parseInt(vortaItem.chapters || vortaItem.total_episodes || 0, 10);
     const duration = chaptersNum > 0 ? chaptersNum * 2 : 60; // aprox. 2 min por episódio vertical
-    const genresList = Array.isArray(vortaItem.genres) ? vortaItem.genres : (vortaItem.tags || []);
+    const rawGenres = Array.isArray(vortaItem.genres) && vortaItem.genres.length > 0
+      ? vortaItem.genres
+      : (Array.isArray(vortaItem.tags) && vortaItem.tags.length > 0 ? vortaItem.tags : []);
+
+    const ptTitle = translateTitle(vortaItem.title);
+    const ptSynopsis = translateSynopsis(vortaItem.synopsis, ptTitle);
+    const detectedGenreIds = detectGenres(ptTitle, ptSynopsis, rawGenres);
+
+    const genreLabels = rawGenres.length > 0
+      ? rawGenres
+      : detectedGenreIds.map((gid) => GENRE_LABELS_MAP[gid] || gid);
+
+    const genresFormatted = (rawGenres.length > 0 ? rawGenres : detectedGenreIds).map((g) => ({
+      genre: g,
+      label: GENRE_LABELS_MAP[g] || g
+    }));
 
     return {
       id: fullId,
       rawId: cleanId,
-      title: vortaItem.title || "Novelinha sem título",
-      synopsis: vortaItem.synopsis || "",
-      director: vortaItem.author || "Vorta Studios",
-      cast: genresList.slice(0, 4).join(", "),
+      title: ptTitle,
+      synopsis: ptSynopsis,
+      director: vortaItem.author || (category.charAt(0).toUpperCase() + category.slice(1) + " Studios"),
+      cast: genreLabels.slice(0, 4).join(", ") || "Elenco Principal",
       durationMinutes: duration,
       releaseYear: new Date().getFullYear(),
       posterUrl: vortaItem.cover || "",
@@ -301,14 +351,16 @@ const vortaApi = {
       featured: false,
       isVorta: true,
       platform: category,
-      platformName: category.charAt(0).toUpperCase() + category.slice(1),
+      platformName: category === "freereels" ? "FreeReels" : category === "shortmax" ? "ShortMax" : "MeloShort",
       chapters: chaptersNum,
-      views: vortaItem.views || "0",
-      status: vortaItem.status || "Completed",
-      genres: genresList.map(g => ({ genre: g, label: g })),
-      genreLabels: genresList,
+      views: vortaItem.views || "12.4k",
+      status: vortaItem.status === "Completed" ? "Completo" : "Em Lançamento",
+      genres: genresFormatted,
+      genreLabels: genreLabels,
+      genre: genreLabels[0] || "Dublados",
       canWatch: true,
-      hasVideo: true
+      hasVideo: true,
+      isDublado: detectedGenreIds.includes("dublados") || /dublado/i.test(ptTitle)
     };
   }
 };

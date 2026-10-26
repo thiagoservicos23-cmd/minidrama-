@@ -5,7 +5,17 @@ const { userCanWatch } = require("./planRules");
 async function withAccess(user, p) {
   const { videoUrl, ...rest } = publicPlay(p);
   const canWatch = await userCanWatch(user, p);
-  return { ...rest, hasVideo: !!videoUrl, canWatch };
+  const isVortaSource = Boolean(
+    p.isVorta ||
+    (p.posterUrl && (p.posterUrl.includes("mydramawave.com") || p.posterUrl.includes("shorttv.live") || p.posterUrl.includes("meloshort.com"))) ||
+    ["FreeReels", "ShortMax", "MeloShort"].includes(p.director)
+  );
+  return {
+    ...rest,
+    hasVideo: Boolean(videoUrl || isVortaSource),
+    canWatch,
+    isVorta: isVortaSource
+  };
 }
 
 module.exports = { withAccess };

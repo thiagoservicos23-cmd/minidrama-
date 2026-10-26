@@ -1,6 +1,6 @@
 /* Service worker do Mini Drama: abre o site instantaneamente nas visitas seguintes e guarda
    imagens. NUNCA mexe em: API (/api/*, exceto imagens das novelinhas), vídeo, pagamentos. */
-const VERSION = "md-v11";
+const VERSION = "md-v12";
 const SHELL = "shell-" + VERSION, IMG = "img-" + VERSION, FONT = "font-" + VERSION;
 const MAX_IMG = 160;
 
@@ -29,31 +29,29 @@ async function staleWhileRevalidate(req, cacheName, key) {
   return cached || (await network) || new Response("Sem conexão. Tente de novo em instantes.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
 }
 
-async function cacheFirst(req, cacheName, max) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(req);
-  if (cached) return cached;
-  try {
-    const res = await fetch(req);
-    if (cacheable(res)) { cache.put(req, res.clone()); if (max) trim(cacheName, max); }
-    return res;
-  } catch (e) {
-    return new Response("", { status: 504 });
-  }
-}
-
 self.addEventListener("fetch", (e) => {
-  const req = e.request;
-  if (req.method !== "GET" || req.headers.has("range")) return;     // vídeo (Range) e qualquer não-GET passam direto
-  const url = new URL(req.url);
+  const url = new URL(e.request.url);
+  if (e.request.method !== "GET") return;
 
-  if (url.origin === self.location.origin) {
-    if (url.pathname.startsWith("/api/plays/") && url.pathname.includes("/image/")) return e.respondWith(cacheFirst(req, IMG, MAX_IMG));
-    if (url.pathname.startsWith("/api/")) return;                    // dados e pagamentos: sempre direto na rede
-    if (req.mode === "navigate") return e.respondWith(staleWhileRevalidate(req, SHELL, "/"));
-    return e.respondWith(staleWhileRevalidate(req, SHELL));
+  // Imagens locais das novelinhas: guarda no cache de imagens (até MAX_IMG).
+  if (url.origin === location.origin && url.pathname.startsWith("/api/plays/image/")) {
+    e.respondWith(staleWhileRevalidate(e.request, IMG).then((r) => { trim(IMG, MAX_IMG); return r; }));
+    return;
   }
-  if (url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com") return e.respondWith(staleWhileRevalidate(req, FONT));
-  if (url.hostname === "images.unsplash.com") return e.respondWith(cacheFirst(req, IMG, MAX_IMG));
-  // Bunny (vídeo), SyncPay etc.: não interceptamos.
+
+  // Fontes do Google Fonts.
+  if (url.origin.includes("fonts.gstatic.com") || url.origin.includes("fonts.googleapis.com")) {
+    e.respondWith(staleWhileRevalidate(e.request, FONT));
+    return;
+  }
+
+  // Demais chamadas à API, vídeos (.m3u8, .mp4), Plyr e tracking: sempre rede direta.
+  if (url.pathname.startsWith("/api/") || url.pathname.includes(".m3u8") || url.pathname.includes(".mp4")) {
+    return;
+  }
+
+  // Arquivos estáticos do app (shell).
+  if (url.origin === location.origin && (url.pathname === "/" || url.pathname.endsWith(".html") || url.pathname.endsWith(".webmanifest") || url.pathname.startsWith("/icons/"))) {
+    e.respondWith(staleWhileRevalidate(e.request, SHELL, url.pathname === "/" ? "/" : undefined));
+  }
 });
