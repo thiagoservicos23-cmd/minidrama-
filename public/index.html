@@ -742,7 +742,7 @@ window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", boot);
 
 /* ---- cache local: a 2ª visita em diante abre NA HORA, mesmo com o servidor dormindo ---- */
-const CACHE_KEY = "minidrama_cache_v8";
+const CACHE_KEY = "minidrama_cache_v9";
 function loadCache(){
   try{ ["minidrama_cache_v2","minidrama_cache_v3","minidrama_cache_v4","minidrama_cache_v5","minidrama_cache_v6"].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)); if(c && Date.now() - c.t < 14*86400000) return c; }catch(e){}
@@ -1789,9 +1789,11 @@ function reelSlideHtml(p, i){
   const syn = String(p.synopsis || "").trim();
   const isVorta = p.isVorta || String(p.id).startsWith("vorta:");
   const isDub = p.isDublado || /dublado/i.test(p.title);
-  const curEp = p.currentEpisodeIndex || 1;
-  const totalEps = p.episodesCount || p.chapters || 1;
-  return `<section class="reel-slide ${panel ? "is-panel" : ""}" data-i="${i}" data-id="${esc(p.id)}" aria-label="${esc(p.title)}">
+  const curEp = p.episodeIndex || p.currentEpisodeIndex || (i + 1);
+  const totalEps = p.episodesCount || (p.chaptersList && p.chaptersList.length) || p.chapters || 1;
+  const displayTitle = p.dramaTitle ? `${esc(p.dramaTitle)} <span style="color:var(--gold-soft); font-size:0.85em; font-weight:700;">(EP ${curEp})</span>` : esc(p.title);
+
+  return `<section class="reel-slide ${panel ? "is-panel" : ""}" data-i="${i}" data-id="${esc(p.id)}" data-chid="${esc(p.chapterId || "")}" aria-label="${esc(p.title)}">
     <div class="reel-bg" style="background-image:url('${bg}')"></div>
     <div class="reel-stage" id="reel-stage-${i}">
       <img class="reel-cover" src="${bg}" alt="">
@@ -1801,6 +1803,7 @@ function reelSlideHtml(p, i){
       <div class="reel-badge-group">
         ${isVorta ? `<span class="card-badge card-badge-plat" style="position:static;">📺 ${esc(p.platformName || "FreeReels")}</span>` : ""}
         <span class="reel-lang-badge">${isDub ? "🎙️ Dublado PT" : "📝 Legendado PT"}</span>
+        <span class="reel-ep-badge" style="background:rgba(201,162,75,0.25); border:1px solid var(--gold); color:var(--gold-soft); font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px;">EP ${curEp} / ${totalEps}</span>
       </div>
     </div>
     <div class="reel-info">
@@ -1811,13 +1814,13 @@ function reelSlideHtml(p, i){
         </button>
         <button type="button" class="reel-ep-nav-btn" data-act="next-ep" aria-label="Próximo episódio">Próx ⏭</button>
       </div>
-      <h2 class="reel-title">${esc(p.title)}</h2>
+      <h2 class="reel-title">${displayTitle}</h2>
       <p class="reel-meta">${reelMetaHtml(p)}</p>
       ${syn.length > 2 ? `<p class="reel-syn">${esc(syn)}</p>` : ""}
     </div>
     <div class="reel-rail">
       ${watchable ? `<button class="reel-btn" data-act="sound" aria-label="Ativar ou silenciar o som" aria-pressed="false">${REEL_ICO.volume}</button><button class="reel-btn reel-btn-fs" data-act="fs" aria-label="Tela cheia">${REEL_ICO.expand}</button>` : ""}
-      <button class="reel-btn" data-act="open-ep-sheet" aria-label="Episódios" title="Episódios">
+      <button class="reel-btn" data-act="open-ep-sheet" aria-label="Episódios" title="Episódios (${totalEps})">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
       </button>
       <button class="reel-btn" data-act="info" aria-label="Detalhes da novelinha">${REEL_ICO.info}</button>
@@ -1827,8 +1830,8 @@ function reelSlideHtml(p, i){
 }
 function reelEndHtml(i){
   return `<section class="reel-slide reel-end" data-i="${i}" aria-label="Fim da lista">
-    <h2>Você viu tudo por aqui</h2><p>Não há mais novelinhas liberadas para você nesta lista.</p>
-    <div class="reel-panel-actions"><a href="#/catalogo" class="btn btn-gold btn-sm">Ver o catálogo</a><button class="btn btn-ghost btn-sm" data-act="top">Voltar ao início</button></div>
+    <h2>Você viu todos os episódios</h2><p>Parabéns! Você chegou ao final dos episódios desta novelinha.</p>
+    <div class="reel-panel-actions"><a href="#/catalogo" class="btn btn-gold btn-sm">Ver outras novelinhas</a><button class="btn btn-ghost btn-sm" data-act="top">Voltar ao EP 1</button></div>
   </section>`;
 }
 function reelShellHtml(inner){
@@ -2050,10 +2053,10 @@ function reelSetActive(i){
   if(up) up.disabled = i <= 0; if(down) down.disabled = i >= r.last;
   const hint = document.getElementById("reel-hint"); if(hint && i > 0){ hint.classList.add("gone"); }
   if(item){
-    try{ history.replaceState(null, "", "#/reel/" + item.id); }catch(e){}
+    try{ history.replaceState(null, "", "#/reel/" + item.id + (item.chapterId ? "?chapterId=" + encodeURIComponent(item.chapterId) : "")); }catch(e){}
     reelMount(i);
     const nxt = r.items[i + 1];                         // adianta o link do próximo (só o texto; o vídeo só carrega quando ele ficar ativo)
-    if(nxt && nxt.canWatch && nxt.hasVideo) reelDetail(nxt.id).catch(() => {});
+    if(nxt && nxt.canWatch && nxt.hasVideo) reelDetail(nxt.id, nxt.chapterId).catch(() => {});
   }
   reelSyncSound(); reelPoke();
 }
@@ -2135,26 +2138,42 @@ function reelOpenSheet(){
 function reelCloseSheet(){ const r = reel; if(r) r.sheet.classList.remove("open"); }
 
 function reelOpenEpisodesSheet(){
-  const r = reel, p = r && r.items[r.active]; if(!p) return;
+  const r = reel; if(!r) return;
+  const p = r.items[r.active] || r.items[0]; if(!p) return;
   const chapters = p.chaptersList || [];
   const currentChapterId = p.chapterId || (chapters[0] && chapters[0].id) || "";
+  const currentIdx = r.active;
   const isDub = p.isDublado || /dublado/i.test(p.title);
+  const totalEps = chapters.length || r.items.length || 1;
 
   r.sheet.innerHTML = `<div class="reel-sheet-box reel-episodes-sheet" role="dialog" aria-modal="true" aria-label="Episódios">
     <div class="reel-sheet-head">
       <div>
-        <h3 style="font-size:17px; margin:0 0 2px;">Episódios (${chapters.length || p.chapters || 0})</h3>
+        <h3 style="font-size:17px; margin:0 0 2px;">Lista de Episódios (${totalEps})</h3>
         <span style="font-size:12px; color:var(--gold-soft); font-weight:600;">${isDub ? "🎙️ Áudio Dublado em Português" : "📝 Legendas em Português"}</span>
       </div>
       <button class="reel-btn" data-act="closesheet" aria-label="Fechar">&times;</button>
     </div>
     <div class="reel-ep-bubbles-grid">
-      ${chapters.length ? chapters.map((ch, idx) => `
-        <button type="button" class="reel-ep-bubble ${ch.id === currentChapterId ? 'active' : ''}" data-act="selectep" data-chid="${esc(ch.id)}">
-          <span class="ep-bubble-num">EP ${ch.index || idx + 1}</span>
-          <span class="ep-bubble-tag">${ch.is_locked ? "🔒" : "Grátis"}</span>
-        </button>
-      `).join("") : `<p style="padding:24px; color:var(--ink-muted); text-align:center;">Carregando lista de episódios...</p>`}
+      ${chapters.length ? chapters.map((ch, idx) => {
+        const epNum = ch.index || idx + 1;
+        const isActive = (String(ch.id) === String(currentChapterId)) || (idx === currentIdx);
+        return `
+          <button type="button" class="reel-ep-bubble ${isActive ? 'active' : ''}" data-act="goto-ep" data-epidx="${idx}">
+            <span class="ep-bubble-num">EP ${epNum}</span>
+            <span class="ep-bubble-tag">${isActive ? "▶ Tocando" : "Assistir"}</span>
+          </button>
+        `;
+      }).join("") : Array.from({ length: totalEps }, (_, idx) => {
+        const epNum = idx + 1;
+        const isActive = idx === currentIdx;
+        return `
+          <button type="button" class="reel-ep-bubble ${isActive ? 'active' : ''}" data-act="goto-ep" data-epidx="${idx}">
+            <span class="ep-bubble-num">EP ${epNum}</span>
+            <span class="ep-bubble-tag">${isActive ? "▶ Tocando" : "Assistir"}</span>
+          </button>
+        `;
+      }).join("")}
     </div>
   </div>`;
   r.sheet.classList.add("open");
@@ -2164,32 +2183,30 @@ function reelOpenEpisodesSheet(){
 
 function reelSwitchChapter(chapterId){
   const r = reel, p = r && r.items[r.active]; if(!p || !chapterId) return;
-  p.chapterId = chapterId;
-  reelCloseSheet();
-  try{ history.replaceState(null, "", "#/reel/" + p.id + "?chapterId=" + encodeURIComponent(chapterId)); }catch(e){}
-  reelUnmount(r.active);
-  reelMount(r.active);
+  const idx = r.items.findIndex(it => String(it.chapterId) === String(chapterId));
+  if(idx >= 0){
+    reelGo(idx);
+    reelCloseSheet();
+  } else {
+    p.chapterId = chapterId;
+    reelCloseSheet();
+    try{ history.replaceState(null, "", "#/reel/" + p.id + "?chapterId=" + encodeURIComponent(chapterId)); }catch(e){}
+    reelUnmount(r.active);
+    reelMount(r.active);
+  }
 }
 
 function reelNextChapter(){
-  const r = reel, p = r && r.items[r.active]; if(!p) return;
-  const chapters = p.chaptersList || [];
-  if(!chapters.length) return;
-  const currentIdx = chapters.findIndex(c => c.id === p.chapterId);
-  if(currentIdx >= 0 && currentIdx < chapters.length - 1){
-    reelSwitchChapter(chapters[currentIdx + 1].id);
-  } else if(r.active < r.items.length - 1){
+  const r = reel; if(!r) return;
+  if(r.active < r.items.length - 1){
     reelGo(r.active + 1);
   }
 }
 
 function reelPrevChapter(){
-  const r = reel, p = r && r.items[r.active]; if(!p) return;
-  const chapters = p.chaptersList || [];
-  if(!chapters.length) return;
-  const currentIdx = chapters.findIndex(c => c.id === p.chapterId);
-  if(currentIdx > 0){
-    reelSwitchChapter(chapters[currentIdx - 1].id);
+  const r = reel; if(!r) return;
+  if(r.active > 0){
+    reelGo(r.active - 1);
   }
 }
 async function reelShare(){
@@ -2213,6 +2230,7 @@ function reelOnClick(e){
     case "down": reelGo(r.active + 1); break;
     case "top": reelGo(0); break;
     case "retry": { const i = r.active; reelUnmount(i); const s = reelSlideEl(i); if(s) s.classList.remove("is-panel"); reelMount(i); break; }
+    case "goto-ep": { const epIdx = parseInt(b.dataset.epidx, 10); if(!isNaN(epIdx) && reel) { reelGo(epIdx); reelCloseSheet(); } break; }
     case "open-ep-sheet": reelOpenEpisodesSheet(); break;
     case "next-ep": reelNextChapter(); break;
     case "prev-ep": reelPrevChapter(); break;
@@ -2269,39 +2287,84 @@ async function openReel(startId, seq){
   document.body.classList.add("reel-open");
   app.innerHTML = reelShellHtml(`<div class="reel-loading" role="status" aria-label="Carregando"></div>`);
   app.querySelector('[data-act="back"]').onclick = reelBack;
-  let plays = [];
-  try{ plays = (await api("/plays?page=1&pageSize=100")).plays || []; }catch(e){ toast(e.message); }
-  if(seq !== renderSeq) return;
-  if(cleanStartId && !plays.some(p => p.id === cleanStartId)){      // novelinha fora das 100 mais recentes: busca só ela
-    try{
-      const d = await api("/plays/" + encodeURIComponent(cleanStartId) + (chapterId ? `?chapterId=${encodeURIComponent(chapterId)}` : ""));
-      if(seq !== renderSeq) return;
-      const itm = Object.assign({}, d.play, { canWatch: d.canWatch, hasVideo: !!d.play.videoUrl, videoUrl: undefined, chapterId, chaptersList: d.play.chaptersList });
-      plays.unshift(itm);
-    }catch(e){ if(seq !== renderSeq) return; toast("Novelinha não encontrada."); go("#/catalogo"); return; }
-  } else if(cleanStartId && chapterId) {
-    const existing = plays.find(p => p.id === cleanStartId);
-    if(existing) existing.chapterId = chapterId;
+
+  if(!cleanStartId){
+    const first = (DB.plays && DB.plays[0]) || (await api("/plays?page=1&pageSize=1")).plays[0];
+    if(first) cleanStartId = first.id;
+    else { toast("Ainda não há novelinhas para assistir."); go("#/home"); return; }
   }
-  const items = buildReelFeed(plays, cleanStartId);
-  if(!items.length){ toast("Ainda não há novelinhas com vídeo para você assistir."); go("#/home"); return; }
+
+  let d;
+  try{
+    d = await api("/plays/" + encodeURIComponent(cleanStartId) + (chapterId ? `?chapterId=${encodeURIComponent(chapterId)}` : ""));
+  } catch(e){
+    if(seq !== renderSeq) return;
+    toast("Novelinha não encontrada."); go("#/catalogo"); return;
+  }
+  if(seq !== renderSeq) return;
+
+  const play = d.play;
+  const chapters = (play && play.chaptersList) || [];
+  let items = [];
+  let startActive = 0;
+
+  if(chapters.length > 1){
+    // Todos os episódios desta novelinha viram slides verticais no StoryReel
+    items = chapters.map((ch, idx) => ({
+      id: play.id,
+      chapterId: ch.id,
+      episodeIndex: ch.index || idx + 1,
+      title: `${play.title} — EP ${ch.index || idx + 1}`,
+      dramaTitle: play.title,
+      posterUrl: play.posterUrl,
+      backdropUrl: play.backdropUrl,
+      synopsis: play.synopsis,
+      genreLabels: play.genreLabels,
+      durationMinutes: play.durationMinutes,
+      canWatch: d.canWatch,
+      hasVideo: true,
+      chaptersList: chapters,
+      episodesCount: chapters.length,
+      isVorta: play.isVorta,
+      platformName: play.platformName,
+      isDublado: play.isDublado
+    }));
+
+    if(chapterId){
+      const foundIdx = chapters.findIndex(c => String(c.id) === String(chapterId));
+      if(foundIdx >= 0) startActive = foundIdx;
+    } else if(play.chapterId){
+      const foundIdx = chapters.findIndex(c => String(c.id) === String(play.chapterId));
+      if(foundIdx >= 0) startActive = foundIdx;
+    }
+  } else {
+    // Novelinha de episódio único / curta independente: monta com as outras novelinhas
+    const itm = Object.assign({}, play, { canWatch: d.canWatch, hasVideo: !!play.videoUrl, videoUrl: undefined, chaptersList: chapters, episodesCount: 1 });
+    let others = (DB.plays && DB.plays.length) ? DB.plays : (await api("/plays?page=1&pageSize=30")).plays || [];
+    items = buildReelFeed([itm, ...others], cleanStartId);
+    startActive = 0;
+  }
+
+  if(!items.length){ toast("Ainda não há episódios para você assistir."); go("#/home"); return; }
 
   app.innerHTML = reelShellHtml(`
     <div class="reel-scroller" id="reel-scroller">${items.map(reelSlideHtml).join("")}${items.length > 1 ? reelEndHtml(items.length) : ""}</div>
-    <div class="reel-nav"><button class="reel-btn" data-act="up" aria-label="Novelinha anterior">${REEL_ICO.up}</button><button class="reel-btn" data-act="down" aria-label="Próxima novelinha">${REEL_ICO.down}</button></div>
+    <div class="reel-nav"><button class="reel-btn" data-act="up" aria-label="Episódio anterior">${REEL_ICO.up}</button><button class="reel-btn" data-act="down" aria-label="Próximo episódio">${REEL_ICO.down}</button></div>
     <div class="reel-sheet" id="reel-sheet"></div>`);
+
   const root = document.getElementById("reel");
   let seen = false; try{ seen = !!localStorage.getItem("md_reel_hint_v1"); }catch(e){}
   if(items.length > 1 && !seen){
-    root.insertAdjacentHTML("beforeend", `<div class="reel-hint" id="reel-hint">${REEL_ICO.up} Deslize para ver a próxima novelinha</div>`);
+    root.insertAdjacentHTML("beforeend", `<div class="reel-hint" id="reel-hint">${REEL_ICO.up} Deslize para ver o próximo episódio</div>`);
     try{ localStorage.setItem("md_reel_hint_v1", "1"); }catch(e){}
     setTimeout(() => { const h = document.getElementById("reel-hint"); if(h) h.classList.add("gone"); }, 4500);
   }
+
   const r = reel = {
     items, root, scroller: document.getElementById("reel-scroller"), sheet: document.getElementById("reel-sheet"),
     last: items.length > 1 ? items.length : 0, active: -1, token: 0, ctl: null, ctlIndex: -1, muted: false, details: new Map(), lastPos: new Map(), lastSave: 0, idleT: 0, io: null,
     onKey: reelOnKey, fsCss: false,
-    onFs: () => { if(!reelNativeFs()) reelUnlock(); },                    // saiu da tela cheia (botão, gesto ou Esc): devolve a rotação
+    onFs: () => { if(!reelNativeFs()) reelUnlock(); },
     onVis: () => { if(document.hidden && r.ctl){ const p = r.items[r.ctlIndex]; if(p) reelSave(r, p.id, r.ctl, true); } },
     onHide: () => { if(r.ctl){ const p = r.items[r.ctlIndex]; if(p) reelSave(r, p.id, r.ctl, true); } }
   };
@@ -2315,6 +2378,16 @@ async function openReel(startId, seq){
     entries.forEach(en => { if(en.isIntersecting && en.intersectionRatio >= 0.6) reelSetActive(Number(en.target.dataset.i)); });
   }, { root: r.scroller, threshold: [0.6] });
   r.scroller.querySelectorAll(".reel-slide").forEach(s => r.io.observe(s));
+
+  if(startActive > 0){
+    setTimeout(() => {
+      reelGo(startActive);
+    }, 60);
+  } else {
+    setTimeout(() => {
+      if(reel === r && r.active < 0) reelSetActive(0);
+    }, 60);
+  }
 }
 
 async function PlayDetail(id){

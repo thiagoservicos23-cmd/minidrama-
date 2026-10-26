@@ -416,6 +416,9 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
       formatted.subtitles = subtitles;
       formatted.chaptersList = chapters;
       formatted.chapterId = chapterId;
+      formatted.episodesCount = chapters.length || 1;
+      const currentCh = chapters.find(c => String(c.id) === String(chapterId)) || chapters[0];
+      formatted.currentEpisodeIndex = currentCh ? currentCh.index : 1;
       formatted.canWatch = true;
       formatted.hasVideo = true;
       return res.json({ play: formatted, canWatch: true, resume: null });
@@ -431,11 +434,42 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
   if (!canWatch) {
     payload.videoUrl = "";
   } else {
-    if (!payload.videoUrl) {
-      const vortaApi = require("../services/vortaApi");
-      payload.videoUrl = vortaApi.getDefaultStream();
-    }
-    if (payload.videoUrl && payload.videoUrl.startsWith("http")) {
+    const isDuplicateOrBroken = !payload.videoUrl ||
+      payload.videoUrl.includes("videos.amodramasoficial.com") ||
+      payload.videoUrl.includes("139c5c83-b1ed-4915-b0ce-0c2d48e9a627");
+    if (isDuplicateOrBroken) {
+      try {
+        const vortaApi = require("../services/vortaApi");
+        const allCurated = await vortaApi.getAllCuratedPlays("pt");
+        if (allCurated.length > 0) {
+          let hashVal = 0;
+          for (let i = 0; i < play.id.length; i++) hashVal = (hashVal * 31 + play.id.charCodeAt(i)) >>> 0;
+          const assigned = allCurated[hashVal % allCurated.length];
+          const parts = assigned.id.split(":");
+          const category = parts[1] || "freereels";
+          const vortaId = parts[2];
+          const detail = await vortaApi.getDetail(category, vortaId, "pt");
+          const chapters = (detail.data && detail.data.chapters) || [];
+          const chapterId = req.query.chapterId || (chapters[0] && chapters[0].id) || 1;
+          const vid = await vortaApi.getVideo(category, vortaId, chapterId, "pt");
+          const streams = (vid.data && vid.data.streams) || [];
+          const h264 = streams.find((s) => s.url && s.url.includes("h264"));
+          const videoUrl = (h264 && h264.url) || (streams[0] && streams[0].url) || "";
+          if (videoUrl) {
+            payload.videoUrl = `/api/vorta/stream?url=${encodeURIComponent(videoUrl)}`;
+            payload.chaptersList = chapters;
+            payload.chapterId = chapterId;
+            payload.episodesCount = chapters.length;
+            const currentCh = chapters.find(c => String(c.id) === String(chapterId)) || chapters[0];
+            payload.currentEpisodeIndex = currentCh ? currentCh.index : 1;
+          }
+        }
+      } catch (err) {}
+      if (!payload.videoUrl) {
+        const vortaApi = require("../services/vortaApi");
+        payload.videoUrl = `/api/vorta/stream?url=${encodeURIComponent(vortaApi.getDefaultStream())}`;
+      }
+    } else if (payload.videoUrl && payload.videoUrl.startsWith("http")) {
       payload.videoUrl = `/api/vorta/stream?url=${encodeURIComponent(payload.videoUrl)}`;
     }
     payload.hasVideo = true;
