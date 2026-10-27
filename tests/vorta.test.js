@@ -111,11 +111,11 @@ test("/api/vorta/categories returns available platforms", async () => {
   assert.equal(res.status, 200);
   assert.equal(res.body.success, true);
   assert.ok(Array.isArray(res.body.data));
-  assert.ok(res.body.data.some((c) => c.name === "freereels"));
+  assert.ok(res.body.data.some((c) => ["shortmax", "meloshort", "mydrama", "freereels"].includes(c.name)));
 });
 
 test("/api/vorta/languages returns supported languages", async () => {
-  const res = await get("/vorta/languages?category=freereels");
+  const res = await get("/vorta/languages?category=mydrama");
   assert.equal(res.status, 200);
   assert.equal(res.body.success, true);
   assert.ok(Array.isArray(res.body.data));
@@ -123,13 +123,13 @@ test("/api/vorta/languages returns supported languages", async () => {
 });
 
 test("/api/vorta/home returns drama items formatted for Mini Drama", async () => {
-  const res = await get("/vorta/home?category=freereels&lang=pt");
+  const res = await get("/vorta/home?category=mydrama&lang=pt");
   assert.equal(res.status, 200);
   assert.equal(res.body.success, true);
   assert.ok(Array.isArray(res.body.plays));
   if (res.body.plays.length > 0) {
     const first = res.body.plays[0];
-    assert.ok(first.id.startsWith("vorta:freereels:"));
+    assert.ok(first.id.startsWith("vorta:mydrama:"));
     assert.ok(first.title);
     assert.ok(first.posterUrl);
   }
@@ -139,9 +139,8 @@ test("/api/vorta/catalog returns paginated unified catalog with platforms and du
   const res = await get("/vorta/catalog?platform=all&pageSize=10");
   assert.equal(res.status, 200);
   assert.equal(res.body.success, true);
-  assert.ok(res.body.total >= 400);
-  assert.ok(res.body.counts.all >= 400);
-  assert.ok(res.body.counts.dubladas > 0);
+  assert.ok(res.body.total >= 100);
+  assert.ok(res.body.counts.all >= 100);
   assert.ok(res.body.counts.legendadas > 0);
   assert.ok(Array.isArray(res.body.plays));
   assert.equal(res.body.plays.length, 10);

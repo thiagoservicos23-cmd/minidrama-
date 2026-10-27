@@ -247,6 +247,35 @@ body.reel-open{overflow:hidden;}
 .reel-player .plyr__video-wrapper{height:100% !important; width:100% !important; padding-bottom:0 !important; background:transparent !important;}
 .reel-player video, .reel-player .plyr video{width:100% !important; height:100% !important; object-fit:cover !important; background:#000 !important;}
 .reel-player iframe{border:0;}
+.reel-player .plyr__captions{
+  position: absolute !important;
+  bottom: 215px !important;
+  left: 14px !important;
+  right: 14px !important;
+  z-index: 10 !important;
+  text-align: center !important;
+  pointer-events: none !important;
+}
+.reel-player .plyr__caption{
+  background: rgba(0, 0, 0, 0.88) !important;
+  color: #ffffff !important;
+  font-size: clamp(14px, 4.2vw, 18px) !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+  padding: 6px 14px !important;
+  border-radius: 6px !important;
+  text-shadow: 0 2px 4px rgba(0,0,0,1) !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.6) !important;
+  display: inline-block !important;
+  max-width: 90% !important;
+}
+.reel-player video::cue{
+  background-color: rgba(0, 0, 0, 0.88) !important;
+  color: #ffffff !important;
+  font-size: 16px !important;
+  font-weight: bold !important;
+  text-shadow: 0 2px 4px rgba(0,0,0,1) !important;
+}
 .reel-loading{position:absolute; left:50%; top:50%; width:34px; height:34px; margin:-17px 0 0 -17px; border-radius:50%; border:2px solid rgba(244,236,227,.25); border-top-color:var(--gold); animation:reel-spin .9s linear infinite; z-index:6; pointer-events:none;}
 @keyframes reel-spin{to{transform:rotate(360deg);}}
 @media (prefers-reduced-motion:reduce){ .reel-loading{animation-duration:2.4s;} }
@@ -758,9 +787,9 @@ window.addEventListener("hashchange", render);
 window.addEventListener("DOMContentLoaded", boot);
 
 /* ---- cache local: a 2ª visita em diante abre NA HORA, mesmo com o servidor dormindo ---- */
-const CACHE_KEY = "minidrama_cache_v11";
+const CACHE_KEY = "minidrama_cache_v12";
 function loadCache(){
-  try{ ["minidrama_cache_v2","minidrama_cache_v3","minidrama_cache_v4","minidrama_cache_v5","minidrama_cache_v6"].forEach(k=>localStorage.removeItem(k)); }catch(e){}
+  try{ ["minidrama_cache_v2","minidrama_cache_v3","minidrama_cache_v4","minidrama_cache_v5","minidrama_cache_v6","minidrama_cache_v10","minidrama_cache_v11"].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   try{ const c = JSON.parse(localStorage.getItem(CACHE_KEY)); if(c && Date.now() - c.t < 14*86400000) return c; }catch(e){}
   return null;
 }
@@ -1169,7 +1198,7 @@ function attachSearchEvents(q0){
 }
 
 /* --------------------------- FASE 2: filtros do catálogo + Surpresa ------------------------------------ */
-const APP_VERSION = "2026.10.26-vorta-fast-reel";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
+const APP_VERSION = "2026.10.27-vorta-subtitles-fix";            // aparece no rodapé: serve para conferir se a versão nova foi publicada
 const SORT_LABELS = { "": "Padrão", recent: "Mais recentes", title: "Título (A–Z)", year: "Ano (mais novo)", longest: "Mais longas", shortest: "Mais curtas" };
 let catalogFilters = { sort: "", year: "", plan: "" };
 let catalogFacets = null;
@@ -1520,7 +1549,7 @@ function HomePage(){
   const quickbar = `
   <div class="category-quickbar" style="margin:20px 0 14px; display:flex; gap:10px; overflow-x:auto; padding-bottom:8px; -webkit-overflow-scrolling:touch;">
     <button type="button" class="quickbar-pill active" onclick="setCatalogPlatform('all'); go('#/catalogo');">✨ Todas as Novelinhas (${totalDramas})</button>
-    <button type="button" class="quickbar-pill pill-dub" onclick="setCatalogPlatform('dubladas'); go('#/catalogo');">🎙️ Dubladas em PT-BR (${dubCount})</button>
+    ${dubCount > 0 ? `<button type="button" class="quickbar-pill pill-dub" onclick="setCatalogPlatform('dubladas'); go('#/catalogo');">🎙️ Dubladas em PT-BR (${dubCount})</button>` : ""}
     <button type="button" class="quickbar-pill pill-sub" onclick="setCatalogPlatform('legendadas'); go('#/catalogo');">📝 Legendadas em PT-BR (${legCount})</button>
     ${platPills}
   </div>`;
@@ -1561,8 +1590,8 @@ function PlayRow(title, genreId, plays, total){
 function PlayCard(p){
   const saved = inMyList(p.id);
   const isVorta = p.isVorta || String(p.id).startsWith("vorta:");
-  const isDub = p.isDublado || /dublado/i.test(p.title);
-  const badgeText = isDub ? "🎙️ Dublado" : (isVorta ? (p.platformName || "FreeReels") : (planLevel(p.requiresPlan)>0 ? (planById(p.requiresPlan)?.name || '') : ''));
+  const isDub = p.isDublado || /dublado em portugu|dublagem brasileira/i.test(p.title);
+  const badgeText = isDub ? "🎙️ Dublado" : (isVorta ? (p.hasSubtitles || p.subtitleUrl ? "📝 Leg. PT-BR" : (p.platformName || "Novela")) : (planLevel(p.requiresPlan)>0 ? (planById(p.requiresPlan)?.name || '') : ''));
   const badgeClass = isDub ? 'card-badge card-badge-dub' : (isVorta ? 'card-badge card-badge-plat' : (planLevel(p.requiresPlan)>0 ? 'card-badge' : ''));
   const launchHref = `#/reel/${esc(p.id)}${p.chapterId ? `?chapterId=${esc(p.chapterId)}` : ''}`;
   return `<a class="card" href="${launchHref}">
@@ -1831,8 +1860,8 @@ function reelSlideHtml(p, i){
 
       <div class="reel-top-bar">
         <div class="reel-badge-group">
-          ${isVorta ? `<span class="card-badge card-badge-plat" style="position:static;">📺 ${esc(p.platformName || "FreeReels")}</span>` : ""}
-          <span class="reel-lang-badge">${isDub ? "🎙️ Dublado PT" : "📝 Legendado PT"}</span>
+          ${isVorta ? `<span class="card-badge card-badge-plat" style="position:static;">📺 ${esc(p.platformName || "My Drama")}</span>` : ""}
+          <span class="reel-lang-badge">${isDub ? "🎙️ Dublado PT" : "📝 Legendado PT-BR"}</span>
           <span class="reel-ep-badge" style="background:rgba(201,162,75,0.25); border:1px solid var(--gold); color:var(--gold-soft); font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px;">EP ${curEp} / ${totalEps}</span>
         </div>
       </div>
@@ -1923,6 +1952,12 @@ async function createReelPlayer(stage, url, opts){
       : opts.subtitleUrl;
     track.default = true;
     el.appendChild(track);
+    track.addEventListener("load", () => {
+      try { if (track.track) track.track.mode = "showing"; } catch(e){}
+    });
+    setTimeout(() => {
+      try { if (track.track) track.track.mode = "showing"; } catch(e){}
+    }, 250);
   }
 
   if(hlsUrl){
@@ -1957,8 +1992,9 @@ async function createReelPlayer(stage, url, opts){
   let player = null;
   if(Plyr_){
     player = new Plyr(el, {
-      controls: ["play-large", "play", "progress", "current-time", "duration", "mute", "volume", "settings", "fullscreen"],
-      settings: ["speed"], speed: { selected: 1, options: [0.75, 1, 1.25, 1.5] },
+      controls: ["play-large", "play", "progress", "current-time", "duration", "mute", "volume", "captions", "settings", "fullscreen"],
+      captions: { active: true, language: "pt", update: true },
+      settings: ["captions", "speed"], speed: { selected: 1, options: [0.75, 1, 1.25, 1.5] },
       keyboard: { focused: false, global: false },        // as teclas são tratadas por reelOnKey (evita ação dupla)
       clickToPlay: true, hideControls: true, resetOnEnd: false, seekTime: 10,
       tooltips: { controls: false, seek: true }, muted: !!opts.muted, i18n: PLYR_PT,
@@ -2047,6 +2083,14 @@ async function reelMount(i){
   });
   ctl.on("ready", () => { if(ctl.kind === "youtube") applyResume(); });
   ctl.on("playing", () => {
+    try {
+      const v = ctl.el;
+      if (v && v.textTracks && v.textTracks.length > 0) {
+        for (let t = 0; t < v.textTracks.length; t++) {
+          v.textTracks[t].mode = "showing";
+        }
+      }
+    } catch(e){}
     const l = stage.querySelector(".reel-loading"); if(l) l.remove(); stage.classList.add("is-live"); reelPoke();
     if(p.isVorta || String(p.id).startsWith("vorta:")){
       fetch("/api/vorta/track", {

@@ -23,18 +23,19 @@ router.get("/subtitles", (req, res) => {
   const subUrl = req.query.url;
   if (!subUrl) return res.status(400).send("URL de legenda não fornecida.");
   try {
-    https.get(subUrl, (remoteRes) => {
+    const client = subUrl.startsWith("https") ? https : http;
+    client.get(subUrl, (remoteRes) => {
       let data = "";
       remoteRes.on("data", (chunk) => { data += chunk; });
       remoteRes.on("end", () => {
-        const vtt = "WEBVTT\n\n" + data.trim()
-          .replace(/\r\n/g, "\n")
-          .replace(/\r/g, "\n")
-          .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");
+        let cleaned = data.trim().replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+        if (!cleaned.startsWith("WEBVTT")) {
+          cleaned = "WEBVTT\n\n" + cleaned.replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, "$1.$2");
+        }
         res.setHeader("Content-Type", "text/vtt; charset=utf-8");
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Cache-Control", "public, max-age=86400");
-        res.send(vtt);
+        res.send(cleaned);
       });
     }).on("error", (err) => {
       res.status(502).send("Erro ao buscar legenda: " + err.message);

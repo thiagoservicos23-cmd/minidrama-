@@ -391,18 +391,37 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
     try {
       const vortaApi = require("../services/vortaApi");
       const parts = req.params.id.includes(":") ? req.params.id.split(":") : req.params.id.split("_");
-      const category = parts[1] || "freereels";
+      let category = parts[1] || "mydrama";
       const vortaId = parts.slice(2).join(":");
       const reqChapterId = req.query.chapterId;
-      let detail, vid = null;
-      if (reqChapterId) {
-        [detail, vid] = await Promise.all([
-          vortaApi.getDetail(category, vortaId, "pt"),
-          vortaApi.getVideo(category, vortaId, reqChapterId, "pt").catch(() => null)
-        ]);
-      } else {
-        detail = await vortaApi.getDetail(category, vortaId, "pt");
+      let detail = null, vid = null;
+
+      const activePlats = await vortaApi.getActivePlatformNames().catch(() => ["mydrama", "shortmax", "meloshort"]);
+      const catsToTry = [category, ...activePlats.filter((p) => p !== category)];
+
+      for (const cat of catsToTry) {
+        try {
+          if (reqChapterId) {
+            [detail, vid] = await Promise.all([
+              vortaApi.getDetail(cat, vortaId, "pt"),
+              vortaApi.getVideo(cat, vortaId, reqChapterId, "pt").catch(() => null)
+            ]);
+          } else {
+            detail = await vortaApi.getDetail(cat, vortaId, "pt");
+          }
+          if (detail && detail.data) {
+            category = cat;
+            break;
+          }
+        } catch (catErr) {
+          // Continua tentando se a plataforma for 403 ou 404
+        }
       }
+
+      if (!detail || !detail.data) {
+        return res.status(404).json({ error: "Novelinha não encontrada ou indisponível nesta plataforma." });
+      }
+
       const formatted = vortaApi.formatVortaPlay(detail.data, category);
       const chapters = (detail.data && detail.data.chapters) || [];
       const chapterId = reqChapterId || (chapters[0] && chapters[0].id) || 1;
@@ -419,7 +438,8 @@ router.get("/:id", attachUserIfPresent, safe(async (req, res) => {
         videoUrl = (h264 && h264.url) || (streams[0] && streams[0].url) || "";
         subtitles = vid.data.subtitles || [];
         const ptSub = subtitles.find((s) => s.languageCode === "pt" || (s.language && s.language.toLowerCase().includes("portugu")));
-        formatted.subtitleUrl = ptSub ? `/api/vorta/subtitles?url=${encodeURIComponent(ptSub.url)}` : "";
+        const fallbackSub = ptSub || subtitles.find((s) => s.languageCode === "es" || (s.language && s.language.toLowerCase().includes("espan"))) || subtitles.find((s) => s.languageCode === "en" || (s.language && s.language.toLowerCase().includes("engl"))) || subtitles[0];
+        formatted.subtitleUrl = ptSub ? `/api/vorta/subtitles?url=${encodeURIComponent(ptSub.url)}` : (fallbackSub ? `/api/vorta/subtitles?url=${encodeURIComponent(fallbackSub.url)}` : "");
         formatted.hasSubtitles = Boolean(ptSub || subtitles.length > 0);
       }
       if (!videoUrl) videoUrl = vortaApi.getDefaultStream();

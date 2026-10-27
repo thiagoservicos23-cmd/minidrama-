@@ -61,12 +61,12 @@ const EXACT_TITLES = {
 
 // Expressões compostas (frases) comuns em títulos e sinopses indonésias
 const PHRASES = [
-  [/\(Sulih Suara\)/gi, " (Dublado)"],
-  [/\[Sulih Suara\]/gi, " [Dublado]"],
-  [/\[Dubbing\]/gi, " [Dublado]"],
-  [/\(Dubbing\)/gi, " (Dublado)"],
-  [/Sulih Suara/gi, "Dublado"],
-  [/Dubbing/gi, "Dublado"],
+  [/\(Sulih Suara\)/gi, ""],
+  [/\[Sulih Suara\]/gi, ""],
+  [/\[Dubbing\]/gi, ""],
+  [/\(Dubbing\)/gi, ""],
+  [/Sulih Suara/gi, ""],
+  [/Dubbing/gi, ""],
   [/Balas Dendam/gi, "Vingança"],
   [/Jatuh Cinta/gi, "Apaixonada"],
   [/Terlahir Kembali/gi, "Renascida"],
@@ -314,8 +314,8 @@ function detectGenres(title = "", synopsis = "", apiTags = []) {
   const combined = `${title} ${synopsis} ${(apiTags || []).join(" ")}`.toLowerCase();
   const genres = new Set();
 
-  // 1. Dublados
-  if (/dublado|dublada|sulih suara|dubbing|audio portugues|dub\b/i.test(combined)) {
+  // 1. Dublados (somente se tiver indicação explícita em português)
+  if (/dublado em portugu|dublagem brasileira|áudio em portugu|audio em portugu/i.test(combined)) {
     genres.add("dublados");
   }
 
@@ -356,7 +356,6 @@ function detectGenres(title = "", synopsis = "", apiTags = []) {
 
   // Se nenhum foi detectado, dá um gênero padrão atraente
   if (genres.size === 0) {
-    genres.add("dublados");
     genres.add("amor-a-primeira-vista");
   }
 

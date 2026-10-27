@@ -327,10 +327,14 @@ const vortaApi = {
     try {
       const cats = await this.getCategories();
       if (cats && Array.isArray(cats.data) && cats.data.length > 0) {
-        return cats.data.filter((c) => c.is_active !== false).map((c) => c.name);
+        const names = cats.data.filter((c) => c.is_active !== false).map((c) => c.name);
+        if (names.includes("mydrama")) {
+          return ["mydrama", ...names.filter((n) => n !== "mydrama")];
+        }
+        return names;
       }
     } catch (e) {}
-    return ["freereels", "shortmax", "meloshort"];
+    return ["mydrama", "shortmax", "meloshort"];
   },
 
   // 11. Busca todos os banners das plataformas com localização PT-BR
@@ -443,18 +447,18 @@ const vortaApi = {
       featured: false,
       isVorta: true,
       platform: category,
-      platformName: category === "freereels" ? "FreeReels" : category === "shortmax" ? "ShortMax" : "MeloShort",
+      platformName: vortaItem.platform_display || (category === "mydrama" ? "My Drama" : category === "freereels" ? "FreeReels" : category === "shortmax" ? "ShortMax" : category === "meloshort" ? "MeloShort" : (category.charAt(0).toUpperCase() + category.slice(1))),
       chapters: chaptersNum,
       views: vortaItem.views || "12.4k",
       status: vortaItem.status === "Completed" ? "Completo" : "Em Lançamento",
       genres: genresFormatted,
       genreLabels: genreLabels,
-      genre: genreLabels[0] || "Dublados",
+      genre: genreLabels[0] || "Romance",
       canWatch: true,
       hasVideo: true,
-      isDublado: detectedGenreIds.includes("dublados") || /dublado/i.test(ptTitle),
-      isLegendado: !detectedGenreIds.includes("dublados") && !/dublado/i.test(ptTitle),
-      audio: (detectedGenreIds.includes("dublados") || /dublado/i.test(ptTitle)) ? "Dublado em Português" : "Original com Legendas em Português",
+      isDublado: /dublado em portugu|dublagem brasileira|áudio em portugu/i.test(ptTitle),
+      isLegendado: true,
+      audio: /dublado em portugu|dublagem brasileira/i.test(ptTitle) ? "Dublado em Português" : "Original (Ásia) com Legendas em Português",
       hasSubtitles: true,
       legendas: "Português (PT-BR)"
     };
