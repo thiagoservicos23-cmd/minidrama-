@@ -1508,14 +1508,21 @@ function HomePage(){
     <div class="hero-dots">${featured.map((_,i)=>`<button class="${i===0?'active':''}" onclick="setHero(${i})"></button>`).join("")}</div>
   </section>` : `<div style="height:84px;"></div>`;
 
+  const platPills = (feed.platforms || [
+    { name: "freereels", display_name: "FreeReels" },
+    { name: "meloshort", display_name: "MeloShort" },
+    { name: "shortmax", display_name: "ShortMax" }
+  ]).map(p => {
+    const c = counts[p.name] || 0;
+    return `<button type="button" class="quickbar-pill pill-plat" onclick="setCatalogPlatform('${esc(p.name)}'); go('#/catalogo');">🎬 Canal ${esc(p.display_name || p.name)}${c ? ` (${c})` : ''}</button>`;
+  }).join("");
+
   const quickbar = `
   <div class="category-quickbar" style="margin:20px 0 14px; display:flex; gap:10px; overflow-x:auto; padding-bottom:8px; -webkit-overflow-scrolling:touch;">
     <button type="button" class="quickbar-pill active" onclick="setCatalogPlatform('all'); go('#/catalogo');">✨ Todas as Novelinhas (${totalDramas})</button>
     <button type="button" class="quickbar-pill pill-dub" onclick="setCatalogPlatform('dubladas'); go('#/catalogo');">🎙️ Dubladas em PT-BR (${dubCount})</button>
     <button type="button" class="quickbar-pill pill-sub" onclick="setCatalogPlatform('legendadas'); go('#/catalogo');">📝 Legendadas em PT-BR (${legCount})</button>
-    <button type="button" class="quickbar-pill pill-plat" onclick="setCatalogPlatform('freereels'); go('#/catalogo');">🎬 Canal FreeReels (${counts.freereels || 381})</button>
-    <button type="button" class="quickbar-pill pill-plat" onclick="setCatalogPlatform('meloshort'); go('#/catalogo');">💖 Canal MeloShort (${counts.meloshort || 70})</button>
-    <button type="button" class="quickbar-pill pill-plat" onclick="setCatalogPlatform('shortmax'); go('#/catalogo');">⚡ Canal ShortMax (${counts.shortmax || 30})</button>
+    ${platPills}
   </div>`;
 
   const sections = [];
@@ -1525,15 +1532,16 @@ function HomePage(){
   if((feed.legendadas || []).length) {
     sections.push(PlayRow("📝 Novelinhas Legendadas em Português", "vorta:legendadas", feed.legendadas.slice(0, 20), legCount));
   }
-  if(feed.channels && (feed.channels.freereels || []).length) {
-    sections.push(PlayRow("🎬 Canal FreeReels (Micro-Séries)", "vorta:freereels", feed.channels.freereels.slice(0, 20), counts.freereels || 381));
-  }
-  if(feed.channels && (feed.channels.meloshort || []).length) {
-    sections.push(PlayRow("💖 Canal MeloShort", "vorta:meloshort", feed.channels.meloshort.slice(0, 20), counts.meloshort || 70));
-  }
-  if(feed.channels && (feed.channels.shortmax || []).length) {
-    sections.push(PlayRow("⚡ Canal ShortMax", "vorta:shortmax", feed.channels.shortmax.slice(0, 20), counts.shortmax || 30));
-  }
+  (feed.platforms || [
+    { name: "freereels", display_name: "FreeReels" },
+    { name: "meloshort", display_name: "MeloShort" },
+    { name: "shortmax", display_name: "ShortMax" }
+  ]).forEach(p => {
+    const chPlays = feed.channels && feed.channels[p.name];
+    if(chPlays && chPlays.length) {
+      sections.push(PlayRow(`🎬 Canal ${p.display_name || p.name}`, `vorta:${p.name}`, chPlays.slice(0, 20), counts[p.name]));
+    }
+  });
   (home.genres || []).forEach(g => {
     if(g.plays && g.plays.length) sections.push(PlayRow(g.label, g.id, g.plays, g.total));
   });
@@ -1641,15 +1649,22 @@ async function CatalogPage(){
     { id: "bl-gl", label: "🌈 BL & GL" }
   ];
 
+  const platButtons = (feed.platforms || [
+    { name: "freereels", display_name: "FreeReels" },
+    { name: "meloshort", display_name: "MeloShort" },
+    { name: "shortmax", display_name: "ShortMax" }
+  ]).map(p => {
+    const c = counts[p.name] || 0;
+    return `<button type="button" class="platform-btn ${catalogPlatform===p.name?'active':''}" data-platform="${esc(p.name)}">🎬 ${esc(p.display_name || p.name)}${c ? ` (${c})` : ''}</button>`;
+  }).join("");
+
   return `<div class="container" style="padding-top:36px;">
     <h1 class="page-title" style="margin-bottom:18px;">Catálogo completo (${r.total || 0} novelinhas)</h1>
     <div class="platform-selector" id="platform-selector">
       <button type="button" class="platform-btn ${catalogPlatform==='all'?'active':''}" data-platform="all">✨ Todas (${totalCount})</button>
       <button type="button" class="platform-btn ${catalogPlatform==='dubladas'?'active':''}" data-platform="dubladas">🎙️ Dubladas (${dubCount})</button>
       <button type="button" class="platform-btn ${catalogPlatform==='legendadas'?'active':''}" data-platform="legendadas">📝 Legendadas (${legCount})</button>
-      <button type="button" class="platform-btn ${catalogPlatform==='freereels'?'active':''}" data-platform="freereels">🎬 FreeReels (${counts.freereels || 381})</button>
-      <button type="button" class="platform-btn ${catalogPlatform==='meloshort'?'active':''}" data-platform="meloshort">💖 MeloShort (${counts.meloshort || 70})</button>
-      <button type="button" class="platform-btn ${catalogPlatform==='shortmax'?'active':''}" data-platform="shortmax">⚡ ShortMax (${counts.shortmax || 30})</button>
+      ${platButtons}
       <button type="button" class="platform-btn ${catalogPlatform==='local'?'active':''}" data-platform="local">🏛️ Catálogo Local (84)</button>
     </div>
 

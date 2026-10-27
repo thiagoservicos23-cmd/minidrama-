@@ -163,19 +163,24 @@ router.get("/banner", safe(async (req, res) => {
 // Multi-channel Feed completo com Plataformas, Dubladas e Legendadas
 router.get("/feed", safe(async (req, res) => {
   const lang = req.query.lang || "pt";
-  const [categories, freereelsHome, shortmaxHome, meloshortHome, banners] = await Promise.all([
-    vortaApi.getCategories().catch(() => ({ data: [] })),
-    vortaApi.getHome("freereels", lang).catch(() => ({ data: [] })),
-    vortaApi.getHome("shortmax", lang).catch(() => ({ data: [] })),
-    vortaApi.getHome("meloshort", lang).catch(() => ({ data: [] })),
+  const categories = await vortaApi.getCategories().catch(() => ({ data: [] }));
+  const platList = (categories.data && categories.data.length > 0)
+    ? categories.data.filter((c) => c.is_active !== false).map((c) => c.name)
+    : ["freereels", "shortmax", "meloshort"];
+
+  const [homeResults, banners] = await Promise.all([
+    Promise.all(platList.map((p) => vortaApi.getHome(p, lang).catch(() => ({ data: [] })))),
     vortaApi.getCuratedBanners(lang).catch(() => [])
   ]);
 
-  const frList = (freereelsHome.data || []).map((i) => vortaApi.formatVortaPlay(i, "freereels"));
-  const smList = (shortmaxHome.data || []).map((i) => vortaApi.formatVortaPlay(i, "shortmax"));
-  const msList = (meloshortHome.data || []).map((i) => vortaApi.formatVortaPlay(i, "meloshort"));
+  const channels = {};
+  const allItems = [...banners];
+  platList.forEach((plat, idx) => {
+    const list = (homeResults[idx] && homeResults[idx].data || []).map((i) => vortaApi.formatVortaPlay(i, plat));
+    channels[plat] = list.slice(0, 30);
+    allItems.push(...list);
+  });
 
-  const allItems = [...banners, ...frList, ...smList, ...msList];
   const seen = new Set();
   const deduped = [];
   allItems.forEach((p) => {
@@ -188,24 +193,29 @@ router.get("/feed", safe(async (req, res) => {
   const dubladas = deduped.filter((p) => p.isDublado);
   const legendadas = deduped.filter((p) => !p.isDublado);
 
+  const counts = {
+    dubladas: dubladas.length,
+    legendadas: legendadas.length
+  };
+  platList.forEach((plat) => {
+    counts[plat] = deduped.filter((p) => p.platform === plat).length;
+  });
+
   res.json({
     success: true,
     platforms: categories.data || [],
     banners,
     total: deduped.length,
+    counts,
     dubladasCount: dubladas.length,
     legendadasCount: legendadas.length,
     dubladas: dubladas.slice(0, 30),
     legendadas: legendadas.slice(0, 30),
-    channels: {
-      freereels: frList.slice(0, 30),
-      shortmax: smList.slice(0, 30),
-      meloshort: msList.slice(0, 30)
-    }
+    channels
   });
 }));
 
-// Catálogo unificado com 510+ novelinhas, suporte a Dubladas, Legendadas, Plataformas e Filtros
+// Catálogo unificado com novelinhas, suporte a Dubladas, Legendadas, Plataformas e Filtros
 router.get("/catalog", safe(async (req, res) => {
   const lang = req.query.lang || "pt";
   const platform = (req.query.platform || req.query.category || "all").toLowerCase();
@@ -229,11 +239,11 @@ router.get("/catalog", safe(async (req, res) => {
     filtered = filtered.filter((p) => p.isDublado);
   } else if (platform === "legendadas") {
     filtered = filtered.filter((p) => !p.isDublado);
-  } else if (["freereels", "shortmax", "meloshort"].includes(platform)) {
-    filtered = filtered.filter((p) => p.platform === platform);
   } else if (platform === "local") {
     const dbRows = await prisma.play.findMany({ select: PLAY_LIST_SELECT });
     filtered = dbRows.map((p) => publicPlay(p));
+  } else if (platform !== "all") {
+    filtered = filtered.filter((p) => p.platform === platform);
   }
 
   if (genre && !["novos", "todos", "Todos"].includes(genre)) {
@@ -265,6 +275,18 @@ router.get("/catalog", safe(async (req, res) => {
   const skip = (page - 1) * pageSize;
   const paged = filtered.slice(skip, skip + pageSize);
 
+  const counts = {
+    all: allPlays.length,
+    dubladas: dubladasTotal,
+    legendadas: legendadasTotal,
+    freereels: frTotal,
+    shortmax: smTotal,
+    meloshort: msTotal
+  };
+  allPlays.forEach((p) => {
+    if (p.platform) counts[p.platform] = (counts[p.platform] || 0) + 1;
+  });
+
   res.json({
     success: true,
     platform,
@@ -273,14 +295,7 @@ router.get("/catalog", safe(async (req, res) => {
     page,
     pageSize,
     totalPages,
-    counts: {
-      all: allPlays.length,
-      dubladas: dubladasTotal,
-      legendadas: legendadasTotal,
-      freereels: frTotal,
-      shortmax: smTotal,
-      meloshort: msTotal
-    },
+    counts,
     plays: paged
   });
 }));

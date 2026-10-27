@@ -323,9 +323,19 @@ const vortaApi = {
     }
   },
 
+  async getActivePlatformNames() {
+    try {
+      const cats = await this.getCategories();
+      if (cats && Array.isArray(cats.data) && cats.data.length > 0) {
+        return cats.data.filter((c) => c.is_active !== false).map((c) => c.name);
+      }
+    } catch (e) {}
+    return ["freereels", "shortmax", "meloshort"];
+  },
+
   // 11. Busca todos os banners das plataformas com localização PT-BR
   async getCuratedBanners(lang = "pt") {
-    const platforms = ["freereels", "shortmax", "meloshort"];
+    const platforms = await this.getActivePlatformNames();
     const results = await Promise.all(
       platforms.map((p) => this.getBanner(p, lang).catch(() => ({ data: [] })))
     );
@@ -345,30 +355,37 @@ const vortaApi = {
     return all;
   },
 
-  // 12. Retorna todo o catálogo agregado e deduplicado da Vorta API (510+ novelinhas)
+  // 12. Retorna todo o catálogo agregado e deduplicado da Vorta API
   async getAllCuratedPlays(lang = "pt") {
     const cacheKey = `vorta:all_plays:${lang}`;
     const cached = getCached(cacheKey);
     if (cached) return cached;
 
-    const [fr, sm, ms, banners] = await Promise.all([
-      this.getHome("freereels", lang).catch(() => ({ data: [] })),
-      this.getHome("shortmax", lang).catch(() => ({ data: [] })),
-      this.getHome("meloshort", lang).catch(() => ({ data: [] })),
+    const platforms = await this.getActivePlatformNames();
+    const [homeResults, banners] = await Promise.all([
+      Promise.all(platforms.map((p) => this.getHome(p, lang).catch(() => ({ data: [] })))),
       this.getCuratedBanners(lang).catch(() => [])
     ]);
 
-    const frList = (fr.data || []).map((i) => this.formatVortaPlay(i, "freereels"));
-    const smList = (sm.data || []).map((i) => this.formatVortaPlay(i, "shortmax"));
-    const msList = (ms.data || []).map((i) => this.formatVortaPlay(i, "meloshort"));
-
     const seen = new Set();
     const all = [];
-    [...banners, ...frList, ...smList, ...msList].forEach((p) => {
+    banners.forEach((p) => {
       if (p && p.id && !seen.has(p.id)) {
         seen.add(p.id);
         all.push(p);
       }
+    });
+
+    homeResults.forEach((res, idx) => {
+      const plat = platforms[idx];
+      (res.data || []).forEach((item) => {
+        if (!item) return;
+        const formatted = this.formatVortaPlay(item, plat);
+        if (formatted && formatted.id && !seen.has(formatted.id)) {
+          seen.add(formatted.id);
+          all.push(formatted);
+        }
+      });
     });
 
     setCached(cacheKey, all, TTL_HOME);
